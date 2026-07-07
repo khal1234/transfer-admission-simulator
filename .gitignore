@@ -1,0 +1,20 @@
+# Target-exclude local build & dependency directories
+node_modules/
+dist/
+data/
+
+# Python compiled cache
+*.pyc
+__pycache__/
+
+# Private agent configurations & keys
+.gemini/
+.env
+*.key
+
+# Standard OS metadata & editor assets
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.local
