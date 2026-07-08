@@ -49,6 +49,12 @@ export interface ConversionResult {
   status: "safe" | "borderline" | "risk" | "unknown";
 }
 
+export interface AcceptedScoreBreakdown {
+  englishConv: number | null;
+  gpaConv: number | null;
+  indexSum: number | null;
+}
+
 /**
  * FLAT HELPER FUNCTION (ZERO RECURSION)
  * Converts raw TOEIC and GPA into university-specific converted scores.
@@ -165,6 +171,59 @@ export function convertRawToConv(
   return { englishConv, gpaConv, indexSum };
 }
 
+function roundScore(score: number | null): number | null {
+  if (score === null) {
+    return null;
+  }
+
+  return Math.round(score * 100) / 100;
+}
+
+function usesEnglishOnly(univ: string, year: string): boolean {
+  return (
+    univ === "인천대학교" ||
+    (univ === "충남대학교" && year !== "2024") ||
+    (univ === "충북대학교" && year === "2026") ||
+    (univ === "강원대학교" && year === "2026")
+  );
+}
+
+export function calculateAcceptedScoreBreakdown(
+  acceptedRecord: DepartmentRecord
+): AcceptedScoreBreakdown {
+  const { 대학명: univ, 연도: year } = acceptedRecord;
+  const convEng = acceptedRecord.최종합격_토익환산점수;
+  const convGpa = acceptedRecord.최종합격_학점환산점수;
+  const rawEng = acceptedRecord.최종합격_토익원점수;
+  const rawGpa = acceptedRecord.최종합격_학점원점수_100점만점;
+
+  if (usesEnglishOnly(univ, year)) {
+    const englishConv =
+      convEng ?? convertRawToConv(univ, year, rawEng, null).englishConv;
+
+    return {
+      englishConv: roundScore(englishConv),
+      gpaConv: null,
+      indexSum: roundScore(englishConv),
+    };
+  }
+
+  const convertedFromRaw = convertRawToConv(univ, year, rawEng, rawGpa);
+  const englishConv = convEng ?? convertedFromRaw.englishConv;
+  const gpaConv = convGpa ?? convertedFromRaw.gpaConv;
+
+  let indexSum: number | null = null;
+  if (englishConv !== null && gpaConv !== null) {
+    indexSum = englishConv + gpaConv;
+  }
+
+  return {
+    englishConv: roundScore(englishConv),
+    gpaConv: roundScore(gpaConv),
+    indexSum: roundScore(indexSum),
+  };
+}
+
 /**
  * Calculates and compares user score vs accepted average in a purely flat,
  * non-recursive manner to prevent stack overflow RangeError.
@@ -180,32 +239,7 @@ export function calculateScore(
   const myRes = convertRawToConv(univ, year, toeic, gpa100);
 
   // 2. Compute Accepted Candidate's Index Sum from database
-  let acceptedIndexSum: number | null = null;
-  const convEng = acceptedRecord.최종합격_토익환산점수;
-  const convGpa = acceptedRecord.최종합격_학점환산점수;
-  const rawEng = acceptedRecord.최종합격_토익원점수;
-  const rawGpa = acceptedRecord.최종합격_학점원점수_100점만점;
-
-  if (univ === "인천대학교" || (univ === "충남대학교" && year !== "2024") || (univ === "충북대학교" && year === "2026") || (univ === "강원대학교" && year === "2026")) {
-    // Only English reflected
-    if (convEng !== null) {
-      acceptedIndexSum = convEng;
-    } else if (rawEng !== null) {
-      const accRes = convertRawToConv(univ, year, rawEng, null);
-      acceptedIndexSum = accRes.indexSum;
-    }
-  } else {
-    // Both English and GPA reflected
-    if (convEng !== null && convGpa !== null) {
-      acceptedIndexSum = convEng + convGpa;
-    } else if (rawEng !== null && rawGpa !== null) {
-      // Fallback to calculate conversion score for accepted averages
-      const calcRes = convertRawToConv(univ, year, rawEng, rawGpa);
-      acceptedIndexSum = calcRes.indexSum;
-    }
-  }
-
-  if (acceptedIndexSum !== null) acceptedIndexSum = Math.round(acceptedIndexSum * 100) / 100;
+  const acceptedIndexSum = calculateAcceptedScoreBreakdown(acceptedRecord).indexSum;
 
   // 3. Compute Difference and Safety status
   let diff: number | null = null;

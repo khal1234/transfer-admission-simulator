@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { 
   calculateScore, 
+  calculateAcceptedScoreBreakdown,
   convertGpaTo100Scale, 
   analyzeScoreDeficit,
   type DepartmentRecord
@@ -56,6 +57,10 @@ function getChosung(text: string | null | undefined): string {
     }
   }
   return result;
+}
+
+function getRecordKey(univ: string, dept: string): string {
+  return `${univ}:::${dept}`;
 }
 
 export default function App() {
@@ -167,15 +172,48 @@ export default function App() {
     return Array.from(s).sort();
   }, []);
 
+  const recordsByDepartment = useMemo(() => {
+    const grouped = new Map<string, DepartmentRecord[]>();
+
+    standardRecords.forEach((record) => {
+      const key = getRecordKey(record.대학명, record.학과);
+      const existing = grouped.get(key);
+
+      if (existing) {
+        existing.push(record);
+        return;
+      }
+
+      grouped.set(key, [record]);
+    });
+
+    return grouped;
+  }, []);
+
+  const latestExplorerRecords = useMemo(() => {
+    const latest = new Map<string, DepartmentRecord>();
+
+    standardRecords.forEach((record) => {
+      const key = getRecordKey(record.대학명, record.학과);
+      if (!latest.has(key)) {
+        latest.set(key, record);
+      }
+    });
+
+    return Array.from(latest.values());
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedUnivs]);
+
   // Filtered department list for exploration section (Deduplicated to latest year name)
   const filteredDepartments = useMemo(() => {
-    setCurrentPage(1); // Reset page on query
-    
     // Detect if search query is Korean consonant-only (chosung)
     const isChosungOnly = /^[ㄱ-ㅎ\s]+$/.test(searchQuery);
     const queryNormalized = searchQuery.toLowerCase().replace(/\s/g, "");
 
-    return standardRecords.filter(r => {
+    return latestExplorerRecords.filter(r => {
       // University matching
       if (selectedUnivs.length > 0 && !selectedUnivs.includes(r.대학명)) {
         return false;
@@ -198,31 +236,15 @@ export default function App() {
       }
       return true;
     });
-  }, [searchQuery, selectedUnivs]);
-
-  // Compress standard explorer records to group by University & Major (showing latest year info)
-  const groupedLatestExplorerList = useMemo(() => {
-    const seen = new Set<string>();
-    const result: DepartmentRecord[] = [];
-    
-    // StandardRecords are pre-sorted by Year DESC, so iterating in order automatically captures the latest year record!
-    filteredDepartments.forEach(r => {
-      const key = `${r.대학명}:::${r.학과}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        result.push(r);
-      }
-    });
-    return result;
-  }, [filteredDepartments]);
+  }, [latestExplorerRecords, searchQuery, selectedUnivs]);
 
   // Paginated explorer list
   const paginatedExplorerList = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return groupedLatestExplorerList.slice(startIndex, startIndex + itemsPerPage);
-  }, [groupedLatestExplorerList, currentPage]);
+    return filteredDepartments.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredDepartments, currentPage]);
 
-  const totalPages = Math.ceil(groupedLatestExplorerList.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredDepartments.length / itemsPerPage);
 
   // =========================================================================
   // 3. Basket Management Helpers
@@ -247,9 +269,7 @@ export default function App() {
     if (!chartTarget) return [];
     
     // Extract 24, 25, 26 records for this specific major in this university
-    const history = standardRecords.filter(
-      r => r.대학명 === chartTarget.univ && r.학과 === chartTarget.dept
-    );
+    const history = recordsByDepartment.get(getRecordKey(chartTarget.univ, chartTarget.dept)) ?? [];
     
     // Sort ascending by year for line chart continuity
     const sortedHistory = [...history].sort((a, b) => parseInt(a.연도) - parseInt(b.연도));
@@ -260,22 +280,19 @@ export default function App() {
         : null;
         
       // Dynamic computation of standard conversion values of that historical year
-      const scoreRes = calculateScore(r.대학명, r.연도, toeic, gpa100, r);
-
-      const acceptedToeicConv = r.최종합격_토익환산점수 ?? (r.최종합격_토익원점수 !== null ? scoreRes.acceptedIndexSum : null);
-      const acceptedGpaConv = r.최종합격_학점환산점수 ?? (r.최종합격_학점원점수_100점만점 !== null ? scoreRes.gpaConv : null);
+      const acceptedScore = calculateAcceptedScoreBreakdown(r);
 
       return {
         year: `${r.연도}년도`,
         "영어 원점수 (TOEIC)": r.최종합격_토익원점수, // Keep null if non-disclosed
-        "영어 환산점수": acceptedToeicConv,
+        "영어 환산점수": acceptedScore.englishConv,
         "전적대 백분위 (GPA)": r.최종합격_학점원점수_100점만점,
-        "전적대 환산점수": acceptedGpaConv,
+        "전적대 환산점수": acceptedScore.gpaConv,
         "실질 경쟁률": ratio,
         originalName: r.학과_원본명
       };
     });
-  }, [chartTarget, toeic, gpa100]);
+  }, [chartTarget, recordsByDepartment]);
 
   return (
     <div className="app-container">
@@ -497,7 +514,7 @@ export default function App() {
               <div className="basket-grid">
                 {targets.map((t, index) => {
                   // Find the latest 2026 record (or 2025, etc.) to use as evaluation reference
-                  const history = standardRecords.filter(r => r.대학명 === t.univ && r.학과 === t.dept);
+                  const history = recordsByDepartment.get(getRecordKey(t.univ, t.dept)) ?? [];
                   const r2026 = history.find(r => r.연도 === "2026") || history.find(r => r.연도 === "2025") || history[0];
 
                   if (!r2026) return null;
@@ -864,7 +881,7 @@ export default function App() {
                 이전
               </button>
               <span className="pagination-info">
-                {currentPage} / {totalPages} 페이지 (총 {groupedLatestExplorerList.length}개 학과)
+                {currentPage} / {totalPages} 페이지 (총 {filteredDepartments.length}개 학과)
               </span>
               <button 
                 className="pagination-btn"
