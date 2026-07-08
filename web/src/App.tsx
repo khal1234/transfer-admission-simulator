@@ -520,6 +520,14 @@ export default function App() {
                         <div className="target-card-meta">
                           <h3>{t.dept}</h3>
                           <p>{t.univ}</p>
+                          {(r2026.합격자기준 === "최초" || r2026.합격자기준 === "최종") && (
+                            <span
+                              style={{ fontSize: "10px", fontWeight: "700", color: "var(--text-muted)" }}
+                              title="이 대학이 공개하는 합격자 평균 성적이 최초합격자 기준인지 최종등록자 기준인지를 나타냅니다"
+                            >
+                              [{r2026.합격자기준}합격자 기준]
+                            </span>
+                          )}
                         </div>
                         <button className="btn-remove-target" onClick={() => toggleTarget(t.univ, t.dept)}>
                           <Trash2 size={16} />

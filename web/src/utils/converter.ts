@@ -10,6 +10,8 @@ export interface DepartmentRecord {
   최종합격_토익원점수: number | null;
   최종합격_학점환산점수: number | null;
   최종합격_학점원점수_100점만점: number | null;
+  비고?: string;
+  합격자기준?: "최초" | "최종" | "확인불가";
 }
 
 export interface FormulaRecord {
