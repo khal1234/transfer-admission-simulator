@@ -65,8 +65,15 @@ export function convertRawToConv(
 
   switch (univ) {
     case "강원대학교":
-      if (t !== null) englishConv = (t / 990) * 100;
-      if (g !== null) gpaConv = g * 0.75;
+      if (year === "2026") {
+        // 2026: GPA not reflected (moved to 면접고사, unsupported by this service).
+        // 공인영어 배점 150점 반영 확인됨; 정확한 배율 수식은 원문 이미지라 확인 불가 - 비례식으로 추정 적용.
+        if (t !== null) englishConv = (t / 990) * 150;
+        gpaConv = null;
+      } else {
+        if (t !== null) englishConv = (t / 990) * 100;
+        if (g !== null) gpaConv = g * 0.75;
+      }
       break;
 
     case "경북대학교":
@@ -177,7 +184,7 @@ export function calculateScore(
   const rawEng = acceptedRecord.최종합격_토익원점수;
   const rawGpa = acceptedRecord.최종합격_학점원점수_100점만점;
 
-  if (univ === "인천대학교" || (univ === "충남대학교" && year !== "2024") || (univ === "충북대학교" && year === "2026")) {
+  if (univ === "인천대학교" || (univ === "충남대학교" && year !== "2024") || (univ === "충북대학교" && year === "2026") || (univ === "강원대학교" && year === "2026")) {
     // Only English reflected
     if (convEng !== null) {
       acceptedIndexSum = convEng;
@@ -286,7 +293,9 @@ export function analyzeScoreDeficit(
 
   // Slopes of English
   let toeicSlope = 0;
-  if (univ === "강원대학교" || univ === "경북대학교") {
+  if (univ === "강원대학교") {
+    toeicSlope = (year === "2026" ? 150 : 100) / 990;
+  } else if (univ === "경북대학교") {
     toeicSlope = 100 / 990;
   } else if (univ === "부경대학교") {
     toeicSlope = 200 / 990;
@@ -317,7 +326,7 @@ export function analyzeScoreDeficit(
   // Slopes of GPA (100 scale)
   let gpaSlope100 = 0;
   if (univ === "강원대학교") {
-    gpaSlope100 = 0.75;
+    gpaSlope100 = year === "2026" ? 0.0 : 0.75; // 2026: GPA not reflected (moved to 면접고사)
   } else if (univ === "경북대학교") {
     gpaSlope100 = 0.2;
   } else if (univ === "부경대학교" || univ === "부산대학교") {

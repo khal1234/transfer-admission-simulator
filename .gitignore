@@ -1,7 +1,7 @@
 # Target-exclude local build & dependency directories
 node_modules/
 dist/
-data/
+/data/
 
 # Python compiled cache
 *.pyc
