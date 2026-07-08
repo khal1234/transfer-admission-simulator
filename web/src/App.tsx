@@ -108,19 +108,35 @@ export default function App() {
 
   // Sync to LocalStorage
   useEffect(() => {
-    localStorage.setItem("t27_toeic", toeic.toString());
+    try {
+      localStorage.setItem("t27_toeic", toeic.toString());
+    } catch {
+      // storage unavailable (private browsing, quota exceeded, etc.) - ignore
+    }
   }, [toeic]);
 
   useEffect(() => {
-    localStorage.setItem("t27_gpa_type", gpaType);
+    try {
+      localStorage.setItem("t27_gpa_type", gpaType);
+    } catch {
+      // storage unavailable (private browsing, quota exceeded, etc.) - ignore
+    }
   }, [gpaType]);
 
   useEffect(() => {
-    localStorage.setItem("t27_gpa_raw", gpaRaw.toString());
+    try {
+      localStorage.setItem("t27_gpa_raw", gpaRaw.toString());
+    } catch {
+      // storage unavailable (private browsing, quota exceeded, etc.) - ignore
+    }
   }, [gpaRaw]);
 
   useEffect(() => {
-    localStorage.setItem("t27_targets", JSON.stringify(targets));
+    try {
+      localStorage.setItem("t27_targets", JSON.stringify(targets));
+    } catch {
+      // storage unavailable (private browsing, quota exceeded, etc.) - ignore
+    }
   }, [targets]);
 
   // Derived 100-scale GPA computation
