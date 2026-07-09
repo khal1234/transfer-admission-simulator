@@ -4,20 +4,21 @@
 
 - 저장소 루트에 프로젝트 전용 `AGENTS.md`를 추가해 로컬 작업 규칙을 정리했다.
 - 프론트엔드 앱은 `web/`에 있고, 결과 데이터 산출물은 `results/`와 `web/src/data/`에 분리돼 있다.
-- `results/`와 `web/src/data/`는 건드리지 않고 `web/src/App.tsx` 코드 수정으로 우선 이슈를 처리했다.
+- `results/`와 `web/src/data/`는 건드리지 않고 `web/src/App.tsx` 코드 최적화를 이어가고 있다.
 
 ## Recent Changes
 
-- 차트 Y축 범위를 고정값이 아니라 선택 지표의 실제 데이터 범위에서 계산하도록 수정했다.
-- GPA 스케일 전환 시 입력값을 초기화하지 않고 현재 100점 환산 기준을 보존해 새 스케일 값으로 변환하도록 수정했다.
-- 최신 연도 레코드 선택을 데이터 배열 순서와 2026 하드코딩에 의존하지 않도록 숫자 연도 기준으로 변경했다.
-- `as any`와 GPA 타입 강제 캐스트를 제거하고 선택값 검증 helper를 추가했다.
+- 지망 카드별 합격 계산, 결핍 분석, 최근 연도 히스토리 생성을 렌더 JSX 밖의 `targetSummaries` 메모로 이동했다.
+- 지망/대학 선택 여부 lookup을 반복 배열 탐색 대신 메모된 `Set` 기반으로 바꿨다.
+- 경쟁률 계산과 학과명 변경 이력 문자열 생성을 helper로 분리해 중복 계산을 줄였다.
+- state 업데이트 일부를 함수형 업데이트로 바꿔 연속 클릭 시 stale state 가능성을 낮췄다.
+- 숫자 파싱을 `Number.parseInt`/`Number.parseFloat`와 `Number.isNaN`으로 통일했다.
 - `web/`에서 `npm run lint`와 `npm run build`를 통과했다.
 
 ## Next Tasks
 
 - 추가 코드 작업 시 `results/`는 계속 제외하고, `web/src/data/` 수정은 사용자가 명시한 경우에만 진행한다.
-- 차트 UX를 더 다듬는다면 지표별 tick 포맷과 tooltip 표시 단위를 별도로 정리한다.
+- 다음 최적화 후보는 큰 `App.tsx`를 UI 섹션 단위 컴포넌트로 분리하고 inline style을 CSS class로 옮기는 작업이다.
 
 ## Update Rules
 
