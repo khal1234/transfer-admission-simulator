@@ -38,6 +38,60 @@ import rawStandardData from "./data/편입_성적_통합.json";
 
 const standardRecords = rawStandardData as DepartmentRecord[];
 
+type GpaType = "100" | "4.5" | "4.3";
+type Target = { univ: string; dept: string };
+type ChartDataPoint = {
+  year: string;
+  "영어 원점수 (TOEIC)": number | null;
+  "영어 환산점수": number | null;
+  "전적대 백분위 (GPA)": number | null;
+  "전적대 환산점수": number | null;
+  "실질 경쟁률": number | null;
+  originalName: string;
+};
+type ChartDataKey = Exclude<keyof ChartDataPoint, "year" | "originalName">;
+type ChartAxisDomain = readonly [number, number] | readonly ["auto", "auto"];
+
+const GPA_SCALE_MAX: Record<Exclude<GpaType, "100">, 4.5 | 4.3> = {
+  "4.5": 4.5,
+  "4.3": 4.3,
+};
+
+const DEFAULT_TARGETS: Target[] = [
+  { univ: "부산대학교", dept: "기계공학부" },
+  { univ: "경북대학교", dept: "기계공학과" },
+];
+
+const CHART_METRIC_CONFIG = {
+  toeic_orig: {
+    label: "공인영어 원점수 (TOEIC)",
+    dataKey: "영어 원점수 (TOEIC)",
+    color: "var(--primary-color)",
+  },
+  toeic_conv: {
+    label: "공인영어 환산점수",
+    dataKey: "영어 환산점수",
+    color: "var(--primary-color)",
+  },
+  gpa_orig: {
+    label: "전적대학 백분위 평균",
+    dataKey: "전적대 백분위 (GPA)",
+    color: "var(--secondary-color)",
+  },
+  gpa_conv: {
+    label: "전적대학 환산점수",
+    dataKey: "전적대 환산점수",
+    color: "var(--secondary-color)",
+  },
+  competition: {
+    label: "실질 경쟁률",
+    dataKey: "실질 경쟁률",
+    color: "#ef4444",
+  },
+} as const satisfies Record<string, { label: string; dataKey: ChartDataKey; color: string }>;
+
+type ChartMetric = keyof typeof CHART_METRIC_CONFIG;
+
 // Korean consonant-initial helper maps
 const KOREAN_CHOSUNG = [
   'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'
@@ -63,6 +117,112 @@ function getRecordKey(univ: string, dept: string): string {
   return `${univ}:::${dept}`;
 }
 
+function isGpaType(value: string | null): value is GpaType {
+  return value === "100" || value === "4.5" || value === "4.3";
+}
+
+function isChartMetric(value: string): value is ChartMetric {
+  return value in CHART_METRIC_CONFIG;
+}
+
+function isTarget(value: unknown): value is Target {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "univ" in value &&
+    "dept" in value &&
+    typeof value.univ === "string" &&
+    typeof value.dept === "string"
+  );
+}
+
+function parseSavedTargets(saved: string | null): Target[] {
+  if (!saved) {
+    return DEFAULT_TARGETS;
+  }
+
+  const parsed: unknown = JSON.parse(saved);
+  return Array.isArray(parsed) && parsed.every(isTarget) ? parsed : DEFAULT_TARGETS;
+}
+
+function getRecordYear(record: DepartmentRecord): number {
+  const year = Number.parseInt(record.연도, 10);
+  return Number.isFinite(year) ? year : Number.NEGATIVE_INFINITY;
+}
+
+function getLatestRecord(records: DepartmentRecord[]): DepartmentRecord | undefined {
+  return records.reduce<DepartmentRecord | undefined>((latest, record) => {
+    if (!latest) return record;
+    return getRecordYear(record) > getRecordYear(latest) ? record : latest;
+  }, undefined);
+}
+
+function getSortedRecordYears(records: DepartmentRecord[]): string[] {
+  return Array.from(new Set(records.map((record) => record.연도))).sort(
+    (a, b) => Number.parseInt(b, 10) - Number.parseInt(a, 10)
+  );
+}
+
+function getGpaMax(gpaType: GpaType): number {
+  return gpaType === "100" ? 100 : GPA_SCALE_MAX[gpaType];
+}
+
+function roundToStep(value: number, step: number): number {
+  return Math.round(value / step) * step;
+}
+
+function roundToTwoDecimals(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getGpa100ForInput(gpaType: GpaType, gpaRaw: number): number {
+  if (gpaType === "100") {
+    return clamp(gpaRaw, 0, 100);
+  }
+
+  return convertGpaTo100Scale(gpaRaw, GPA_SCALE_MAX[gpaType]);
+}
+
+function convertGpa100ToInput(gpa100: number, targetType: GpaType): number {
+  const normalizedGpa100 = clamp(gpa100, 0, 100);
+
+  if (targetType === "100") {
+    return roundToTwoDecimals(normalizedGpa100);
+  }
+
+  const max = GPA_SCALE_MAX[targetType];
+  const raw = normalizedGpa100 <= 60
+    ? 1
+    : 1 + ((normalizedGpa100 - 60) * (max - 1)) / 40;
+
+  return roundToTwoDecimals(clamp(roundToStep(raw, 0.05), 0, max));
+}
+
+function calculateChartDomain(data: ChartDataPoint[], dataKey: ChartDataKey): ChartAxisDomain {
+  const values = data
+    .map((point) => point[dataKey])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+
+  if (values.length === 0) {
+    return ["auto", "auto"];
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min;
+  const padding = Math.max(span * 0.12, Math.abs(max) * 0.03, 1);
+
+  if (span === 0) {
+    return [roundToTwoDecimals(Math.max(0, min - padding)), roundToTwoDecimals(max + padding)];
+  }
+
+  return [roundToTwoDecimals(Math.max(0, min - padding)), roundToTwoDecimals(max + padding)];
+}
+
 export default function App() {
   // =========================================================================
   // 1. Core State Management (LocalStorage synced with fallback protection)
@@ -77,10 +237,10 @@ export default function App() {
     }
   });
 
-  const [gpaType, setGpaType] = useState<"100" | "4.5" | "4.3">(() => {
+  const [gpaType, setGpaType] = useState<GpaType>(() => {
     try {
       const saved = localStorage.getItem("t27_gpa_type");
-      return (saved as "100" | "4.5" | "4.3") || "100";
+      return isGpaType(saved) ? saved : "100";
     } catch {
       return "100";
     }
@@ -96,18 +256,12 @@ export default function App() {
     }
   });
 
-  const [targets, setTargets] = useState<Array<{ univ: string; dept: string }>>(() => {
+  const [targets, setTargets] = useState<Target[]>(() => {
     try {
       const saved = localStorage.getItem("t27_targets");
-      return saved ? JSON.parse(saved) : [
-        { univ: "부산대학교", dept: "기계공학부" },
-        { univ: "경북대학교", dept: "기계공학과" }
-      ];
+      return parseSavedTargets(saved);
     } catch {
-      return [
-        { univ: "부산대학교", dept: "기계공학부" },
-        { univ: "경북대학교", dept: "기계공학과" }
-      ];
+      return DEFAULT_TARGETS;
     }
   });
 
@@ -147,7 +301,7 @@ export default function App() {
   // Derived 100-scale GPA computation
   const gpa100 = useMemo(() => {
     if (gpaType === "100") return gpaRaw;
-    return convertGpaTo100Scale(gpaRaw, parseFloat(gpaType) as 4.5 | 4.3);
+    return convertGpaTo100Scale(gpaRaw, GPA_SCALE_MAX[gpaType]);
   }, [gpaRaw, gpaType]);
 
   // =========================================================================
@@ -163,7 +317,7 @@ export default function App() {
     univ: "부산대학교",
     dept: "기계공학부"
   });
-  const [chartMetric, setChartMetric] = useState<"toeic_orig" | "toeic_conv" | "gpa_orig" | "gpa_conv" | "competition">("toeic_orig");
+  const [chartMetric, setChartMetric] = useState<ChartMetric>("toeic_orig");
 
   // Compile list of unique standard universities
   const universities = useMemo(() => {
@@ -190,12 +344,16 @@ export default function App() {
     return grouped;
   }, []);
 
+  const recentRecordYears = useMemo(() => getSortedRecordYears(standardRecords).slice(0, 3), []);
+
   const latestExplorerRecords = useMemo(() => {
     const latest = new Map<string, DepartmentRecord>();
 
     standardRecords.forEach((record) => {
       const key = getRecordKey(record.대학명, record.학과);
-      if (!latest.has(key)) {
+      const existing = latest.get(key);
+
+      if (!existing || getRecordYear(record) > getRecordYear(existing)) {
         latest.set(key, record);
       }
     });
@@ -262,10 +420,18 @@ export default function App() {
     return targets.some(t => t.univ === univ && t.dept === dept);
   };
 
+  const handleGpaTypeChange = (nextType: GpaType) => {
+    if (nextType === gpaType) return;
+
+    const currentGpa100 = getGpa100ForInput(gpaType, gpaRaw);
+    setGpaType(nextType);
+    setGpaRaw(convertGpa100ToInput(currentGpa100, nextType));
+  };
+
   // =========================================================================
   // 4. Computation of Historical Trend Chart Data (With Converted Score Support)
   // =========================================================================
-  const chartData = useMemo(() => {
+  const chartData = useMemo<ChartDataPoint[]>(() => {
     if (!chartTarget) return [];
     
     // Extract 24, 25, 26 records for this specific major in this university
@@ -293,6 +459,12 @@ export default function App() {
       };
     });
   }, [chartTarget, recordsByDepartment]);
+
+  const selectedChartMetric = CHART_METRIC_CONFIG[chartMetric];
+  const chartYAxisDomain = useMemo(
+    () => calculateChartDomain(chartData, selectedChartMetric.dataKey),
+    [chartData, selectedChartMetric.dataKey]
+  );
 
   return (
     <div className="app-container">
@@ -355,19 +527,19 @@ export default function App() {
               <div className="spec-tabs">
                 <button 
                   className={`spec-tab ${gpaType === "100" ? "active" : ""}`}
-                  onClick={() => { setGpaType("100"); setGpaRaw(90); }}
+                  onClick={() => handleGpaTypeChange("100")}
                 >
                   백분위 (100)
                 </button>
                 <button 
                   className={`spec-tab ${gpaType === "4.5" ? "active" : ""}`}
-                  onClick={() => { setGpaType("4.5"); setGpaRaw(4.0); }}
+                  onClick={() => handleGpaTypeChange("4.5")}
                 >
                   4.5 만점
                 </button>
                 <button 
                   className={`spec-tab ${gpaType === "4.3" ? "active" : ""}`}
-                  onClick={() => { setGpaType("4.3"); setGpaRaw(3.8); }}
+                  onClick={() => handleGpaTypeChange("4.3")}
                 >
                   4.3 만점
                 </button>
@@ -378,7 +550,7 @@ export default function App() {
                   type="number" 
                   step={gpaType === "100" ? 1 : 0.05}
                   min={gpaType === "100" ? 0 : 0.0}
-                  max={gpaType === "100" ? 100 : parseFloat(gpaType)}
+                  max={getGpaMax(gpaType)}
                   value={gpaRaw} 
                   onChange={(e) => setGpaRaw(parseFloat(e.target.value) || 0)} 
                 />
@@ -416,13 +588,7 @@ export default function App() {
                     📈 {chartTarget.univ} {chartTarget.dept} 입결 대시보드
                   </h3>
                   <p style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: "500", marginTop: "2px" }}>
-                    현재 선택 지표: {
-                      chartMetric === "toeic_orig" ? "공인영어 원점수 (TOEIC)" :
-                      chartMetric === "toeic_conv" ? "공인영어 환산점수" :
-                      chartMetric === "gpa_orig" ? "전적대학 백분위 평균" :
-                      chartMetric === "gpa_conv" ? "전적대학 환산점수" :
-                      "실질 경쟁률"
-                    }
+                    현재 선택 지표: {selectedChartMetric.label}
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -436,7 +602,11 @@ export default function App() {
                       outline: "none"
                     }}
                     value={chartMetric}
-                    onChange={(e) => setChartMetric(e.target.value as any)}
+                    onChange={(e) => {
+                      if (isChartMetric(e.target.value)) {
+                        setChartMetric(e.target.value);
+                      }
+                    }}
                   >
                     <option value="toeic_orig">영어 원점수 (TOEIC)</option>
                     <option value="toeic_conv">영어 환산점수</option>
@@ -456,11 +626,7 @@ export default function App() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                     <XAxis dataKey="year" tick={{ fontSize: 11, fontWeight: "600" }} />
                     <YAxis 
-                      domain={
-                        chartMetric.includes("toeic") ? [400, 990] :
-                        chartMetric.includes("gpa") ? [50, 100] :
-                        [0, "auto"]
-                      }
+                      domain={chartYAxisDomain}
                       tick={{ fontSize: 11, fontWeight: "600" }} 
                     />
                     <Tooltip 
@@ -471,18 +637,8 @@ export default function App() {
                     <Line 
                       type="monotone" 
                       connectNulls={true}
-                      dataKey={
-                        chartMetric === "toeic_orig" ? "영어 원점수 (TOEIC)" :
-                        chartMetric === "toeic_conv" ? "영어 환산점수" :
-                        chartMetric === "gpa_orig" ? "전적대 백분위 (GPA)" :
-                        chartMetric === "gpa_conv" ? "전적대 환산점수" :
-                        "실질 경쟁률"
-                      } 
-                      stroke={
-                        chartMetric.includes("toeic") ? "var(--primary-color)" : 
-                        chartMetric.includes("gpa") ? "var(--secondary-color)" : 
-                        "#ef4444"
-                      }
+                      dataKey={selectedChartMetric.dataKey} 
+                      stroke={selectedChartMetric.color}
                       strokeWidth={3}
                       activeDot={{ r: 8 }}
                     />
@@ -513,22 +669,19 @@ export default function App() {
             ) : (
               <div className="basket-grid">
                 {targets.map((t, index) => {
-                  // Find the latest 2026 record (or 2025, etc.) to use as evaluation reference
                   const history = recordsByDepartment.get(getRecordKey(t.univ, t.dept)) ?? [];
-                  const r2026 = history.find(r => r.연도 === "2026") || history.find(r => r.연도 === "2025") || history[0];
+                  const referenceRecord = getLatestRecord(history);
 
-                  if (!r2026) return null;
+                  if (!referenceRecord) return null;
 
                   // Perform calculation
-                  const res = calculateScore(t.univ, r2026.연도, toeic, gpa100, r2026);
+                  const res = calculateScore(t.univ, referenceRecord.연도, toeic, gpa100, referenceRecord);
 
                   // Extract 3-year history for mini table display
-                  const h2026 = history.find(r => r.연도 === "2026");
-                  const h2025 = history.find(r => r.연도 === "2025");
-                  const h2024 = history.find(r => r.연도 === "2024");
+                  const historyByYear = new Map(history.map((record) => [record.연도, record]));
 
                   const deficit = res.diff !== null ? -res.diff : 0;
-                  const analysis = analyzeScoreDeficit(t.univ, r2026.연도, gpaType, deficit);
+                  const analysis = analyzeScoreDeficit(t.univ, referenceRecord.연도, gpaType, deficit);
 
                   return (
                     <div className="target-card" key={`${t.univ}-${t.dept}-${index}`}>
@@ -537,12 +690,12 @@ export default function App() {
                         <div className="target-card-meta">
                           <h3>{t.dept}</h3>
                           <p>{t.univ}</p>
-                          {(r2026.합격자기준 === "최초" || r2026.합격자기준 === "최종") && (
+                          {(referenceRecord.합격자기준 === "최초" || referenceRecord.합격자기준 === "최종") && (
                             <span
                               style={{ fontSize: "10px", fontWeight: "700", color: "var(--text-muted)" }}
                               title="이 대학이 공개하는 합격자 평균 성적이 최초합격자 기준인지 최종등록자 기준인지를 나타냅니다"
                             >
-                              [{r2026.합격자기준}합격자 기준]
+                              [{referenceRecord.합격자기준}합격자 기준]
                             </span>
                           )}
                         </div>
@@ -556,7 +709,7 @@ export default function App() {
                         <div className="compare-container">
                           <div className="compare-row">
                             <span className="compare-label">
-                              {r2026.연도}년도 합격 평균 대비
+                              {referenceRecord.연도}년도 합격 평균 대비
                             </span>
                             {res.status === "safe" && <span className="status-badge status-safe">🟢 전년도 평균 상회</span>}
                             {res.status === "borderline" && <span className="status-badge status-borderline">🟡 전년도 평균 근접</span>}
@@ -581,7 +734,7 @@ export default function App() {
 
                           <div className="compare-row">
                             <span style={{ fontSize: "11px", fontWeight: "600", color: "var(--text-secondary)" }}>
-                              합격선 지표합 ({r2026.연도} 평균)
+                              합격선 지표합 ({referenceRecord.연도} 평균)
                             </span>
                             <span className="compare-score" style={{ color: "var(--text-secondary)" }}>
                               {res.acceptedIndexSum !== null ? `${res.acceptedIndexSum}점` : "비공개"}
@@ -667,7 +820,7 @@ export default function App() {
                                   )}
                                   {analysis.gpaNeeded !== null && (
                                     <li style={{ color: "var(--text-secondary)" }}>
-                                      • <strong>GPA만</strong> 올릴 시: <strong style={{ color: "var(--text-primary)" }}>+{analysis.gpaNeeded}점</strong> {gpaRaw + analysis.gpaNeeded > (gpaType === "100" ? 100 : parseFloat(gpaType)) ? "(만점 초과로 불가)" : `(목표: ${(gpaRaw + analysis.gpaNeeded).toFixed(2)}점)`}
+                                      • <strong>GPA만</strong> 올릴 시: <strong style={{ color: "var(--text-primary)" }}>+{analysis.gpaNeeded}점</strong> {gpaRaw + analysis.gpaNeeded > getGpaMax(gpaType) ? "(만점 초과로 불가)" : `(목표: ${(gpaRaw + analysis.gpaNeeded).toFixed(2)}점)`}
                                     </li>
                                   )}
                                 </ul>
@@ -710,11 +863,12 @@ export default function App() {
                             </tr>
                           </thead>
                           <tbody>
-                            {[h2026, h2025, h2024].map((h, i) => {
+                            {recentRecordYears.map((year) => {
+                              const h = historyByYear.get(year);
                               if (!h) {
                                 return (
-                                  <tr key={i}>
-                                    <td>{2026 - i}년</td>
+                                  <tr key={year}>
+                                    <td>{year}년</td>
                                     <td colSpan={5} style={{color: "var(--text-muted)", fontStyle: "italic"}}>미선발</td>
                                   </tr>
                                 );
