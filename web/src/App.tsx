@@ -51,6 +51,20 @@ type ChartDataPoint = {
 };
 type ChartDataKey = Exclude<keyof ChartDataPoint, "year" | "originalName">;
 type ChartAxisDomain = readonly [number, number] | readonly ["auto", "auto"];
+type RecentHistoryRow = {
+  year: string;
+  record: DepartmentRecord | null;
+};
+type TargetSummary = {
+  key: string;
+  target: Target;
+  referenceRecord: DepartmentRecord;
+  score: ReturnType<typeof calculateScore>;
+  deficit: number;
+  analysis: ReturnType<typeof analyzeScoreDeficit>;
+  renamedHistoryText: string;
+  recentHistoryRows: RecentHistoryRow[];
+};
 
 const GPA_SCALE_MAX: Record<Exclude<GpaType, "100">, 4.5 | 4.3> = {
   "4.5": 4.5,
@@ -117,6 +131,10 @@ function getRecordKey(univ: string, dept: string): string {
   return `${univ}:::${dept}`;
 }
 
+function getTargetKey(target: Target): string {
+  return getRecordKey(target.univ, target.dept);
+}
+
 function isGpaType(value: string | null): value is GpaType {
   return value === "100" || value === "4.5" || value === "4.3";
 }
@@ -161,6 +179,27 @@ function getSortedRecordYears(records: DepartmentRecord[]): string[] {
   return Array.from(new Set(records.map((record) => record.연도))).sort(
     (a, b) => Number.parseInt(b, 10) - Number.parseInt(a, 10)
   );
+}
+
+function getCompetitionRatio(record: DepartmentRecord): number | null {
+  if (!record.모집인원 || !record.지원인원 || record.모집인원 <= 0) {
+    return null;
+  }
+
+  return Math.round((record.지원인원 / record.모집인원) * 100) / 100;
+}
+
+function formatCompetitionRatio(record: DepartmentRecord): string {
+  const ratio = getCompetitionRatio(record);
+  return ratio === null ? "-" : `${Math.round(ratio * 10) / 10}:1`;
+}
+
+function getRenamedHistoryText(history: DepartmentRecord[]): string {
+  return history
+    .flatMap((record) => (
+      record.학과 !== record.학과_원본명 ? [`[${record.연도}년] ${record.학과_원본명}`] : []
+    ))
+    .join(" ➔ ");
 }
 
 function getGpaMax(gpaType: GpaType): number {
@@ -230,8 +269,8 @@ export default function App() {
   const [toeic, setToeic] = useState<number>(() => {
     try {
       const saved = localStorage.getItem("t27_toeic");
-      const val = saved ? parseInt(saved, 10) : 850;
-      return isNaN(val) ? 850 : val;
+      const val = saved ? Number.parseInt(saved, 10) : 850;
+      return Number.isNaN(val) ? 850 : val;
     } catch {
       return 850;
     }
@@ -249,8 +288,8 @@ export default function App() {
   const [gpaRaw, setGpaRaw] = useState<number>(() => {
     try {
       const saved = localStorage.getItem("t27_gpa_raw");
-      const val = saved ? parseFloat(saved) : 90;
-      return isNaN(val) ? 90 : val;
+      const val = saved ? Number.parseFloat(saved) : 90;
+      return Number.isNaN(val) ? 90 : val;
     } catch {
       return 90;
     }
@@ -345,6 +384,8 @@ export default function App() {
   }, []);
 
   const recentRecordYears = useMemo(() => getSortedRecordYears(standardRecords).slice(0, 3), []);
+  const selectedUnivSet = useMemo(() => new Set(selectedUnivs), [selectedUnivs]);
+  const targetKeySet = useMemo(() => new Set(targets.map(getTargetKey)), [targets]);
 
   const latestExplorerRecords = useMemo(() => {
     const latest = new Map<string, DepartmentRecord>();
@@ -373,7 +414,7 @@ export default function App() {
 
     return latestExplorerRecords.filter(r => {
       // University matching
-      if (selectedUnivs.length > 0 && !selectedUnivs.includes(r.대학명)) {
+      if (selectedUnivSet.size > 0 && !selectedUnivSet.has(r.대학명)) {
         return false;
       }
       // Text query matching (support normal keywords AND chosung-initial matching)
@@ -394,7 +435,7 @@ export default function App() {
       }
       return true;
     });
-  }, [latestExplorerRecords, searchQuery, selectedUnivs]);
+  }, [latestExplorerRecords, searchQuery, selectedUnivSet]);
 
   // Paginated explorer list
   const paginatedExplorerList = useMemo(() => {
@@ -408,16 +449,18 @@ export default function App() {
   // 3. Basket Management Helpers
   // =========================================================================
   const toggleTarget = (univ: string, dept: string) => {
-    const isAdded = targets.some(t => t.univ === univ && t.dept === dept);
-    if (isAdded) {
-      setTargets(targets.filter(t => !(t.univ === univ && t.dept === dept)));
-    } else {
-      setTargets([...targets, { univ, dept }]);
-    }
+    const target = { univ, dept };
+    const targetKey = getTargetKey(target);
+
+    setTargets((currentTargets) => (
+      currentTargets.some((current) => getTargetKey(current) === targetKey)
+        ? currentTargets.filter((current) => getTargetKey(current) !== targetKey)
+        : [...currentTargets, target]
+    ));
   };
 
   const isTargetAdded = (univ: string, dept: string) => {
-    return targets.some(t => t.univ === univ && t.dept === dept);
+    return targetKeySet.has(getRecordKey(univ, dept));
   };
 
   const handleGpaTypeChange = (nextType: GpaType) => {
@@ -438,13 +481,9 @@ export default function App() {
     const history = recordsByDepartment.get(getRecordKey(chartTarget.univ, chartTarget.dept)) ?? [];
     
     // Sort ascending by year for line chart continuity
-    const sortedHistory = [...history].sort((a, b) => parseInt(a.연도) - parseInt(b.연도));
+    const sortedHistory = [...history].sort((a, b) => getRecordYear(a) - getRecordYear(b));
     
     return sortedHistory.map(r => {
-      const ratio = r.모집인원 && r.지원인원 && r.모집인원 > 0 
-        ? Math.round((r.지원인원 / r.모집인원) * 100) / 100 
-        : null;
-        
       // Dynamic computation of standard conversion values of that historical year
       const acceptedScore = calculateAcceptedScoreBreakdown(r);
 
@@ -454,7 +493,7 @@ export default function App() {
         "영어 환산점수": acceptedScore.englishConv,
         "전적대 백분위 (GPA)": r.최종합격_학점원점수_100점만점,
         "전적대 환산점수": acceptedScore.gpaConv,
-        "실질 경쟁률": ratio,
+        "실질 경쟁률": getCompetitionRatio(r),
         originalName: r.학과_원본명
       };
     });
@@ -465,6 +504,37 @@ export default function App() {
     () => calculateChartDomain(chartData, selectedChartMetric.dataKey),
     [chartData, selectedChartMetric.dataKey]
   );
+
+  const targetSummaries = useMemo<TargetSummary[]>(() => {
+    return targets.flatMap((target) => {
+      const key = getTargetKey(target);
+      const history = recordsByDepartment.get(key) ?? [];
+      const referenceRecord = getLatestRecord(history);
+
+      if (!referenceRecord) {
+        return [];
+      }
+
+      const score = calculateScore(target.univ, referenceRecord.연도, toeic, gpa100, referenceRecord);
+      const deficit = score.diff !== null ? -score.diff : 0;
+      const analysis = analyzeScoreDeficit(target.univ, referenceRecord.연도, gpaType, deficit);
+      const historyByYear = new Map(history.map((record) => [record.연도, record]));
+
+      return [{
+        key,
+        target,
+        referenceRecord,
+        score,
+        deficit,
+        analysis,
+        renamedHistoryText: getRenamedHistoryText(history),
+        recentHistoryRows: recentRecordYears.map((year) => ({
+          year,
+          record: historyByYear.get(year) ?? null,
+        })),
+      }];
+    });
+  }, [gpa100, gpaType, recentRecordYears, recordsByDepartment, targets, toeic]);
 
   return (
     <div className="app-container">
@@ -506,7 +576,7 @@ export default function App() {
                   max={990} 
                   step={5}
                   value={toeic} 
-                  onChange={(e) => setToeic(parseInt(e.target.value) || 0)} 
+                  onChange={(e) => setToeic(Number.parseInt(e.target.value, 10) || 0)} 
                 />
                 <span>점 / 990점</span>
               </div>
@@ -516,7 +586,7 @@ export default function App() {
                 max={990} 
                 step={5} 
                 value={toeic} 
-                onChange={(e) => setToeic(parseInt(e.target.value))} 
+                onChange={(e) => setToeic(Number.parseInt(e.target.value, 10))} 
                 style={{ width: "100%", accentColor: "var(--primary-color)" }}
               />
             </div>
@@ -552,7 +622,7 @@ export default function App() {
                   min={gpaType === "100" ? 0 : 0.0}
                   max={getGpaMax(gpaType)}
                   value={gpaRaw} 
-                  onChange={(e) => setGpaRaw(parseFloat(e.target.value) || 0)} 
+                  onChange={(e) => setGpaRaw(Number.parseFloat(e.target.value) || 0)} 
                 />
                 <span>점 / {gpaType === "100" ? "100" : gpaType}점</span>
               </div>
@@ -668,28 +738,23 @@ export default function App() {
               </div>
             ) : (
               <div className="basket-grid">
-                {targets.map((t, index) => {
-                  const history = recordsByDepartment.get(getRecordKey(t.univ, t.dept)) ?? [];
-                  const referenceRecord = getLatestRecord(history);
-
-                  if (!referenceRecord) return null;
-
-                  // Perform calculation
-                  const res = calculateScore(t.univ, referenceRecord.연도, toeic, gpa100, referenceRecord);
-
-                  // Extract 3-year history for mini table display
-                  const historyByYear = new Map(history.map((record) => [record.연도, record]));
-
-                  const deficit = res.diff !== null ? -res.diff : 0;
-                  const analysis = analyzeScoreDeficit(t.univ, referenceRecord.연도, gpaType, deficit);
-
+                {targetSummaries.map(({
+                  key,
+                  target,
+                  referenceRecord,
+                  score,
+                  deficit,
+                  analysis,
+                  renamedHistoryText,
+                  recentHistoryRows,
+                }) => {
                   return (
-                    <div className="target-card" key={`${t.univ}-${t.dept}-${index}`}>
+                    <div className="target-card" key={key}>
                       <div className="target-card-header">
-                        <div className="univ-emblem-badge">{t.univ.charAt(0)}</div>
+                        <div className="univ-emblem-badge">{target.univ.charAt(0)}</div>
                         <div className="target-card-meta">
-                          <h3>{t.dept}</h3>
-                          <p>{t.univ}</p>
+                          <h3>{target.dept}</h3>
+                          <p>{target.univ}</p>
                           {(referenceRecord.합격자기준 === "최초" || referenceRecord.합격자기준 === "최종") && (
                             <span
                               style={{ fontSize: "10px", fontWeight: "700", color: "var(--text-muted)" }}
@@ -699,7 +764,7 @@ export default function App() {
                             </span>
                           )}
                         </div>
-                        <button className="btn-remove-target" onClick={() => toggleTarget(t.univ, t.dept)}>
+                        <button className="btn-remove-target" onClick={() => toggleTarget(target.univ, target.dept)}>
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -711,10 +776,10 @@ export default function App() {
                             <span className="compare-label">
                               {referenceRecord.연도}년도 합격 평균 대비
                             </span>
-                            {res.status === "safe" && <span className="status-badge status-safe">🟢 전년도 평균 상회</span>}
-                            {res.status === "borderline" && <span className="status-badge status-borderline">🟡 전년도 평균 근접</span>}
-                            {res.status === "risk" && <span className="status-badge status-risk">🔴 전년도 평균 미달</span>}
-                            {res.status === "unknown" && <span className="status-badge status-borderline" style={{backgroundColor: "#f1f5f9", color: "#64748b"}}>⚪ 데이터 부족</span>}
+                            {score.status === "safe" && <span className="status-badge status-safe">🟢 전년도 평균 상회</span>}
+                            {score.status === "borderline" && <span className="status-badge status-borderline">🟡 전년도 평균 근접</span>}
+                            {score.status === "risk" && <span className="status-badge status-risk">🔴 전년도 평균 미달</span>}
+                            {score.status === "unknown" && <span className="status-badge status-borderline" style={{backgroundColor: "#f1f5f9", color: "#64748b"}}>⚪ 데이터 부족</span>}
                           </div>
 
                           <div className="compare-row" style={{ marginTop: "10px" }}>
@@ -728,7 +793,7 @@ export default function App() {
                               </span>
                             </span>
                             <span className="compare-score" style={{ color: "var(--primary-color)" }}>
-                              {res.myIndexSum !== null ? `${res.myIndexSum}점` : "계산 불가"}
+                              {score.myIndexSum !== null ? `${score.myIndexSum}점` : "계산 불가"}
                             </span>
                           </div>
 
@@ -737,30 +802,30 @@ export default function App() {
                               합격선 지표합 ({referenceRecord.연도} 평균)
                             </span>
                             <span className="compare-score" style={{ color: "var(--text-secondary)" }}>
-                              {res.acceptedIndexSum !== null ? `${res.acceptedIndexSum}점` : "비공개"}
+                              {score.acceptedIndexSum !== null ? `${score.acceptedIndexSum}점` : "비공개"}
                             </span>
                           </div>
 
-                          {res.diff !== null && (
+                          {score.diff !== null && (
                             <div style={{ 
                               textAlign: "right", 
                               fontSize: "13px", 
                               fontWeight: "700", 
-                              color: res.diff >= 0 ? "var(--status-safe)" : "var(--status-risk)",
+                              color: score.diff >= 0 ? "var(--status-safe)" : "var(--status-risk)",
                               marginTop: "4px"
                             }}>
-                              {res.diff >= 0 ? `+${res.diff}` : res.diff}점 차이
+                              {score.diff >= 0 ? `+${score.diff}` : score.diff}점 차이
                             </div>
                           )}
 
                           {/* Mini visual indicator sum track */}
-                          {res.myIndexSum !== null && res.acceptedIndexSum !== null && (
+                          {score.myIndexSum !== null && score.acceptedIndexSum !== null && (
                             <div className="compare-progress-track" style={{ marginTop: "12px" }}>
                               <div 
                                 className="compare-progress-fill"
                                 style={{ 
-                                  width: `${Math.min(100, Math.max(10, (res.myIndexSum / (res.acceptedIndexSum * 1.15)) * 100))}%`,
-                                  backgroundColor: res.status === "safe" ? "var(--status-safe)" : res.status === "borderline" ? "var(--status-borderline)" : "var(--status-risk)"
+                                  width: `${Math.min(100, Math.max(10, (score.myIndexSum / (score.acceptedIndexSum * 1.15)) * 100))}%`,
+                                  backgroundColor: score.status === "safe" ? "var(--status-safe)" : score.status === "borderline" ? "var(--status-borderline)" : "var(--status-risk)"
                                 }}
                               />
                             </div>
@@ -768,7 +833,7 @@ export default function App() {
                         </div>
 
                         {/* 🎯 HISTORICAL MAJOR NAME TIMELINE */}
-                        {history.some(h => h.학과 !== h.학과_원본명) && (
+                        {renamedHistoryText !== "" && (
                           <div style={{ 
                             background: "#f8fafc", 
                             padding: "8px 12px", 
@@ -783,7 +848,7 @@ export default function App() {
                           }}>
                             <span style={{ fontWeight: "700", color: "var(--primary-color)", whiteSpace: "nowrap" }}>📍 구 명칭 변천사:</span>
                             <span style={{ color: "var(--text-secondary)" }}>
-                              {history.map(h => h.학과 !== h.학과_원본명 ? `[${h.연도}년] ${h.학과_원본명}` : null).filter(Boolean).join(" ➔ ")}
+                              {renamedHistoryText}
                             </span>
                           </div>
                         )}
@@ -863,8 +928,8 @@ export default function App() {
                             </tr>
                           </thead>
                           <tbody>
-                            {recentRecordYears.map((year) => {
-                              const h = historyByYear.get(year);
+                            {recentHistoryRows.map(({ year, record }) => {
+                              const h = record;
                               if (!h) {
                                 return (
                                   <tr key={year}>
@@ -873,15 +938,12 @@ export default function App() {
                                   </tr>
                                 );
                               }
-                              const comp = h.모집인원 && h.지원인원 && h.모집인원 > 0 
-                                ? `${Math.round((h.지원인원 / h.모집인원) * 10) / 10}:1` 
-                                : "-";
                               return (
                                 <tr key={h.연도}>
                                   <td>{h.연도}년</td>
                                   <td>{h.모집인원 ?? "-"}</td>
                                   <td>{h.지원인원 ?? "-"}</td>
-                                  <td>{comp}</td>
+                                  <td>{formatCompetitionRatio(h)}</td>
                                   <td>{h.최종합격_토익원점수 ?? "비공개"}</td>
                                   <td>{h.최종합격_학점원점수_100점만점 ?? "비공개"}</td>
                                 </tr>
@@ -892,7 +954,7 @@ export default function App() {
                       </div>
 
                       <div className="target-card-footer">
-                        <button className="btn-card-action" onClick={() => setChartTarget({ univ: t.univ, dept: t.dept })}>
+                        <button className="btn-card-action" onClick={() => setChartTarget({ univ: target.univ, dept: target.dept })}>
                           <TrendingUp size={14} />
                           입결 추이 차트
                         </button>
@@ -948,11 +1010,11 @@ export default function App() {
                 key={u}
                 className={`univ-chip ${selectedUnivs.includes(u) ? "active" : ""}`}
                 onClick={() => {
-                  if (selectedUnivs.includes(u)) {
-                    setSelectedUnivs(selectedUnivs.filter(x => x !== u));
-                  } else {
-                    setSelectedUnivs([...selectedUnivs, u]);
-                  }
+                  setSelectedUnivs((currentSelectedUnivs) => (
+                    currentSelectedUnivs.includes(u)
+                      ? currentSelectedUnivs.filter(x => x !== u)
+                      : [...currentSelectedUnivs, u]
+                  ));
                 }}
               >
                 {u}
