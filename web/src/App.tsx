@@ -1,74 +1,66 @@
-import { useState, useEffect, useMemo } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import DepartmentExplorer from "./components/DepartmentExplorer";
+import ChartErrorBoundary from "./components/ChartErrorBoundary";
+import SpecInputPanel from "./components/SpecInputPanel";
+import TargetBasket, { type TargetSummary } from "./components/TargetBasket";
+import type { ChartMetric } from "./components/TrendChart";
 import { 
   calculateScore, 
-  calculateAcceptedScoreBreakdown,
-  convertGpaTo100Scale, 
+  calculateScoreDeficit,
   analyzeScoreDeficit,
   type DepartmentRecord
 } from "./utils/converter";
+import {
+  getLatestComparableRecord,
+  getLatestRecord,
+  getRecordYear,
+} from "./utils/records";
+import { getConversionFormula } from "./utils/formulaRegistry";
+import {
+  isGpaType,
+  convertGpa100ToInput,
+  getGpa100ForInput,
+  parseGpaInput,
+  parseToeicInput,
+  restoreGpaInput,
+  restoreToeicInput,
+  type GpaType,
+} from "./utils/scoreInput";
+import {
+  getRecordKey,
+  getTargetKey,
+  parseSavedTargets,
+  type Target,
+} from "./utils/targets";
+import {
+  readSimulatorStorageSnapshot,
+  STORAGE_KEYS,
+  writeSimulatorStorageValue,
+  type SimulatorStorageKey,
+} from "./utils/storage";
+import {
+  prepareDepartmentRecords,
+  prepareExceptionDepartmentRecords,
+  type ExceptionDepartmentRecord,
+} from "./utils/dataValidation";
 
-import { 
-  Search, 
-  Star, 
-  Trash2, 
-  TrendingUp, 
-  AlertTriangle, 
-  School, 
-  BookOpen, 
-  UserCheck, 
-  X, 
-  ChevronLeft, 
-  ChevronRight,
-  HelpCircle
-} from "lucide-react";
+import { AlertTriangle, School } from "lucide-react";
 
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Legend
-} from "recharts";
-
-// Static database imports (casted for TS safety)
+// Static database imports validated before use
 import rawStandardData from "./data/편입_성적_통합.json";
 
-const standardRecords = rawStandardData as DepartmentRecord[];
+const TrendChart = lazy(() => import("./components/TrendChart"));
 
-type GpaType = "100" | "4.5" | "4.3";
-type Target = { univ: string; dept: string };
-type ChartDataPoint = {
-  year: string;
-  "영어 원점수 (TOEIC)": number | null;
-  "영어 환산점수": number | null;
-  "전적대 백분위 (GPA)": number | null;
-  "전적대 환산점수": number | null;
-  "실질 경쟁률": number | null;
-  originalName: string;
-};
-type ChartDataKey = Exclude<keyof ChartDataPoint, "year" | "originalName">;
-type ChartAxisDomain = readonly [number, number] | readonly ["auto", "auto"];
-type RecentHistoryRow = {
-  year: string;
-  record: DepartmentRecord | null;
-};
-type TargetSummary = {
-  key: string;
-  target: Target;
-  referenceRecord: DepartmentRecord;
-  score: ReturnType<typeof calculateScore>;
-  deficit: number;
-  analysis: ReturnType<typeof analyzeScoreDeficit>;
-  renamedHistoryText: string;
-  recentHistoryRows: RecentHistoryRow[];
-};
-
-const GPA_SCALE_MAX: Record<Exclude<GpaType, "100">, 4.5 | 4.3> = {
-  "4.5": 4.5,
-  "4.3": 4.3,
+type ChartTarget = {
+  univ: string;
+  dept: string;
 };
 
 const DEFAULT_TARGETS: Target[] = [
@@ -76,122 +68,52 @@ const DEFAULT_TARGETS: Target[] = [
   { univ: "경북대학교", dept: "기계공학과" },
 ];
 
-const CHART_METRIC_CONFIG = {
-  toeic_orig: {
-    label: "공인영어 원점수 (TOEIC)",
-    dataKey: "영어 원점수 (TOEIC)",
-    color: "var(--primary-color)",
-  },
-  toeic_conv: {
-    label: "공인영어 환산점수",
-    dataKey: "영어 환산점수",
-    color: "var(--primary-color)",
-  },
-  gpa_orig: {
-    label: "전적대학 백분위 평균",
-    dataKey: "전적대 백분위 (GPA)",
-    color: "var(--secondary-color)",
-  },
-  gpa_conv: {
-    label: "전적대학 환산점수",
-    dataKey: "전적대 환산점수",
-    color: "var(--secondary-color)",
-  },
-  competition: {
-    label: "실질 경쟁률",
-    dataKey: "실질 경쟁률",
-    color: "#ef4444",
-  },
-} as const satisfies Record<string, { label: string; dataKey: ChartDataKey; color: string }>;
+function buildValidatedData() {
+  const preparedStandardData = prepareDepartmentRecords(rawStandardData);
+  const standardRecords = preparedStandardData.records;
 
-type ChartMetric = keyof typeof CHART_METRIC_CONFIG;
+  return {
+    standardRecords,
+    standardDataIssueCount: preparedStandardData.affectedRecordCount,
+    standardTargetKeys: new Set(
+      standardRecords.map((record) => getRecordKey(record.대학명, record.학과)),
+    ),
+  };
+}
 
-// Korean consonant-initial helper maps
-const KOREAN_CHOSUNG = [
-  'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'
-];
+type ValidatedData = ReturnType<typeof buildValidatedData>;
+let validatedDataCache: ValidatedData | null = null;
 
-function getChosung(text: string | null | undefined): string {
-  if (!text) return "";
-  const str = String(text);
-  let result = "";
-  for (let i = 0; i < str.length; i++) {
-    const code = str.charCodeAt(i) - 44032;
-    if (code >= 0 && code <= 11172) {
-      const chosungIndex = Math.floor(code / 588);
-      result += KOREAN_CHOSUNG[chosungIndex];
-    } else {
-      result += str.charAt(i);
-    }
+function getValidatedData(): ValidatedData {
+  if (validatedDataCache === null) {
+    validatedDataCache = buildValidatedData();
   }
-  return result;
+
+  return validatedDataCache;
 }
 
-function getRecordKey(univ: string, dept: string): string {
-  return `${univ}:::${dept}`;
-}
+type ExceptionHistoryState = {
+  status: "loading" | "ready" | "error";
+  recordsByKeyAndYear: ReadonlyMap<string, ExceptionDepartmentRecord>;
+};
 
-function getTargetKey(target: Target): string {
-  return getRecordKey(target.univ, target.dept);
-}
+const EMPTY_EXCEPTION_RECORDS = new Map<string, ExceptionDepartmentRecord>();
 
-function isGpaType(value: string | null): value is GpaType {
-  return value === "100" || value === "4.5" || value === "4.3";
-}
-
-function isChartMetric(value: string): value is ChartMetric {
-  return value in CHART_METRIC_CONFIG;
-}
-
-function isTarget(value: unknown): value is Target {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "univ" in value &&
-    "dept" in value &&
-    typeof value.univ === "string" &&
-    typeof value.dept === "string"
+function buildExceptionRecordMap(
+  records: ExceptionDepartmentRecord[],
+): ReadonlyMap<string, ExceptionDepartmentRecord> {
+  return new Map(
+    records.map((record) => [
+      `${getRecordKey(record.대학명, record.학과)}::${record.연도}`,
+      record,
+    ]),
   );
-}
-
-function parseSavedTargets(saved: string | null): Target[] {
-  if (!saved) {
-    return DEFAULT_TARGETS;
-  }
-
-  const parsed: unknown = JSON.parse(saved);
-  return Array.isArray(parsed) && parsed.every(isTarget) ? parsed : DEFAULT_TARGETS;
-}
-
-function getRecordYear(record: DepartmentRecord): number {
-  const year = Number.parseInt(record.연도, 10);
-  return Number.isFinite(year) ? year : Number.NEGATIVE_INFINITY;
-}
-
-function getLatestRecord(records: DepartmentRecord[]): DepartmentRecord | undefined {
-  return records.reduce<DepartmentRecord | undefined>((latest, record) => {
-    if (!latest) return record;
-    return getRecordYear(record) > getRecordYear(latest) ? record : latest;
-  }, undefined);
 }
 
 function getSortedRecordYears(records: DepartmentRecord[]): string[] {
   return Array.from(new Set(records.map((record) => record.연도))).sort(
     (a, b) => Number.parseInt(b, 10) - Number.parseInt(a, 10)
   );
-}
-
-function getCompetitionRatio(record: DepartmentRecord): number | null {
-  if (!record.모집인원 || !record.지원인원 || record.모집인원 <= 0) {
-    return null;
-  }
-
-  return Math.round((record.지원인원 / record.모집인원) * 100) / 100;
-}
-
-function formatCompetitionRatio(record: DepartmentRecord): string {
-  const ratio = getCompetitionRatio(record);
-  return ratio === null ? "-" : `${Math.round(ratio * 10) / 10}:1`;
 }
 
 function getRenamedHistoryText(history: DepartmentRecord[]): string {
@@ -202,168 +124,126 @@ function getRenamedHistoryText(history: DepartmentRecord[]): string {
     .join(" ➔ ");
 }
 
-function getGpaMax(gpaType: GpaType): number {
-  return gpaType === "100" ? 100 : GPA_SCALE_MAX[gpaType];
-}
-
-function roundToStep(value: number, step: number): number {
-  return Math.round(value / step) * step;
-}
-
-function roundToTwoDecimals(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
-
-function getGpa100ForInput(gpaType: GpaType, gpaRaw: number): number {
-  if (gpaType === "100") {
-    return clamp(gpaRaw, 0, 100);
-  }
-
-  return convertGpaTo100Scale(gpaRaw, GPA_SCALE_MAX[gpaType]);
-}
-
-function convertGpa100ToInput(gpa100: number, targetType: GpaType): number {
-  const normalizedGpa100 = clamp(gpa100, 0, 100);
-
-  if (targetType === "100") {
-    return roundToTwoDecimals(normalizedGpa100);
-  }
-
-  const max = GPA_SCALE_MAX[targetType];
-  const raw = normalizedGpa100 <= 60
-    ? 1
-    : 1 + ((normalizedGpa100 - 60) * (max - 1)) / 40;
-
-  return roundToTwoDecimals(clamp(roundToStep(raw, 0.05), 0, max));
-}
-
-function calculateChartDomain(data: ChartDataPoint[], dataKey: ChartDataKey): ChartAxisDomain {
-  const values = data
-    .map((point) => point[dataKey])
-    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
-
-  if (values.length === 0) {
-    return ["auto", "auto"];
-  }
-
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min;
-  const padding = Math.max(span * 0.12, Math.abs(max) * 0.03, 1);
-
-  if (span === 0) {
-    return [roundToTwoDecimals(Math.max(0, min - padding)), roundToTwoDecimals(max + padding)];
-  }
-
-  return [roundToTwoDecimals(Math.max(0, min - padding)), roundToTwoDecimals(max + padding)];
-}
-
 export default function App() {
+  const {
+    standardRecords,
+    standardDataIssueCount,
+    standardTargetKeys,
+  } = getValidatedData();
+  const [exceptionHistory, setExceptionHistory] = useState<ExceptionHistoryState>({
+    status: "loading",
+    recordsByKeyAndYear: EMPTY_EXCEPTION_RECORDS,
+  });
+
   // =========================================================================
   // 1. Core State Management (LocalStorage synced with fallback protection)
   // =========================================================================
-  const [toeic, setToeic] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem("t27_toeic");
-      const val = saved ? Number.parseInt(saved, 10) : 850;
-      return Number.isNaN(val) ? 850 : val;
-    } catch {
-      return 850;
-    }
-  });
+  const [initialStorage] = useState(readSimulatorStorageSnapshot);
+  const [storageAvailable, setStorageAvailable] = useState(
+    initialStorage.available,
+  );
+  const [toeicInput, setToeicInput] = useState<string>(() => (
+    restoreToeicInput(initialStorage.values[STORAGE_KEYS.toeic])
+  ));
 
   const [gpaType, setGpaType] = useState<GpaType>(() => {
-    try {
-      const saved = localStorage.getItem("t27_gpa_type");
-      return isGpaType(saved) ? saved : "100";
-    } catch {
-      return "100";
-    }
+    const saved = initialStorage.values[STORAGE_KEYS.gpaType];
+    return isGpaType(saved) ? saved : "100";
   });
 
-  const [gpaRaw, setGpaRaw] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem("t27_gpa_raw");
-      const val = saved ? Number.parseFloat(saved) : 90;
-      return Number.isNaN(val) ? 90 : val;
-    } catch {
-      return 90;
-    }
-  });
+  const [gpaRawInput, setGpaRawInput] = useState<string>(() => (
+    restoreGpaInput(initialStorage.values[STORAGE_KEYS.gpaRaw], gpaType)
+  ));
 
-  const [targets, setTargets] = useState<Target[]>(() => {
-    try {
-      const saved = localStorage.getItem("t27_targets");
-      return parseSavedTargets(saved);
-    } catch {
-      return DEFAULT_TARGETS;
+  const [targets, setTargets] = useState<Target[]>(() => (
+    parseSavedTargets(
+      initialStorage.values[STORAGE_KEYS.targets],
+      standardTargetKeys,
+      DEFAULT_TARGETS,
+    )
+  ));
+
+  const toeic = useMemo(() => parseToeicInput(toeicInput), [toeicInput]);
+  const gpaRaw = useMemo(
+    () => parseGpaInput(gpaRawInput, gpaType),
+    [gpaRawInput, gpaType]
+  );
+  const persistStorageValue = useCallback((
+    key: SimulatorStorageKey,
+    value: string,
+  ) => {
+    if (!writeSimulatorStorageValue(key, value)) {
+      setStorageAvailable(false);
     }
-  });
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    import("./data/편입_예외학과_통합.json")
+      .then(({ default: rawExceptionData }) => {
+        const records = prepareExceptionDepartmentRecords(
+          rawExceptionData,
+        ).records;
+
+        if (!isCancelled) {
+          setExceptionHistory({
+            status: "ready",
+            recordsByKeyAndYear: buildExceptionRecordMap(records),
+          });
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setExceptionHistory({
+            status: "error",
+            recordsByKeyAndYear: EMPTY_EXCEPTION_RECORDS,
+          });
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   // Sync to LocalStorage
   useEffect(() => {
-    try {
-      localStorage.setItem("t27_toeic", toeic.toString());
-    } catch {
-      // storage unavailable (private browsing, quota exceeded, etc.) - ignore
+    if (toeic === null) {
+      return;
     }
-  }, [toeic]);
+
+    persistStorageValue(STORAGE_KEYS.toeic, toeic.toString());
+  }, [persistStorageValue, toeic]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("t27_gpa_type", gpaType);
-    } catch {
-      // storage unavailable (private browsing, quota exceeded, etc.) - ignore
-    }
-  }, [gpaType]);
+    persistStorageValue(STORAGE_KEYS.gpaType, gpaType);
+  }, [gpaType, persistStorageValue]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("t27_gpa_raw", gpaRaw.toString());
-    } catch {
-      // storage unavailable (private browsing, quota exceeded, etc.) - ignore
+    if (gpaRaw === null) {
+      return;
     }
-  }, [gpaRaw]);
+
+    persistStorageValue(STORAGE_KEYS.gpaRaw, gpaRaw.toString());
+  }, [gpaRaw, persistStorageValue]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("t27_targets", JSON.stringify(targets));
-    } catch {
-      // storage unavailable (private browsing, quota exceeded, etc.) - ignore
-    }
-  }, [targets]);
+    persistStorageValue(STORAGE_KEYS.targets, JSON.stringify(targets));
+  }, [persistStorageValue, targets]);
 
   // Derived 100-scale GPA computation
   const gpa100 = useMemo(() => {
-    if (gpaType === "100") return gpaRaw;
-    return convertGpaTo100Scale(gpaRaw, GPA_SCALE_MAX[gpaType]);
+    if (gpaRaw === null) return null;
+    return getGpa100ForInput(gpaType, gpaRaw);
   }, [gpaRaw, gpaType]);
 
-  // =========================================================================
-  // 2. Filter & Navigation States
-  // =========================================================================
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUnivs, setSelectedUnivs] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
   // Selected major for chart visualization
-  const [chartTarget, setChartTarget] = useState<{ univ: string; dept: string } | null>({
+  const [chartTarget, setChartTarget] = useState<ChartTarget | null>({
     univ: "부산대학교",
     dept: "기계공학부"
   });
   const [chartMetric, setChartMetric] = useState<ChartMetric>("toeic_orig");
-
-  // Compile list of unique standard universities
-  const universities = useMemo(() => {
-    const s = new Set<string>();
-    standardRecords.forEach(r => s.add(r.대학명));
-    return Array.from(s).sort();
-  }, []);
 
   const recordsByDepartment = useMemo(() => {
     const grouped = new Map<string, DepartmentRecord[]>();
@@ -381,10 +261,12 @@ export default function App() {
     });
 
     return grouped;
-  }, []);
+  }, [standardRecords]);
 
-  const recentRecordYears = useMemo(() => getSortedRecordYears(standardRecords).slice(0, 3), []);
-  const selectedUnivSet = useMemo(() => new Set(selectedUnivs), [selectedUnivs]);
+  const recentRecordYears = useMemo(
+    () => getSortedRecordYears(standardRecords).slice(0, 3),
+    [standardRecords],
+  );
   const targetKeySet = useMemo(() => new Set(targets.map(getTargetKey)), [targets]);
 
   const latestExplorerRecords = useMemo(() => {
@@ -400,55 +282,12 @@ export default function App() {
     });
 
     return Array.from(latest.values());
-  }, []);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedUnivs]);
-
-  // Filtered department list for exploration section (Deduplicated to latest year name)
-  const filteredDepartments = useMemo(() => {
-    // Detect if search query is Korean consonant-only (chosung)
-    const isChosungOnly = /^[ㄱ-ㅎ\s]+$/.test(searchQuery);
-    const queryNormalized = searchQuery.toLowerCase().replace(/\s/g, "");
-
-    return latestExplorerRecords.filter(r => {
-      // University matching
-      if (selectedUnivSet.size > 0 && !selectedUnivSet.has(r.대학명)) {
-        return false;
-      }
-      // Text query matching (support normal keywords AND chosung-initial matching)
-      if (searchQuery.trim() !== "") {
-        if (isChosungOnly) {
-          const deptChosung = getChosung(r.학과);
-          const origChosung = getChosung(r.학과_원본명);
-          if (!deptChosung.includes(queryNormalized) && !origChosung.includes(queryNormalized)) {
-            return false;
-          }
-        } else {
-          const dStandard = r.학과.toLowerCase().replace(/\s/g, "");
-          const dOriginal = r.학과_원본명.toLowerCase().replace(/\s/g, "");
-          if (!dStandard.includes(queryNormalized) && !dOriginal.includes(queryNormalized)) {
-            return false;
-          }
-        }
-      }
-      return true;
-    });
-  }, [latestExplorerRecords, searchQuery, selectedUnivSet]);
-
-  // Paginated explorer list
-  const paginatedExplorerList = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredDepartments.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredDepartments, currentPage]);
-
-  const totalPages = Math.ceil(filteredDepartments.length / itemsPerPage);
+  }, [standardRecords]);
 
   // =========================================================================
   // 3. Basket Management Helpers
   // =========================================================================
-  const toggleTarget = (univ: string, dept: string) => {
+  const toggleTarget = useCallback((univ: string, dept: string) => {
     const target = { univ, dept };
     const targetKey = getTargetKey(target);
 
@@ -457,67 +296,64 @@ export default function App() {
         ? currentTargets.filter((current) => getTargetKey(current) !== targetKey)
         : [...currentTargets, target]
     ));
-  };
+  }, []);
+  const closeChart = useCallback(() => setChartTarget(null), []);
+  const selectChart = useCallback((univ: string, dept: string) => {
+    setChartTarget({ univ, dept });
+  }, []);
 
-  const isTargetAdded = (univ: string, dept: string) => {
-    return targetKeySet.has(getRecordKey(univ, dept));
-  };
-
-  const handleGpaTypeChange = (nextType: GpaType) => {
+  const handleGpaTypeChange = useCallback((nextType: GpaType) => {
     if (nextType === gpaType) return;
 
+    if (gpaRaw === null) {
+      setGpaType(nextType);
+      setGpaRawInput("");
+      return;
+    }
+
     const currentGpa100 = getGpa100ForInput(gpaType, gpaRaw);
+    const convertedGpa = convertGpa100ToInput(currentGpa100, nextType);
     setGpaType(nextType);
-    setGpaRaw(convertGpa100ToInput(currentGpa100, nextType));
-  };
-
-  // =========================================================================
-  // 4. Computation of Historical Trend Chart Data (With Converted Score Support)
-  // =========================================================================
-  const chartData = useMemo<ChartDataPoint[]>(() => {
-    if (!chartTarget) return [];
-    
-    // Extract 24, 25, 26 records for this specific major in this university
-    const history = recordsByDepartment.get(getRecordKey(chartTarget.univ, chartTarget.dept)) ?? [];
-    
-    // Sort ascending by year for line chart continuity
-    const sortedHistory = [...history].sort((a, b) => getRecordYear(a) - getRecordYear(b));
-    
-    return sortedHistory.map(r => {
-      // Dynamic computation of standard conversion values of that historical year
-      const acceptedScore = calculateAcceptedScoreBreakdown(r);
-
-      return {
-        year: `${r.연도}년도`,
-        "영어 원점수 (TOEIC)": r.최종합격_토익원점수, // Keep null if non-disclosed
-        "영어 환산점수": acceptedScore.englishConv,
-        "전적대 백분위 (GPA)": r.최종합격_학점원점수_100점만점,
-        "전적대 환산점수": acceptedScore.gpaConv,
-        "실질 경쟁률": getCompetitionRatio(r),
-        originalName: r.학과_원본명
-      };
-    });
-  }, [chartTarget, recordsByDepartment]);
-
-  const selectedChartMetric = CHART_METRIC_CONFIG[chartMetric];
-  const chartYAxisDomain = useMemo(
-    () => calculateChartDomain(chartData, selectedChartMetric.dataKey),
-    [chartData, selectedChartMetric.dataKey]
-  );
+    setGpaRawInput(convertedGpa === null ? "" : convertedGpa.toString());
+  }, [gpaRaw, gpaType]);
 
   const targetSummaries = useMemo<TargetSummary[]>(() => {
     return targets.flatMap((target) => {
       const key = getTargetKey(target);
       const history = recordsByDepartment.get(key) ?? [];
-      const referenceRecord = getLatestRecord(history);
+      const latestRecord = getLatestRecord(history);
 
-      if (!referenceRecord) {
+      if (!latestRecord) {
         return [];
       }
 
-      const score = calculateScore(target.univ, referenceRecord.연도, toeic, gpa100, referenceRecord);
-      const deficit = score.diff !== null ? -score.diff : 0;
-      const analysis = analyzeScoreDeficit(target.univ, referenceRecord.연도, gpaType, deficit);
+      const comparableRecord = getLatestComparableRecord(history);
+      const referenceRecord = comparableRecord ?? latestRecord;
+      const score = calculateScore(
+        target.univ,
+        referenceRecord.연도,
+        toeic,
+        gpa100,
+        comparableRecord ?? null
+      );
+      const deficit = calculateScoreDeficit(score.diff);
+      const analysis = deficit === null
+        ? null
+        : analyzeScoreDeficit(target.univ, referenceRecord.연도, gpaType, deficit);
+      const formula = getConversionFormula(
+        target.univ,
+        referenceRecord.연도
+      );
+      const formulaNotices = [
+        formula?.provenance === "assumed-from-other-year"
+          ? "이 연도의 모집요강을 확보하지 못해 인접 연도와 동일한 공식으로 가정했습니다."
+          : null,
+        formula?.confidence === "estimated"
+          ? "이 연도의 환산식은 확인 가능한 배점을 바탕으로 한 추정값이 포함되어 있습니다."
+          : formula?.confidence === "lookup-approximation"
+            ? "이 대학의 구간 환산표는 연속식으로 근사한 참고값이며 실제 환산점수와 차이가 날 수 있습니다."
+            : null,
+      ].filter((notice): notice is string => notice !== null);
       const historyByYear = new Map(history.map((record) => [record.연도, record]));
 
       return [{
@@ -527,14 +363,32 @@ export default function App() {
         score,
         deficit,
         analysis,
+        comparisonYearNotice: comparableRecord && comparableRecord.연도 !== latestRecord.연도
+          ? `${latestRecord.연도}에는 비교 가능한 합격 평균이 없어 최신 유효 자료인 ${comparableRecord.연도} 평균을 사용합니다.`
+          : null,
+        formulaNotice: formulaNotices.length > 0
+          ? formulaNotices.join(" ")
+          : null,
         renamedHistoryText: getRenamedHistoryText(history),
         recentHistoryRows: recentRecordYears.map((year) => ({
           year,
           record: historyByYear.get(year) ?? null,
+          exclusionReason: exceptionHistory.recordsByKeyAndYear.get(
+            `${key}::${year}`
+          )?.제거사유 ?? null,
+          exceptionLookupStatus: exceptionHistory.status,
         })),
       }];
     });
-  }, [gpa100, gpaType, recentRecordYears, recordsByDepartment, targets, toeic]);
+  }, [
+    exceptionHistory,
+    gpa100,
+    gpaType,
+    recentRecordYears,
+    recordsByDepartment,
+    targets,
+    toeic,
+  ]);
 
   return (
     <div className="app-container">
@@ -547,570 +401,111 @@ export default function App() {
             Team27 거점국립대 편입 성적 시뮬레이터
             <span className="badge-2026">3개년 통합</span>
           </h1>
-          <p>전국 9대 거점국립대학의 2024~2026학년도 일반편입 1,923개 학과의 최종합격 평균 점수 동적 비교 플랫폼</p>
+          <p>
+            전국 9대 거점국립대학의 2024~2026학년도 일반편입{" "}
+            {standardRecords.length.toLocaleString("ko-KR")}개 입결 레코드 /{" "}
+            {standardTargetKeys.size.toLocaleString("ko-KR")}개 모집단위 동적 비교 플랫폼
+          </p>
+          <div className="ai-disclaimer" role="note">
+            <AlertTriangle size={17} aria-hidden="true" />
+            <p>
+              본 서비스는 AI를 활용해 제작된 참고용 시뮬레이터로, 데이터·환산식·계산
+              결과가 부정확하거나 최신 모집요강과 다를 수 있습니다. 지원 전 각 대학
+              입학처의 공식 모집요강과 공지를 통한 2차 검증은 필수입니다. 본 서비스는
+              합격 가능성이나 정보의 완전성·정확성을 보증하지 않으며, 최종 지원 판단과
+              그 결과에 대한 책임은 이용자에게 있습니다.
+            </p>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div className="header-status">
           <School size={20} color="#10b981" />
-          <span style={{ fontSize: "14px", fontWeight: "700" }}>9개 대학교 연동 중</span>
+          <span>9개 대학교 연동 중</span>
         </div>
       </header>
 
+      {standardDataIssueCount > 0 && (
+        <div className="data-quality-warning" role="status">
+          <AlertTriangle size={18} aria-hidden="true" />
+          <p>
+            데이터 품질 검사에서 {standardDataIssueCount}개 입결 레코드의 비정상 값을
+            자동으로 제외하거나 비공개 처리했습니다.
+          </p>
+        </div>
+      )}
+
+      {!storageAvailable && (
+        <div className="storage-warning" role="status">
+          <AlertTriangle size={18} aria-hidden="true" />
+          <p>
+            브라우저 저장소를 사용할 수 없어 현재 입력과 지망 목록은 이번 세션에서만
+            유지됩니다.
+          </p>
+        </div>
+      )}
+
+      {exceptionHistory.status === "error" && (
+        <div className="storage-warning" role="status">
+          <AlertTriangle size={18} aria-hidden="true" />
+          <p>
+            예외 전형 이력을 불러오지 못해 일부 연도의 모집 여부를 표시할 수 없습니다.
+          </p>
+        </div>
+      )}
+
       <div className="dashboard-grid">
-        {/* ===================================================================
-            LEFT COLUMN: MY SPEC PROFILE (입력창 및 경고 디스클레이머)
-            =================================================================== */}
-        <section style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          <div className="card">
-            <h2 className="card-title">
-              <UserCheck size={20} color="#1e3a8a" />
-              내 편입 스펙 입력
-            </h2>
+        <SpecInputPanel
+          toeicInput={toeicInput}
+          toeic={toeic}
+          gpaType={gpaType}
+          gpaRawInput={gpaRawInput}
+          gpaRaw={gpaRaw}
+          gpa100={gpa100}
+          onToeicInputChange={setToeicInput}
+          onGpaRawInputChange={setGpaRawInput}
+          onGpaTypeChange={handleGpaTypeChange}
+        />
 
-            {/* TOEIC INPUT */}
-            <div className="spec-input-group">
-              <label>공인영어성적 (TOEIC)</label>
-              <div className="input-with-suffix" style={{ marginBottom: "10px" }}>
-                <input 
-                  type="number" 
-                  min={100} 
-                  max={990} 
-                  step={5}
-                  value={toeic} 
-                  onChange={(e) => setToeic(Number.parseInt(e.target.value, 10) || 0)} 
+        <section className="dashboard-column">
+          {chartTarget !== null && (
+            <ChartErrorBoundary
+              key={`${chartTarget.univ}::${chartTarget.dept}`}
+              onClose={closeChart}
+            >
+              <Suspense
+                fallback={(
+                  <div className="chart-card" role="status">
+                    입결 차트를 불러오는 중입니다.
+                  </div>
+                )}
+              >
+                <TrendChart
+                  target={chartTarget}
+                  recordsByDepartment={recordsByDepartment}
+                  metric={chartMetric}
+                  onMetricChange={setChartMetric}
+                  onClose={closeChart}
                 />
-                <span>점 / 990점</span>
-              </div>
-              <input 
-                type="range" 
-                min={100} 
-                max={990} 
-                step={5} 
-                value={toeic} 
-                onChange={(e) => setToeic(Number.parseInt(e.target.value, 10))} 
-                style={{ width: "100%", accentColor: "var(--primary-color)" }}
-              />
-            </div>
-
-            {/* GPA INPUT WITH SCALES */}
-            <div className="spec-input-group">
-              <label>전적대학 평점 성적 (GPA)</label>
-              <div className="spec-tabs">
-                <button 
-                  className={`spec-tab ${gpaType === "100" ? "active" : ""}`}
-                  onClick={() => handleGpaTypeChange("100")}
-                >
-                  백분위 (100)
-                </button>
-                <button 
-                  className={`spec-tab ${gpaType === "4.5" ? "active" : ""}`}
-                  onClick={() => handleGpaTypeChange("4.5")}
-                >
-                  4.5 만점
-                </button>
-                <button 
-                  className={`spec-tab ${gpaType === "4.3" ? "active" : ""}`}
-                  onClick={() => handleGpaTypeChange("4.3")}
-                >
-                  4.3 만점
-                </button>
-              </div>
-
-              <div className="input-with-suffix">
-                <input 
-                  type="number" 
-                  step={gpaType === "100" ? 1 : 0.05}
-                  min={gpaType === "100" ? 0 : 0.0}
-                  max={getGpaMax(gpaType)}
-                  value={gpaRaw} 
-                  onChange={(e) => setGpaRaw(Number.parseFloat(e.target.value) || 0)} 
-                />
-                <span>점 / {gpaType === "100" ? "100" : gpaType}점</span>
-              </div>
-
-              {/* Dynamic computed 백분위 display */}
-              {gpaType !== "100" && (
-                <div style={{ marginTop: "10px", fontSize: "13px", fontWeight: "600", color: "var(--secondary-color)" }}>
-                  💡 100점 백분위 환산 추정치: <strong style={{fontSize: "14px"}}>{gpa100}점</strong>
-                </div>
-              )}
-            </div>
-
-            {/* ⚠️ REQUIRED WARNING DISCLAIMER FOR GPA */}
-            <div className="disclaimer-box">
-              <AlertTriangle size={18} color="#b45309" style={{ flexShrink: 0, marginTop: "2px" }} />
-              <p className="disclaimer-text">
-                4.5 및 4.3 평점 환산은 일반적인 선형 근사치이며, 대학별 산정 기준과 다를 수 있습니다. 정확한 비교를 위해 성적 증명서 상의 <strong>'백분위 성적(100만점)'</strong>을 직접 입력하는 것을 강력히 권장합니다.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ===================================================================
-            RIGHT COLUMN: SELECTED TARGET BASKET (지망 대학 동시 비교 대시보드)
-            =================================================================== */}
-        <section style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          {/* 3-YEAR HISTORICAL TREND VISUALIZATION CARD */}
-          {chartTarget && chartData.length > 0 && (
-            <div className="chart-card">
-              <div className="chart-header-row">
-                <div>
-                  <h3 style={{ fontSize: "16px", fontWeight: "800", color: "var(--text-primary)" }}>
-                    📈 {chartTarget.univ} {chartTarget.dept} 입결 대시보드
-                  </h3>
-                  <p style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: "500", marginTop: "2px" }}>
-                    현재 선택 지표: {selectedChartMetric.label}
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <select 
-                    style={{ 
-                      padding: "6px 12px", 
-                      fontSize: "12px", 
-                      fontWeight: "700", 
-                      borderRadius: "8px", 
-                      border: "1px solid var(--border-color)",
-                      outline: "none"
-                    }}
-                    value={chartMetric}
-                    onChange={(e) => {
-                      if (isChartMetric(e.target.value)) {
-                        setChartMetric(e.target.value);
-                      }
-                    }}
-                  >
-                    <option value="toeic_orig">영어 원점수 (TOEIC)</option>
-                    <option value="toeic_conv">영어 환산점수</option>
-                    <option value="gpa_orig">학점 원점수 (백분위)</option>
-                    <option value="gpa_conv">학점 환산점수</option>
-                    <option value="competition">실질 경쟁률</option>
-                  </select>
-                  <button className="btn-close-chart" onClick={() => setChartTarget(null)}>
-                    <X size={18} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="chart-wrapper">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                    <XAxis dataKey="year" tick={{ fontSize: 11, fontWeight: "600" }} />
-                    <YAxis 
-                      domain={chartYAxisDomain}
-                      tick={{ fontSize: 11, fontWeight: "600" }} 
-                    />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: "#1e293b", color: "white", borderRadius: "10px", fontSize: "12px" }}
-                      itemStyle={{ color: "white" }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: "11px", fontWeight: "600" }} />
-                    <Line 
-                      type="monotone" 
-                      connectNulls={true}
-                      dataKey={selectedChartMetric.dataKey} 
-                      stroke={selectedChartMetric.color}
-                      strokeWidth={3}
-                      activeDot={{ r: 8 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="trend-disclaimer">
-                * 성적 비공개(1인 등록 등) 또는 미모집인 연도는 지표가 공백으로 우회되어 표시됩니다 (라인 연속 연결 지원).
-              </p>
-            </div>
+              </Suspense>
+            </ChartErrorBoundary>
           )}
 
-          {/* TARGET BASKET CONTENT */}
-          <div className="card" style={{ flex: 1 }}>
-            <h2 className="card-title">
-              <Star size={20} color="var(--status-borderline)" fill="var(--status-borderline)" />
-              내 지망 대학 장바구니 (동시 환산 비교)
-            </h2>
-
-            {targets.length === 0 ? (
-              <div className="basket-empty">
-                <BookOpen size={40} color="var(--text-muted)" />
-                <p>현재 담겨 있는 지망 대학이 없습니다.</p>
-                <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                  하단의 <strong>전체 모집단위 리스트</strong>에서 관심 있는 학과 우측의 '⭐️ 지망 추가' 버튼을 눌러보세요!
-                </span>
-              </div>
-            ) : (
-              <div className="basket-grid">
-                {targetSummaries.map(({
-                  key,
-                  target,
-                  referenceRecord,
-                  score,
-                  deficit,
-                  analysis,
-                  renamedHistoryText,
-                  recentHistoryRows,
-                }) => {
-                  return (
-                    <div className="target-card" key={key}>
-                      <div className="target-card-header">
-                        <div className="univ-emblem-badge">{target.univ.charAt(0)}</div>
-                        <div className="target-card-meta">
-                          <h3>{target.dept}</h3>
-                          <p>{target.univ}</p>
-                          {(referenceRecord.합격자기준 === "최초" || referenceRecord.합격자기준 === "최종") && (
-                            <span
-                              style={{ fontSize: "10px", fontWeight: "700", color: "var(--text-muted)" }}
-                              title="이 대학이 공개하는 합격자 평균 성적이 최초합격자 기준인지 최종등록자 기준인지를 나타냅니다"
-                            >
-                              [{referenceRecord.합격자기준}합격자 기준]
-                            </span>
-                          )}
-                        </div>
-                        <button className="btn-remove-target" onClick={() => toggleTarget(target.univ, target.dept)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-
-                      <div className="target-card-body">
-                        {/* Comparison Progress indicator */}
-                        <div className="compare-container">
-                          <div className="compare-row">
-                            <span className="compare-label">
-                              {referenceRecord.연도}년도 합격 평균 대비
-                            </span>
-                            {score.status === "safe" && <span className="status-badge status-safe">🟢 전년도 평균 상회</span>}
-                            {score.status === "borderline" && <span className="status-badge status-borderline">🟡 전년도 평균 근접</span>}
-                            {score.status === "risk" && <span className="status-badge status-risk">🔴 전년도 평균 미달</span>}
-                            {score.status === "unknown" && <span className="status-badge status-borderline" style={{backgroundColor: "#f1f5f9", color: "#64748b"}}>⚪ 데이터 부족</span>}
-                          </div>
-
-                          <div className="compare-row" style={{ marginTop: "10px" }}>
-                            <span style={{ fontSize: "11px", fontWeight: "600", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "4px" }}>
-                              내 스펙 지표합
-                              <span 
-                                style={{ cursor: "help", display: "inline-flex", alignItems: "center", color: "var(--text-muted)" }}
-                                title="지표합 = 공인영어 환산점수 + 전적대 환산점수. 대학마다 배점이 달라 절대값 비교는 의미 없으며, 같은 대학 내 합격선과의 격차만 참고하세요"
-                              >
-                                <HelpCircle size={12} />
-                              </span>
-                            </span>
-                            <span className="compare-score" style={{ color: "var(--primary-color)" }}>
-                              {score.myIndexSum !== null ? `${score.myIndexSum}점` : "계산 불가"}
-                            </span>
-                          </div>
-
-                          <div className="compare-row">
-                            <span style={{ fontSize: "11px", fontWeight: "600", color: "var(--text-secondary)" }}>
-                              합격선 지표합 ({referenceRecord.연도} 평균)
-                            </span>
-                            <span className="compare-score" style={{ color: "var(--text-secondary)" }}>
-                              {score.acceptedIndexSum !== null ? `${score.acceptedIndexSum}점` : "비공개"}
-                            </span>
-                          </div>
-
-                          {score.diff !== null && (
-                            <div style={{ 
-                              textAlign: "right", 
-                              fontSize: "13px", 
-                              fontWeight: "700", 
-                              color: score.diff >= 0 ? "var(--status-safe)" : "var(--status-risk)",
-                              marginTop: "4px"
-                            }}>
-                              {score.diff >= 0 ? `+${score.diff}` : score.diff}점 차이
-                            </div>
-                          )}
-
-                          {/* Mini visual indicator sum track */}
-                          {score.myIndexSum !== null && score.acceptedIndexSum !== null && (
-                            <div className="compare-progress-track" style={{ marginTop: "12px" }}>
-                              <div 
-                                className="compare-progress-fill"
-                                style={{ 
-                                  width: `${Math.min(100, Math.max(10, (score.myIndexSum / (score.acceptedIndexSum * 1.15)) * 100))}%`,
-                                  backgroundColor: score.status === "safe" ? "var(--status-safe)" : score.status === "borderline" ? "var(--status-borderline)" : "var(--status-risk)"
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* 🎯 HISTORICAL MAJOR NAME TIMELINE */}
-                        {renamedHistoryText !== "" && (
-                          <div style={{ 
-                            background: "#f8fafc", 
-                            padding: "8px 12px", 
-                            borderRadius: "8px", 
-                            fontSize: "11px", 
-                            color: "var(--text-secondary)",
-                            border: "1px solid #f1f5f9",
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: "4px",
-                            marginBottom: "12px"
-                          }}>
-                            <span style={{ fontWeight: "700", color: "var(--primary-color)", whiteSpace: "nowrap" }}>📍 구 명칭 변천사:</span>
-                            <span style={{ color: "var(--text-secondary)" }}>
-                              {renamedHistoryText}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* 🎯 합격 예측 및 보완 가이드 (역산 계산기 + 효율 비교) */}
-                        <div style={{
-                          marginTop: "14px",
-                          padding: "12px 14px",
-                          backgroundColor: deficit > 0 ? "var(--status-risk-bg)" : "var(--status-safe-bg)",
-                          border: `1px solid ${deficit > 0 ? "#fecaca" : "#a7f3d0"}`,
-                          borderRadius: "12px",
-                          fontSize: "12px",
-                          marginBottom: "14px"
-                        }}>
-                          <h4 style={{ fontSize: "12.5px", fontWeight: "800", color: deficit > 0 ? "var(--status-risk)" : "var(--status-safe)", display: "flex", alignItems: "center", gap: "4px", marginBottom: "8px" }}>
-                            📊 전년도 평균 대조 및 역산 분석
-                          </h4>
-                          
-                          {deficit > 0 ? (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                              <p style={{ fontSize: "11.5px", fontWeight: "600", color: "var(--text-secondary)" }}>
-                                전년도 평균선 도달(격차: <strong>{deficit.toFixed(2)}점</strong>)을 위한 가상 보완 시나리오:
-                              </p>
-                              {analysis.isLookupBased ? (
-                                <p style={{ color: "#b45309", fontWeight: "600", fontStyle: "italic", fontSize: "11px" }}>
-                                  ⚠️ 이 대학은 구간 등급제 환산표를 사용하므로 산식으로 정확한 역산이 불가능합니다. 홈페이지의 모집요강 환산표를 참고해 주세요.
-                                </p>
-                              ) : (
-                                <ul style={{ listStyleType: "none", paddingLeft: "4px", display: "flex", flexDirection: "column", gap: "4px", fontSize: "11.5px" }}>
-                                  {analysis.toeicNeeded !== null && (
-                                    <li style={{ color: "var(--text-secondary)" }}>
-                                      • <strong>TOEIC만</strong> 올릴 시: <strong style={{ color: "var(--text-primary)" }}>+{analysis.toeicNeeded}점</strong> {toeic + analysis.toeicNeeded > 990 ? "(만점 초과로 불가)" : `(목표: ${toeic + analysis.toeicNeeded}점)`}
-                                    </li>
-                                  )}
-                                  {analysis.gpaNeeded !== null && (
-                                    <li style={{ color: "var(--text-secondary)" }}>
-                                      • <strong>GPA만</strong> 올릴 시: <strong style={{ color: "var(--text-primary)" }}>+{analysis.gpaNeeded}점</strong> {gpaRaw + analysis.gpaNeeded > getGpaMax(gpaType) ? "(만점 초과로 불가)" : `(목표: ${(gpaRaw + analysis.gpaNeeded).toFixed(2)}점)`}
-                                    </li>
-                                  )}
-                                </ul>
-                              )}
-                            </div>
-                          ) : (
-                            <p style={{ color: "var(--secondary-color)", fontWeight: "700" }}>
-                              🎉 전년도 합격자 평균 성적을 상회하고 있습니다. (단, 실제 합격 여부는 면접 및 대학별 고사가 주요 변수로 작용합니다.)
-                            </p>
-                          )}
-
-                          {/* 📊 효율 비교 (Efficiency Section) */}
-                          <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: "1px solid #e2e8f0", fontSize: "11px", color: "var(--text-secondary)" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                              <span>• TOEIC 10점 상승 시:</span>
-                              <strong style={{ color: "var(--text-primary)" }}>+{analysis.toeicEfficiency}점</strong>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                              <span>• GPA 0.1점 상승 시:</span>
-                              <strong style={{ color: "var(--text-primary)" }}>+{analysis.gpaEfficiency}점</strong>
-                            </div>
-                            {analysis.recommendedMetric !== "none" && (
-                              <p style={{ fontSize: "11px", fontWeight: "700", color: "var(--text-primary)", backgroundColor: "#f8fafc", padding: "4px 8px", borderRadius: "6px", border: "1px solid #f1f5f9" }}>
-                                💡 수식상 획득 효율: 이 대학은 <strong>[{analysis.recommendedMetric === "toeic" ? "공인영어" : "전적대학 성적"}]</strong>을 올릴 때 환산점수가 상대적으로 더 많이 상승합니다. <span style={{ fontWeight: "400", color: "var(--text-muted)" }}>(실제 공부 난이도 무관)</span>
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* 3-Year mini history table */}
-                        <table className="mini-table">
-                          <thead>
-                            <tr>
-                              <th>연도</th>
-                              <th>모집</th>
-                              <th>지원</th>
-                              <th>경쟁률</th>
-                              <th>TOEIC 평균</th>
-                              <th>GPA 평균</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {recentHistoryRows.map(({ year, record }) => {
-                              const h = record;
-                              if (!h) {
-                                return (
-                                  <tr key={year}>
-                                    <td>{year}년</td>
-                                    <td colSpan={5} style={{color: "var(--text-muted)", fontStyle: "italic"}}>미선발</td>
-                                  </tr>
-                                );
-                              }
-                              return (
-                                <tr key={h.연도}>
-                                  <td>{h.연도}년</td>
-                                  <td>{h.모집인원 ?? "-"}</td>
-                                  <td>{h.지원인원 ?? "-"}</td>
-                                  <td>{formatCompetitionRatio(h)}</td>
-                                  <td>{h.최종합격_토익원점수 ?? "비공개"}</td>
-                                  <td>{h.최종합격_학점원점수_100점만점 ?? "비공개"}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      <div className="target-card-footer">
-                        <button className="btn-card-action" onClick={() => setChartTarget({ univ: target.univ, dept: target.dept })}>
-                          <TrendingUp size={14} />
-                          입결 추이 차트
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <TargetBasket
+            summaries={targetSummaries}
+            targetCount={targets.length}
+            toeic={toeic}
+            gpaRaw={gpaRaw}
+            gpaType={gpaType}
+            onToggleTarget={toggleTarget}
+            onSelectChart={selectChart}
+          />
         </section>
       </div>
 
-      {/* ===================================================================
-          BOTTOM SECTION: GLOBAL EXPLORER & SEARCH (전체 모집단위 검색 및 지망 담기)
-          =================================================================== */}
-      <section className="card" style={{ marginTop: "30px" }}>
-        <h2 className="card-title">
-          <BookOpen size={20} color="var(--secondary-color)" />
-          거점국립대 모집단위 탐색 및 지망 담기
-        </h2>
-
-        <div className="explorer-filters">
-          {/* SEARCH KEYWORD INPUT (WITH AUTO KOREAN CHOSUNG MATCHING) */}
-          <div className="search-input-box">
-            <Search size={20} color="var(--text-muted)" />
-            <input 
-              type="text" 
-              placeholder="가고 싶은 학과명이나 초성을 검색해 보세요 (예: 기계, 컴공, ㅅㅁ, ㄱㄱㄱㅎㄱ)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button 
-                style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-muted)" }}
-                onClick={() => setSearchQuery("")}
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-
-          {/* UNIVERSITY CHIPS GRID */}
-          <div className="univ-chips-grid">
-            <button 
-              className={`univ-chip ${selectedUnivs.length === 0 ? "active" : ""}`}
-              onClick={() => setSelectedUnivs([])}
-            >
-              전체 대학
-            </button>
-            {universities.map(u => (
-              <button 
-                key={u}
-                className={`univ-chip ${selectedUnivs.includes(u) ? "active" : ""}`}
-                onClick={() => {
-                  setSelectedUnivs((currentSelectedUnivs) => (
-                    currentSelectedUnivs.includes(u)
-                      ? currentSelectedUnivs.filter(x => x !== u)
-                      : [...currentSelectedUnivs, u]
-                  ));
-                }}
-              >
-                {u}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* EXPLORER RESULTS TABLE */}
-        <div className="table-wrapper">
-          <table className="master-table" style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid var(--border-color)", color: "var(--text-secondary)" }}>
-                <th style={{ width: "15%", padding: "14px 16px" }}>대학명</th>
-                <th style={{ width: "35%", padding: "14px 16px" }}>학과명 (통합 표준과명)</th>
-                <th style={{ width: "12%", padding: "14px 16px", textAlign: "center" }}>최신 모집인원</th>
-                <th style={{ width: "13%", padding: "14px 16px", textAlign: "center" }}>토익합격 평균</th>
-                <th style={{ width: "13%", padding: "14px 16px", textAlign: "center" }}>GPA합격 백분위</th>
-                <th style={{ width: "12%", padding: "14px 16px", textAlign: "center" }}>장바구니</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedExplorerList.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", fontWeight: "500" }}>
-                    검색 결과와 일치하는 모집단위가 존재하지 않습니다. 다른 검색어를 입력해 보세요.
-                  </td>
-                </tr>
-              ) : (
-                paginatedExplorerList.map((r, i) => {
-                  const isAdded = isTargetAdded(r.대학명, r.학과);
-                  
-                  return (
-                    <tr key={`${r.대학명}-${r.학과}-${i}`} style={{ borderBottom: "1px solid var(--border-color)" }}>
-                      <td style={{ padding: "14px 16px", fontWeight: "700", color: "var(--text-primary)" }}>
-                        {r.대학명}
-                      </td>
-                      <td style={{ padding: "14px 16px" }}>
-                        <div className="dept-name-wrapper">
-                          <h4>{r.학과}</h4>
-                          {r.학과 !== r.학과_원본명 && (
-                            <span>이전 명칭: {r.학과_원본명}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ padding: "14px 16px", textAlign: "center", fontWeight: "600" }}>
-                        {r.모집인원 !== null ? `${r.모집인원}명` : "-"}
-                      </td>
-                      <td style={{ padding: "14px 16px", textAlign: "center", fontWeight: "700" }}>
-                        {r.최종합격_토익원점수 !== null ? `${r.최종합격_토익원점수}점` : "비공개"}
-                      </td>
-                      <td style={{ padding: "14px 16px", textAlign: "center", fontWeight: "700" }}>
-                        {r.최종합격_학점원점수_100점만점 !== null ? `${r.최종합격_학점원점수_100점만점}점` : "비공개"}
-                      </td>
-                      <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                        <button 
-                          className={`btn-add-cart ${isAdded ? "added" : ""}`}
-                          onClick={() => toggleTarget(r.대학명, r.학과)}
-                        >
-                          <Star size={14} fill={isAdded ? "white" : "none"} />
-                          {isAdded ? "지망 중" : "지망 추가"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-
-          {/* PAGINATION PANEL */}
-          {totalPages > 1 && (
-            <div className="pagination-row">
-              <button 
-                className="pagination-btn"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
-              >
-                <ChevronLeft size={16} style={{ verticalAlign: "middle" }} />
-                이전
-              </button>
-              <span className="pagination-info">
-                {currentPage} / {totalPages} 페이지 (총 {filteredDepartments.length}개 학과)
-              </span>
-              <button 
-                className="pagination-btn"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
-              >
-                다음
-                <ChevronRight size={16} style={{ verticalAlign: "middle" }} />
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
+      <DepartmentExplorer
+        records={latestExplorerRecords}
+        targetKeys={targetKeySet}
+        onToggleTarget={toggleTarget}
+      />
     </div>
   );
 }

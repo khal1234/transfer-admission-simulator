@@ -1,3 +1,5 @@
+import { getConversionFormula } from "./formulaRegistry";
+
 export interface DepartmentRecord {
   대학명: string;
   연도: string;
@@ -10,7 +12,7 @@ export interface DepartmentRecord {
   최종합격_토익원점수: number | null;
   최종합격_학점환산점수: number | null;
   최종합격_학점원점수_100점만점: number | null;
-  비고?: string;
+  비고?: string | null;
   합격자기준?: "최초" | "최종" | "확인불가";
 }
 
@@ -55,6 +57,10 @@ export interface AcceptedScoreBreakdown {
   indexSum: number | null;
 }
 
+export function calculateScoreDeficit(diff: number | null): number | null {
+  return diff === null ? null : Math.max(0, -diff);
+}
+
 /**
  * FLAT HELPER FUNCTION (ZERO RECURSION)
  * Converts raw TOEIC and GPA into university-specific converted scores.
@@ -71,88 +77,14 @@ export function convertRawToConv(
   const t = toeic !== null ? Math.max(100, Math.min(990, toeic)) : null;
   const g = gpa100 !== null ? Math.max(0, Math.min(100, gpa100)) : null;
 
-  switch (univ) {
-    case "강원대학교":
-      if (year === "2026") {
-        // 2026: GPA not reflected (moved to 면접고사, unsupported by this service).
-        // 공인영어 배점 150점 반영 확인됨; 정확한 배율 수식은 원문 이미지라 확인 불가 - 비례식으로 추정 적용.
-        if (t !== null) englishConv = (t / 990) * 150;
-        gpaConv = null;
-      } else {
-        if (t !== null) englishConv = (t / 990) * 100;
-        if (g !== null) gpaConv = g * 0.75;
-      }
-      break;
-
-    case "경북대학교":
-      if (t !== null) englishConv = (t / 990) * 100;
-      if (g !== null) gpaConv = 30 + (g / 100) * 20;
-      break;
-
-    case "부경대학교":
-      if (t !== null) englishConv = (t / 990) * 200;
-      if (g !== null) gpaConv = g;
-      break;
-
-    case "부산대학교":
-      if (t !== null) englishConv = (t / 990) * 30;
-      if (g !== null) gpaConv = g * 0.3;
-      break;
-
-    case "인천대학교":
-      if (t !== null) englishConv = (t / 990) * 60 + 60;
-      gpaConv = null;
-      break;
-
-    case "전남대학교":
-      if (t !== null) englishConv = (t / 990) * 400;
-      if (g !== null) gpaConv = (g / 100) * 200;
-      break;
-
-    case "전북대학교":
-      if (t !== null) {
-        const eng100 = Math.max(0.0, Math.min(100.0, 100.0 - 0.101 * (990.0 - t)));
-        englishConv = eng100 * 0.8;
-      }
-      if (g !== null) gpaConv = g * 0.6;
-      break;
-
-    case "충남대학교":
-      if (year === "2024") {
-        if (t !== null) {
-          const rawInterp = 20.0 + (t - 385.0) / 20.0;
-          englishConv = Math.max(20.0, Math.min(50.0, rawInterp));
-        }
-        if (g !== null) gpaConv = g * 0.1;
-      } else {
-        if (t !== null) {
-          const rawInterp = 60.0 - (990.0 - t) / 8.33333333;
-          englishConv = Math.max(24.0, Math.min(60.0, rawInterp));
-        }
-        gpaConv = null;
-      }
-      break;
-
-    case "충북대학교":
-      if (year === "2026") {
-        if (t !== null) {
-          const english100 = 50.0 + (t - 587.5) / 8.0;
-          const rawInterp = 40.0 + Math.max(0.0, Math.min(100.0, english100)) * 0.2;
-          englishConv = Math.max(40.0, Math.min(60.0, rawInterp));
-        }
-        gpaConv = null;
-      } else {
-        if (t !== null) {
-          const english100 = 50.0 + (t - 587.5) / 8.0;
-          const rawInterp = 10.0 + Math.max(0.0, Math.min(100.0, english100)) * 0.2;
-          englishConv = Math.max(10.0, Math.min(30.0, rawInterp));
-        }
-        if (g !== null) gpaConv = 10.0 + g * 0.2;
-      }
-      break;
-
-    default:
-      break;
+  const formula = getConversionFormula(univ, year);
+  if (formula !== null) {
+    if (t !== null) {
+      englishConv = formula.convertEnglish(t);
+    }
+    if (g !== null && formula.convertGpa !== null) {
+      gpaConv = formula.convertGpa(g);
+    }
   }
 
   // Round converted results to 2 decimal places
@@ -160,10 +92,12 @@ export function convertRawToConv(
   if (gpaConv !== null) gpaConv = Math.round(gpaConv * 100) / 100;
 
   let indexSum: number | null = null;
-  if (englishConv !== null && gpaConv !== null) {
-    indexSum = englishConv + gpaConv;
-  } else if (englishConv !== null) {
-    indexSum = englishConv;
+  if (englishConv !== null) {
+    if (formula?.convertGpa === null) {
+      indexSum = englishConv;
+    } else if (gpaConv !== null) {
+      indexSum = englishConv + gpaConv;
+    }
   }
 
   if (indexSum !== null) indexSum = Math.round(indexSum * 100) / 100;
@@ -180,12 +114,7 @@ function roundScore(score: number | null): number | null {
 }
 
 function usesEnglishOnly(univ: string, year: string): boolean {
-  return (
-    univ === "인천대학교" ||
-    (univ === "충남대학교" && year !== "2024") ||
-    (univ === "충북대학교" && year === "2026") ||
-    (univ === "강원대학교" && year === "2026")
-  );
+  return getConversionFormula(univ, year)?.convertGpa === null;
 }
 
 export function calculateAcceptedScoreBreakdown(
@@ -233,13 +162,15 @@ export function calculateScore(
   year: string,
   toeic: number | null,
   gpa100: number | null,
-  acceptedRecord: DepartmentRecord
+  acceptedRecord: DepartmentRecord | null
 ): ConversionResult {
   // 1. Calculate My Conversion Score
   const myRes = convertRawToConv(univ, year, toeic, gpa100);
 
   // 2. Compute Accepted Candidate's Index Sum from database
-  const acceptedIndexSum = calculateAcceptedScoreBreakdown(acceptedRecord).indexSum;
+  const acceptedIndexSum = acceptedRecord === null
+    ? null
+    : calculateAcceptedScoreBreakdown(acceptedRecord).indexSum;
 
   // 3. Compute Difference and Safety status
   let diff: number | null = null;
@@ -295,6 +226,10 @@ export function calculateScore(
  * Helper for converting 4.5/4.3 GPA into 100-scale 백분위.
  */
 export function convertGpaTo100Scale(gpa: number, scale: 4.5 | 4.3): number {
+  if (gpa <= 0) {
+    return 0;
+  }
+
   if (scale === 4.5) {
     if (gpa <= 1.0) return 60.0;
     const computed = 60.0 + ((gpa - 1.0) * 40.0) / 3.5;
@@ -322,63 +257,10 @@ export function analyzeScoreDeficit(
   gpaEfficiency: number;   // conversion points per 0.1 raw GPA points
   recommendedMetric: "toeic" | "gpa" | "none";
 } {
-  const isLookupBased = 
-    univ === "전북대학교" || 
-    univ === "충남대학교" || 
-    (univ === "충북대학교" && year !== "2026"); // 충북대 2026 is interval but we can linearly interpolate, wait!
-
-  // Slopes of English
-  let toeicSlope = 0;
-  if (univ === "강원대학교") {
-    toeicSlope = (year === "2026" ? 150 : 100) / 990;
-  } else if (univ === "경북대학교") {
-    toeicSlope = 100 / 990;
-  } else if (univ === "부경대학교") {
-    toeicSlope = 200 / 990;
-  } else if (univ === "부산대학교") {
-    toeicSlope = 30 / 990;
-  } else if (univ === "인천대학교") {
-    toeicSlope = 60 / 990;
-  } else if (univ === "전남대학교") {
-    toeicSlope = 400 / 990;
-  } else if (univ === "전북대학교") {
-    // 0.8 points * 0.101 slope = 0.0808 points in conv per 1 TOEIC!
-    toeicSlope = 0.0808;
-  } else if (univ === "충남대학교") {
-    if (year === "2024") {
-      toeicSlope = 1.0 / 20.0; // 0.05
-    } else {
-      toeicSlope = 1.0 / 8.33333333; // 0.12
-    }
-  } else if (univ === "충북대학교") {
-    if (year === "2026") {
-      // 0.2 points * (1 / 8.0) = 0.025 points in conv per 1 TOEIC!
-      toeicSlope = 0.025;
-    } else {
-      toeicSlope = 0.2 * (1 / 8.0); // 0.025
-    }
-  }
-
-  // Slopes of GPA (100 scale)
-  let gpaSlope100 = 0;
-  if (univ === "강원대학교") {
-    gpaSlope100 = year === "2026" ? 0.0 : 0.75; // 2026: GPA not reflected (moved to 면접고사)
-  } else if (univ === "경북대학교") {
-    gpaSlope100 = 0.2;
-  } else if (univ === "부경대학교" || univ === "부산대학교") {
-    gpaSlope100 = 1.0;
-    if (univ === "부산대학교") gpaSlope100 = 0.3;
-  } else if (univ === "인천대학교" || (univ === "충남대학교" && year !== "2024") || (univ === "충북대학교" && year === "2026")) {
-    gpaSlope100 = 0.0; // Not reflected
-  } else if (univ === "전남대학교") {
-    gpaSlope100 = 2.0;
-  } else if (univ === "전북대학교") {
-    gpaSlope100 = 0.6;
-  } else if (univ === "충남대학교" && year === "2024") {
-    gpaSlope100 = 0.1;
-  } else if (univ === "충북대학교") {
-    gpaSlope100 = 0.2;
-  }
+  const formula = getConversionFormula(univ, year);
+  const isLookupBased = formula?.reverseCalculationMode === "lookup";
+  const toeicSlope = formula?.englishSlope ?? 0;
+  const gpaSlope100 = formula?.gpaSlope100 ?? 0;
 
   // Convert GPA Slope 100 into Chosen Scale Slope
   let scaleFactor = 1.0; // multiplier from raw scale to 100-scale
