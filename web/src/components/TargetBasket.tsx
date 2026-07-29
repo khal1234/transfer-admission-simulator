@@ -1,6 +1,7 @@
 import { memo } from "react";
 import {
   BookOpen,
+  ChevronDown,
   HelpCircle,
   Star,
   Trash2,
@@ -78,7 +79,7 @@ function TargetBasket({
   onSelectChart,
 }: TargetBasketProps) {
   return (
-    <div className="card basket-card">
+    <div className="card basket-card" id="target-basket">
       <h2 className="card-title">
         <Star
           size={20}
@@ -93,8 +94,8 @@ function TargetBasket({
           <BookOpen size={40} color="var(--text-muted)" />
           <p>현재 담겨 있는 지망 대학이 없습니다.</p>
           <span className="basket-empty-description">
-            하단의 <strong>전체 모집단위 리스트</strong>에서 관심 있는 학과 우측의
-            '⭐️ 지망 추가' 버튼을 눌러보세요!
+            위의 <strong>모집단위 탐색</strong>에서 관심 있는 학과의
+            ‘지망 추가’ 버튼을 눌러보세요.
           </span>
         </div>
       ) : (
@@ -237,17 +238,24 @@ function TargetBasket({
                       )}
                   </div>
 
-                  {renamedHistoryText !== "" && (
-                    <div className="renamed-history">
-                      <span className="renamed-history-label">
-                        📍 구 명칭 변천사:
-                      </span>
-                      <span>{renamedHistoryText}</span>
-                    </div>
-                  )}
+                  <details className="target-details">
+                    <summary className="target-details-summary">
+                      <span className="details-closed-label">상세 분석 보기</span>
+                      <span className="details-open-label">상세 분석 접기</span>
+                      <ChevronDown size={18} />
+                    </summary>
+                    <div className="target-details-content">
+                      {renamedHistoryText !== "" && (
+                        <div className="renamed-history">
+                          <span className="renamed-history-label">
+                            📍 구 명칭 변천사:
+                          </span>
+                          <span>{renamedHistoryText}</span>
+                        </div>
+                      )}
 
-                  <div className={`analysis-panel analysis-panel-${analysisPanelState}`}>
-                    <h4>📊 전년도 평균 대조 및 역산 분석</h4>
+                      <div className={`analysis-panel analysis-panel-${analysisPanelState}`}>
+                        <h4>📊 전년도 평균 대조 및 역산 분석</h4>
 
                     {comparisonUnavailable ? (
                       <p className="analysis-unavailable-message">
@@ -326,64 +334,68 @@ function TargetBasket({
                         )}
                       </div>
                     )}
-                  </div>
+                      </div>
 
-                  <table className="mini-table">
-                    <thead>
-                      <tr>
-                        <th>연도</th>
-                        <th>모집</th>
-                        <th>지원</th>
-                        <th>경쟁률</th>
-                        <th>TOEIC 평균</th>
-                        <th>GPA 평균</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recentHistoryRows.map(({
-                        year,
-                        record,
-                        exclusionReason,
-                        exceptionLookupStatus,
-                      }) => {
-                        if (record === null) {
-                          const unavailableLabel = exceptionLookupStatus === "loading"
-                            ? "예외 이력 확인 중"
-                            : exceptionLookupStatus === "error"
-                              ? "이력 확인 불가"
-                              : exclusionReason === null
-                                ? "미선발"
-                                : "별도 전형 · 비교 제외";
-
-                          return (
-                            <tr key={year}>
-                              <td>{year}년</td>
-                              <td
-                                colSpan={5}
-                                className="history-unavailable"
-                                title={exclusionReason ?? undefined}
-                              >
-                                {unavailableLabel}
-                              </td>
+                      <div className="target-history-scroll">
+                        <table className="mini-table">
+                          <thead>
+                            <tr>
+                              <th>연도</th>
+                              <th>모집</th>
+                              <th>지원</th>
+                              <th>경쟁률</th>
+                              <th>TOEIC 평균</th>
+                              <th>GPA 평균</th>
                             </tr>
-                          );
-                        }
+                          </thead>
+                          <tbody>
+                            {recentHistoryRows.map(({
+                              year,
+                              record,
+                              exclusionReason,
+                              exceptionLookupStatus,
+                            }) => {
+                              if (record === null) {
+                                const unavailableLabel = exceptionLookupStatus === "loading"
+                                  ? "예외 이력 확인 중"
+                                  : exceptionLookupStatus === "error"
+                                    ? "이력 확인 불가"
+                                    : exclusionReason === null
+                                      ? "미선발"
+                                      : "별도 전형 · 비교 제외";
 
-                        return (
-                          <tr key={record.연도}>
-                            <td>{record.연도}년</td>
-                            <td>{record.모집인원 ?? "-"}</td>
-                            <td>{record.지원인원 ?? "-"}</td>
-                            <td>{formatCompetitionRatio(record)}</td>
-                            <td>{record.최종합격_토익원점수 ?? "비공개"}</td>
-                            <td>
-                              {record.최종합격_학점원점수_100점만점 ?? "비공개"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                                return (
+                                  <tr key={year}>
+                                    <td>{year}년</td>
+                                    <td
+                                      colSpan={5}
+                                      className="history-unavailable"
+                                      title={exclusionReason ?? undefined}
+                                    >
+                                      {unavailableLabel}
+                                    </td>
+                                  </tr>
+                                );
+                              }
+
+                              return (
+                                <tr key={record.연도}>
+                                  <td>{record.연도}년</td>
+                                  <td>{record.모집인원 ?? "-"}</td>
+                                  <td>{record.지원인원 ?? "-"}</td>
+                                  <td>{formatCompetitionRatio(record)}</td>
+                                  <td>{record.최종합격_토익원점수 ?? "비공개"}</td>
+                                  <td>
+                                    {record.최종합격_학점원점수_100점만점 ?? "비공개"}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </details>
                 </div>
 
                 <div className="target-card-footer">
