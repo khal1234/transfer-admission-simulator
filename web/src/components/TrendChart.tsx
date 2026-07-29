@@ -251,11 +251,12 @@ function TrendChart({
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
-            margin={{ top: 10, right: 30, left: -20, bottom: 0 }}
+            margin={{ top: 10, right: 12, left: 8, bottom: 0 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis dataKey="year" tick={{ fontSize: 11, fontWeight: "600" }} />
             <YAxis
+              width={54}
               domain={yAxisDomain}
               tick={{ fontSize: 11, fontWeight: "600" }}
             />

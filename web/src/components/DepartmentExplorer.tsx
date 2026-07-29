@@ -125,7 +125,11 @@ function DepartmentExplorer({
         </div>
       </div>
 
-      <div className="table-wrapper">
+      <p className="explorer-result-count" aria-live="polite">
+        검색 결과 {filteredDepartments.length}개
+      </p>
+
+      <div className="table-wrapper desktop-department-results">
         <table className="master-table">
           <thead>
             <tr>
@@ -191,33 +195,89 @@ function DepartmentExplorer({
             )}
           </tbody>
         </table>
+      </div>
 
-        {totalPages > 1 && (
-          <div className="pagination-row">
-            <button
-              type="button"
-              className="pagination-btn"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((page) => page - 1)}
-            >
-              <ChevronLeft className="pagination-icon" size={16} />
-              이전
-            </button>
-            <span className="pagination-info">
-              {currentPage} / {totalPages} 페이지 (총 {filteredDepartments.length}개 학과)
-            </span>
-            <button
-              type="button"
-              className="pagination-btn"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((page) => page + 1)}
-            >
-              다음
-              <ChevronRight className="pagination-icon" size={16} />
-            </button>
-          </div>
+      <div className="mobile-department-results">
+        {paginatedRecords.length === 0 ? (
+          <p className="explorer-empty-mobile">
+            검색 결과와 일치하는 모집단위가 없습니다. 다른 검색어를 입력해 보세요.
+          </p>
+        ) : (
+          paginatedRecords.map((record) => {
+            const key = getRecordKey(record.대학명, record.학과);
+            const isAdded = targetKeys.has(key);
+
+            return (
+              <article className="department-result-card" key={key}>
+                <div className="department-result-heading">
+                  <span className="department-university">{record.대학명}</span>
+                  <span className="department-count">
+                    {record.모집인원 !== null ? `${record.모집인원}명 모집` : "인원 비공개"}
+                  </span>
+                </div>
+                <div className="dept-name-wrapper">
+                  <h3>{record.학과}</h3>
+                  {record.학과 !== record.학과_원본명 && (
+                    <span>이전 명칭: {record.학과_원본명}</span>
+                  )}
+                </div>
+                <dl className="department-metrics">
+                  <div>
+                    <dt>TOEIC 합격 평균</dt>
+                    <dd>
+                      {record.최종합격_토익원점수 !== null
+                        ? `${record.최종합격_토익원점수}점`
+                        : "비공개"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>GPA 합격 평균</dt>
+                    <dd>
+                      {record.최종합격_학점원점수_100점만점 !== null
+                        ? `${record.최종합격_학점원점수_100점만점}점`
+                        : "비공개"}
+                    </dd>
+                  </div>
+                </dl>
+                <button
+                  type="button"
+                  className={`btn-add-cart mobile-add-cart ${isAdded ? "added" : ""}`}
+                  onClick={() => onToggleTarget(record.대학명, record.학과)}
+                >
+                  <Star size={16} fill={isAdded ? "white" : "none"} />
+                  {isAdded ? "지망에서 빼기" : "지망 추가"}
+                </button>
+              </article>
+            );
+          })
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="pagination-row">
+          <button
+            type="button"
+            className="pagination-btn"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((page) => page - 1)}
+          >
+            <ChevronLeft className="pagination-icon" size={16} />
+            이전
+          </button>
+          <span className="pagination-info">
+            {currentPage} / {totalPages} 페이지 (총 {filteredDepartments.length}개 학과)
+          </span>
+          <button
+            type="button"
+            className="pagination-btn"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((page) => page + 1)}
+          >
+            다음
+            <ChevronRight className="pagination-icon" size={16} />
+          </button>
+        </div>
+      )}
     </section>
   );
 }

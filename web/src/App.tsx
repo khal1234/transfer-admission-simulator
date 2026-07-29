@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import DepartmentExplorer from "./components/DepartmentExplorer";
@@ -51,7 +52,12 @@ import {
   type ExceptionDepartmentRecord,
 } from "./utils/dataValidation";
 
-import { AlertTriangle, School } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  School,
+  Star,
+} from "lucide-react";
 
 // Static database imports validated before use
 import rawStandardData from "./data/편입_성적_통합.json";
@@ -239,11 +245,9 @@ export default function App() {
   }, [gpaRaw, gpaType]);
 
   // Selected major for chart visualization
-  const [chartTarget, setChartTarget] = useState<ChartTarget | null>({
-    univ: "부산대학교",
-    dept: "기계공학부"
-  });
+  const [chartTarget, setChartTarget] = useState<ChartTarget | null>(null);
   const [chartMetric, setChartMetric] = useState<ChartMetric>("toeic_orig");
+  const chartRegionRef = useRef<HTMLDivElement | null>(null);
 
   const recordsByDepartment = useMemo(() => {
     const grouped = new Map<string, DepartmentRecord[]>();
@@ -301,6 +305,23 @@ export default function App() {
   const selectChart = useCallback((univ: string, dept: string) => {
     setChartTarget({ univ, dept });
   }, []);
+
+  useEffect(() => {
+    if (chartTarget === null) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      chartRegionRef.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [chartTarget]);
 
   const handleGpaTypeChange = useCallback((nextType: GpaType) => {
     if (nextType === gpaType) return;
@@ -402,12 +423,25 @@ export default function App() {
             <span className="badge-2026">3개년 통합</span>
           </h1>
           <p>
-            전국 9대 거점국립대학의 2024~2026학년도 일반편입{" "}
-            {standardRecords.length.toLocaleString("ko-KR")}개 입결 레코드 /{" "}
-            {standardTargetKeys.size.toLocaleString("ko-KR")}개 모집단위 동적 비교 플랫폼
+            <span className="header-description-desktop">
+              전국 9대 거점국립대학의 2024~2026학년도 일반편입{" "}
+              {standardRecords.length.toLocaleString("ko-KR")}개 입결 레코드 /{" "}
+              {standardTargetKeys.size.toLocaleString("ko-KR")}개 모집단위 동적 비교 플랫폼
+            </span>
+            <span className="header-description-mobile">
+              2024~2026학년도 ·{" "}
+              {standardRecords.length.toLocaleString("ko-KR")}개 입결 ·{" "}
+              {standardTargetKeys.size.toLocaleString("ko-KR")}개 모집단위
+            </span>
           </p>
-          <div className="ai-disclaimer" role="note">
-            <AlertTriangle size={17} aria-hidden="true" />
+          <details className="ai-disclaimer">
+            <summary>
+              <span>
+                <AlertTriangle size={17} aria-hidden="true" />
+                AI 참고용 · 지원 전 공식 모집요강 확인
+              </span>
+              <ChevronDown size={17} aria-hidden="true" />
+            </summary>
             <p>
               본 서비스는 AI를 활용해 제작된 참고용 시뮬레이터로, 데이터·환산식·계산
               결과가 부정확하거나 최신 모집요강과 다를 수 있습니다. 지원 전 각 대학
@@ -415,7 +449,7 @@ export default function App() {
               합격 가능성이나 정보의 완전성·정확성을 보증하지 않으며, 최종 지원 판단과
               그 결과에 대한 책임은 이용자에게 있습니다.
             </p>
-          </div>
+          </details>
         </div>
         <div className="header-status">
           <School size={20} color="#10b981" />
@@ -453,40 +487,50 @@ export default function App() {
       )}
 
       <div className="dashboard-grid">
-        <SpecInputPanel
-          toeicInput={toeicInput}
-          toeic={toeic}
-          gpaType={gpaType}
-          gpaRawInput={gpaRawInput}
-          gpaRaw={gpaRaw}
-          gpa100={gpa100}
-          onToeicInputChange={setToeicInput}
-          onGpaRawInputChange={setGpaRawInput}
-          onGpaTypeChange={handleGpaTypeChange}
+        <div className="spec-area">
+          <SpecInputPanel
+            toeicInput={toeicInput}
+            toeic={toeic}
+            gpaType={gpaType}
+            gpaRawInput={gpaRawInput}
+            gpaRaw={gpaRaw}
+            gpa100={gpa100}
+            onToeicInputChange={setToeicInput}
+            onGpaRawInputChange={setGpaRawInput}
+            onGpaTypeChange={handleGpaTypeChange}
+          />
+        </div>
+
+        <DepartmentExplorer
+          records={latestExplorerRecords}
+          targetKeys={targetKeySet}
+          onToggleTarget={toggleTarget}
         />
 
-        <section className="dashboard-column">
+        <section className="dashboard-column results-area">
           {chartTarget !== null && (
-            <ChartErrorBoundary
-              key={`${chartTarget.univ}::${chartTarget.dept}`}
-              onClose={closeChart}
-            >
-              <Suspense
-                fallback={(
-                  <div className="chart-card" role="status">
-                    입결 차트를 불러오는 중입니다.
-                  </div>
-                )}
+            <div className="chart-region" ref={chartRegionRef}>
+              <ChartErrorBoundary
+                key={`${chartTarget.univ}::${chartTarget.dept}`}
+                onClose={closeChart}
               >
-                <TrendChart
-                  target={chartTarget}
-                  recordsByDepartment={recordsByDepartment}
-                  metric={chartMetric}
-                  onMetricChange={setChartMetric}
-                  onClose={closeChart}
-                />
-              </Suspense>
-            </ChartErrorBoundary>
+                <Suspense
+                  fallback={(
+                    <div className="chart-card" role="status">
+                      입결 차트를 불러오는 중입니다.
+                    </div>
+                  )}
+                >
+                  <TrendChart
+                    target={chartTarget}
+                    recordsByDepartment={recordsByDepartment}
+                    metric={chartMetric}
+                    onMetricChange={setChartMetric}
+                    onClose={closeChart}
+                  />
+                </Suspense>
+              </ChartErrorBoundary>
+            </div>
           )}
 
           <TargetBasket
@@ -501,11 +545,11 @@ export default function App() {
         </section>
       </div>
 
-      <DepartmentExplorer
-        records={latestExplorerRecords}
-        targetKeys={targetKeySet}
-        onToggleTarget={toggleTarget}
-      />
+      <a className="mobile-target-dock" href="#target-basket">
+        <Star size={18} fill="currentColor" aria-hidden="true" />
+        <span>지망 보기</span>
+        <strong>{targets.length}</strong>
+      </a>
     </div>
   );
 }
