@@ -281,6 +281,7 @@ body {
   grid-template-areas:
     "spec"
     "explorer"
+    "target-jump"
     "results";
   gap: 24px;
 }
@@ -1310,7 +1311,7 @@ select:focus-visible {
   }
 
   .app-container {
-    padding: 12px 12px 96px;
+    padding: 12px;
   }
 
   .app-header {
@@ -1350,7 +1351,7 @@ select:focus-visible {
     display: none;
   }
 
-  .header-title-block p.header-description-mobile {
+  .header-description-mobile {
     display: block;
     color: #cbd5e1;
     font-size: 13px;
@@ -1495,6 +1496,7 @@ select:focus-visible {
   }
 
   .explorer-result-count {
+    scroll-margin-top: 132px;
     margin-bottom: 10px;
     font-size: 13px;
   }
@@ -1781,14 +1783,14 @@ select:focus-visible {
   }
 
   .mobile-target-dock {
-    position: fixed;
-    z-index: 20;
-    right: 16px;
-    bottom: max(16px, env(safe-area-inset-bottom));
+    grid-area: target-jump;
+    justify-self: end;
     display: flex;
+    width: fit-content;
     min-height: 52px;
     align-items: center;
     gap: 8px;
+    margin: -4px 4px 0 0;
     padding: 10px 12px 10px 16px;
     border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: 99px;

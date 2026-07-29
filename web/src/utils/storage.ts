@@ -2,6 +2,7 @@ export const STORAGE_KEYS = {
   toeic: "t27_toeic",
   gpaType: "t27_gpa_type",
   gpaRaw: "t27_gpa_raw",
+  gpa100: "t27_gpa_100",
   targets: "t27_targets",
 } as const;
 
@@ -23,6 +24,7 @@ function createEmptyValues(): Record<SimulatorStorageKey, null> {
     [STORAGE_KEYS.toeic]: null,
     [STORAGE_KEYS.gpaType]: null,
     [STORAGE_KEYS.gpaRaw]: null,
+    [STORAGE_KEYS.gpa100]: null,
     [STORAGE_KEYS.targets]: null,
   };
 }
@@ -56,6 +58,7 @@ export function readSimulatorStorageSnapshot(
         [STORAGE_KEYS.toeic]: storage.getItem(STORAGE_KEYS.toeic),
         [STORAGE_KEYS.gpaType]: storage.getItem(STORAGE_KEYS.gpaType),
         [STORAGE_KEYS.gpaRaw]: storage.getItem(STORAGE_KEYS.gpaRaw),
+        [STORAGE_KEYS.gpa100]: storage.getItem(STORAGE_KEYS.gpa100),
         [STORAGE_KEYS.targets]: storage.getItem(STORAGE_KEYS.targets),
       },
     };

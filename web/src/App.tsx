@@ -28,8 +28,13 @@ import {
   isGpaType,
   convertGpa100ToInput,
   getGpa100ForInput,
+  limitGpaInput,
+  limitToeicInput,
+  normalizeGpaInput,
+  normalizeToeicInput,
   parseGpaInput,
   parseToeicInput,
+  restoreCanonicalGpa100,
   restoreGpaInput,
   restoreToeicInput,
   type GpaType,
@@ -160,6 +165,13 @@ export default function App() {
   const [gpaRawInput, setGpaRawInput] = useState<string>(() => (
     restoreGpaInput(initialStorage.values[STORAGE_KEYS.gpaRaw], gpaType)
   ));
+  const [canonicalGpa100, setCanonicalGpa100] = useState<number | null>(() => (
+    restoreCanonicalGpa100(
+      initialStorage.values[STORAGE_KEYS.gpa100],
+      gpaRawInput,
+      gpaType,
+    )
+  ));
 
   const [targets, setTargets] = useState<Target[]>(() => (
     parseSavedTargets(
@@ -174,6 +186,7 @@ export default function App() {
     () => parseGpaInput(gpaRawInput, gpaType),
     [gpaRawInput, gpaType]
   );
+  const gpa100 = gpaRaw === null ? null : canonicalGpa100;
   const persistStorageValue = useCallback((
     key: SimulatorStorageKey,
     value: string,
@@ -235,14 +248,16 @@ export default function App() {
   }, [gpaRaw, persistStorageValue]);
 
   useEffect(() => {
+    if (canonicalGpa100 === null) {
+      return;
+    }
+
+    persistStorageValue(STORAGE_KEYS.gpa100, canonicalGpa100.toString());
+  }, [canonicalGpa100, persistStorageValue]);
+
+  useEffect(() => {
     persistStorageValue(STORAGE_KEYS.targets, JSON.stringify(targets));
   }, [persistStorageValue, targets]);
-
-  // Derived 100-scale GPA computation
-  const gpa100 = useMemo(() => {
-    if (gpaRaw === null) return null;
-    return getGpa100ForInput(gpaType, gpaRaw);
-  }, [gpaRaw, gpaType]);
 
   // Selected major for chart visualization
   const [chartTarget, setChartTarget] = useState<ChartTarget | null>(null);
@@ -323,20 +338,43 @@ export default function App() {
     return () => window.cancelAnimationFrame(frameId);
   }, [chartTarget]);
 
+  const handleToeicInputChange = useCallback((value: string) => {
+    setToeicInput(limitToeicInput(value));
+  }, []);
+  const handleToeicInputBlur = useCallback(() => {
+    setToeicInput((current) => normalizeToeicInput(current));
+  }, []);
+  const handleGpaRawInputChange = useCallback((value: string) => {
+    const limitedInput = limitGpaInput(value, gpaType);
+    setGpaRawInput(limitedInput);
+
+    const parsedGpa = parseGpaInput(limitedInput, gpaType);
+    if (parsedGpa !== null) {
+      setCanonicalGpa100(getGpa100ForInput(gpaType, parsedGpa));
+    }
+  }, [gpaType]);
+  const handleGpaRawInputBlur = useCallback(() => {
+    const normalizedInput = normalizeGpaInput(gpaRawInput, gpaType);
+    const parsedGpa = parseGpaInput(normalizedInput, gpaType);
+
+    setGpaRawInput(normalizedInput);
+    if (parsedGpa !== null) {
+      setCanonicalGpa100(getGpa100ForInput(gpaType, parsedGpa));
+    }
+  }, [gpaRawInput, gpaType]);
   const handleGpaTypeChange = useCallback((nextType: GpaType) => {
     if (nextType === gpaType) return;
 
-    if (gpaRaw === null) {
+    if (gpaRaw === null || canonicalGpa100 === null) {
       setGpaType(nextType);
       setGpaRawInput("");
       return;
     }
 
-    const currentGpa100 = getGpa100ForInput(gpaType, gpaRaw);
-    const convertedGpa = convertGpa100ToInput(currentGpa100, nextType);
+    const convertedGpa = convertGpa100ToInput(canonicalGpa100, nextType);
     setGpaType(nextType);
     setGpaRawInput(convertedGpa === null ? "" : convertedGpa.toString());
-  }, [gpaRaw, gpaType]);
+  }, [canonicalGpa100, gpaRaw, gpaType]);
 
   const targetSummaries = useMemo<TargetSummary[]>(() => {
     return targets.flatMap((target) => {
@@ -495,8 +533,10 @@ export default function App() {
             gpaRawInput={gpaRawInput}
             gpaRaw={gpaRaw}
             gpa100={gpa100}
-            onToeicInputChange={setToeicInput}
-            onGpaRawInputChange={setGpaRawInput}
+            onToeicInputChange={handleToeicInputChange}
+            onToeicInputBlur={handleToeicInputBlur}
+            onGpaRawInputChange={handleGpaRawInputChange}
+            onGpaRawInputBlur={handleGpaRawInputBlur}
             onGpaTypeChange={handleGpaTypeChange}
           />
         </div>
@@ -506,6 +546,12 @@ export default function App() {
           targetKeys={targetKeySet}
           onToggleTarget={toggleTarget}
         />
+
+        <a className="mobile-target-dock" href="#target-basket">
+          <Star size={18} fill="currentColor" aria-hidden="true" />
+          <span>지망 보기</span>
+          <strong>{targets.length}</strong>
+        </a>
 
         <section className="dashboard-column results-area">
           {chartTarget !== null && (
@@ -544,12 +590,6 @@ export default function App() {
           />
         </section>
       </div>
-
-      <a className="mobile-target-dock" href="#target-basket">
-        <Star size={18} fill="currentColor" aria-hidden="true" />
-        <span>지망 보기</span>
-        <strong>{targets.length}</strong>
-      </a>
     </div>
   );
 }

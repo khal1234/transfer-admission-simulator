@@ -10,7 +10,9 @@ type SpecInputPanelProps = {
   gpaRaw: number | null;
   gpa100: number | null;
   onToeicInputChange: (value: string) => void;
+  onToeicInputBlur: () => void;
   onGpaRawInputChange: (value: string) => void;
+  onGpaRawInputBlur: () => void;
   onGpaTypeChange: (type: GpaType) => void;
 };
 
@@ -22,7 +24,9 @@ function SpecInputPanel({
   gpaRaw,
   gpa100,
   onToeicInputChange,
+  onToeicInputBlur,
   onGpaRawInputChange,
+  onGpaRawInputBlur,
   onGpaTypeChange,
 }: SpecInputPanelProps) {
   return (
@@ -44,6 +48,9 @@ function SpecInputPanel({
               step={5}
               value={toeicInput}
               onChange={(event) => onToeicInputChange(event.target.value)}
+              onBlur={onToeicInputBlur}
+              aria-invalid={toeic === null}
+              aria-describedby={toeic === null ? "toeic-validation" : undefined}
             />
             <span>점 / 990점</span>
           </div>
@@ -54,11 +61,11 @@ function SpecInputPanel({
             min={100}
             max={990}
             step={5}
-            value={toeic ?? 100}
+            value={toeic ?? 850}
             onChange={(event) => onToeicInputChange(event.target.value)}
           />
           {toeic === null && (
-            <p className="validation-message">
+            <p className="validation-message" id="toeic-validation" role="alert">
               TOEIC은 100~990점 범위에서 5점 단위로 입력해 주세요.
             </p>
           )}
@@ -83,16 +90,19 @@ function SpecInputPanel({
             <input
               id="gpa-score"
               type="number"
-              step={gpaType === "100" ? 1 : 0.05}
+              step={0.01}
               min={gpaType === "100" ? 0 : 0.01}
               max={getGpaMax(gpaType)}
               value={gpaRawInput}
               onChange={(event) => onGpaRawInputChange(event.target.value)}
+              onBlur={onGpaRawInputBlur}
+              aria-invalid={gpaRaw === null}
+              aria-describedby={gpaRaw === null ? "gpa-validation" : undefined}
             />
             <span>점 / {gpaType === "100" ? "100" : gpaType}점</span>
           </div>
           {gpaRaw === null && (
-            <p className="validation-message">
+            <p className="validation-message" id="gpa-validation" role="alert">
               선택한 GPA 만점 범위 안의 점수를 입력해 주세요.
             </p>
           )}

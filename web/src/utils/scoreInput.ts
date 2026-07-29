@@ -36,6 +36,49 @@ export function parseToeicInput(input: string): number | null {
   return value;
 }
 
+function clampNumericInput(
+  input: string,
+  min: number,
+  max: number,
+): string {
+  if (input.trim() === "") {
+    return input;
+  }
+
+  const value = Number(input);
+  if (!Number.isFinite(value)) {
+    return input;
+  }
+
+  if (value > max) {
+    return max.toString();
+  }
+
+  if (value < 0) {
+    return min.toString();
+  }
+
+  return input;
+}
+
+export function limitToeicInput(input: string): string {
+  return clampNumericInput(input, 100, 990);
+}
+
+export function normalizeToeicInput(input: string): string {
+  if (input.trim() === "") {
+    return input;
+  }
+
+  const value = Number(input);
+  if (!Number.isFinite(value)) {
+    return input;
+  }
+
+  const clamped = Math.max(100, Math.min(990, value));
+  return (Math.round(clamped / 5) * 5).toString();
+}
+
 export function parseGpaInput(
   input: string,
   gpaType: GpaType
@@ -53,6 +96,26 @@ export function parseGpaInput(
   }
 
   return value;
+}
+
+export function limitGpaInput(input: string, gpaType: GpaType): string {
+  const min = gpaType === "100" ? 0 : 0.01;
+  return clampNumericInput(input, min, getGpaMax(gpaType));
+}
+
+export function normalizeGpaInput(input: string, gpaType: GpaType): string {
+  if (input.trim() === "") {
+    return input;
+  }
+
+  const value = Number(input);
+  if (!Number.isFinite(value)) {
+    return input;
+  }
+
+  const min = gpaType === "100" ? 0 : 0.01;
+  const normalized = Math.max(min, Math.min(getGpaMax(gpaType), value));
+  return (Math.round(normalized * 100) / 100).toString();
 }
 
 export function restoreToeicInput(saved: string | null): string {
@@ -81,6 +144,23 @@ export function getGpa100ForInput(
   }
 
   return convertGpaTo100Scale(gpaRaw, GPA_SCALE_MAX[gpaType]);
+}
+
+export function restoreCanonicalGpa100(
+  savedGpa100: string | null,
+  gpaRawInput: string,
+  gpaType: GpaType,
+): number | null {
+  const saved = savedGpa100 === null
+    ? null
+    : parseGpaInput(savedGpa100, "100");
+
+  if (saved !== null) {
+    return saved;
+  }
+
+  const gpaRaw = parseGpaInput(gpaRawInput, gpaType);
+  return gpaRaw === null ? null : getGpa100ForInput(gpaType, gpaRaw);
 }
 
 export function convertGpa100ToInput(

@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
   ChevronLeft,
@@ -30,6 +30,7 @@ function DepartmentExplorer({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUnivs, setSelectedUnivs] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const resultsStartRef = useRef<HTMLParagraphElement | null>(null);
 
   const universities = useMemo(
     () => Array.from(new Set(records.map((record) => record.대학명))).sort(),
@@ -70,6 +71,23 @@ function DepartmentExplorer({
         : [...current, university]
     ));
     setCurrentPage(1);
+  };
+
+  const changePage = (nextPage: number) => {
+    setCurrentPage(nextPage);
+
+    if (!window.matchMedia("(max-width: 767px)").matches) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      resultsStartRef.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start",
+      });
+    });
   };
 
   return (
@@ -125,7 +143,11 @@ function DepartmentExplorer({
         </div>
       </div>
 
-      <p className="explorer-result-count" aria-live="polite">
+      <p
+        className="explorer-result-count"
+        aria-live="polite"
+        ref={resultsStartRef}
+      >
         검색 결과 {filteredDepartments.length}개
       </p>
 
@@ -259,7 +281,7 @@ function DepartmentExplorer({
             type="button"
             className="pagination-btn"
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage((page) => page - 1)}
+            onClick={() => changePage(currentPage - 1)}
           >
             <ChevronLeft className="pagination-icon" size={16} />
             이전
@@ -271,7 +293,7 @@ function DepartmentExplorer({
             type="button"
             className="pagination-btn"
             disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((page) => page + 1)}
+            onClick={() => changePage(currentPage + 1)}
           >
             다음
             <ChevronRight className="pagination-icon" size={16} />

@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   convertGpa100ToInput,
+  limitGpaInput,
+  limitToeicInput,
+  normalizeGpaInput,
+  normalizeToeicInput,
   parseGpaInput,
   parseToeicInput,
+  restoreCanonicalGpa100,
   restoreGpaInput,
   restoreToeicInput,
 } from "./scoreInput";
@@ -39,6 +44,24 @@ describe("parseGpaInput", () => {
   });
 });
 
+describe("score input boundaries", () => {
+  it("clamps clearly out-of-range values while preserving partial input", () => {
+    expect(limitToeicInput("1000")).toBe("990");
+    expect(limitToeicInput("-5")).toBe("100");
+    expect(limitToeicInput("85")).toBe("85");
+    expect(limitGpaInput("101", "100")).toBe("100");
+    expect(limitGpaInput("-1", "4.5")).toBe("0.01");
+  });
+
+  it("normalizes values to a valid score when editing finishes", () => {
+    expect(normalizeToeicInput("99")).toBe("100");
+    expect(normalizeToeicInput("851")).toBe("850");
+    expect(normalizeToeicInput("989")).toBe("990");
+    expect(normalizeGpaInput("101", "100")).toBe("100");
+    expect(normalizeGpaInput("4.75", "4.5")).toBe("4.5");
+  });
+});
+
 describe("stored score restoration", () => {
   it("keeps valid stored values", () => {
     expect(restoreToeicInput("900")).toBe("900");
@@ -49,6 +72,16 @@ describe("stored score restoration", () => {
     expect(restoreToeicInput("2000")).toBe("850");
     expect(restoreGpaInput("90", "4.5")).toBe("3.65");
     expect(restoreGpaInput(null, "4.3")).toBe("3.5");
+  });
+});
+
+describe("canonical GPA restoration", () => {
+  it("prefers a saved canonical percentile over a rounded display scale", () => {
+    expect(restoreCanonicalGpa100("90", "3.65", "4.5")).toBe(90);
+  });
+
+  it("migrates legacy raw GPA storage to a percentile", () => {
+    expect(restoreCanonicalGpa100(null, "3.65", "4.5")).toBe(90.29);
   });
 });
 

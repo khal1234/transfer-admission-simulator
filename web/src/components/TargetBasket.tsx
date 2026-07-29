@@ -78,6 +78,8 @@ function TargetBasket({
   onToggleTarget,
   onSelectChart,
 }: TargetBasketProps) {
+  const scoreInputInvalid = toeic === null || gpaRaw === null;
+
   return (
     <div className="card basket-card" id="target-basket">
       <h2 className="card-title">
@@ -154,22 +156,22 @@ function TargetBasket({
                       </span>
                       {score.status === "safe" && (
                         <span className="status-badge status-safe">
-                          🟢 전년도 평균 상회
+                          🟢 {referenceRecord.연도} 평균 상회
                         </span>
                       )}
                       {score.status === "borderline" && (
                         <span className="status-badge status-borderline">
-                          🟡 전년도 평균 근접
+                          🟡 {referenceRecord.연도} 평균 근접
                         </span>
                       )}
                       {score.status === "risk" && (
                         <span className="status-badge status-risk">
-                          🔴 전년도 평균 미달
+                          🔴 {referenceRecord.연도} 평균 미달
                         </span>
                       )}
                       {score.status === "unknown" && (
                         <span className="status-badge status-unknown">
-                          ⚪ 데이터 부족
+                          {scoreInputInvalid ? "⚪ 점수 입력 확인" : "⚪ 데이터 부족"}
                         </span>
                       )}
                     </div>
@@ -193,7 +195,9 @@ function TargetBasket({
                       <span className="compare-score compare-score-primary">
                         {score.myIndexSum !== null
                           ? `${score.myIndexSum}점`
-                          : "계산 불가"}
+                          : scoreInputInvalid
+                            ? "입력 확인 필요"
+                            : "계산 불가"}
                       </span>
                     </div>
 
@@ -255,17 +259,22 @@ function TargetBasket({
                       )}
 
                       <div className={`analysis-panel analysis-panel-${analysisPanelState}`}>
-                        <h4>📊 전년도 평균 대조 및 역산 분석</h4>
+                        <h4>📊 {referenceRecord.연도} 평균 대조 및 역산 분석</h4>
 
-                    {comparisonUnavailable ? (
+                    {scoreInputInvalid ? (
+                      <p className="analysis-unavailable-message">
+                        유효한 TOEIC과 GPA를 입력하면 합격 평균 대조 및 역산 분석을 확인할 수
+                        있습니다.
+                      </p>
+                    ) : comparisonUnavailable ? (
                       <p className="analysis-unavailable-message">
                         비교 가능한 합격 평균 성적이 없어 대조 및 역산 분석을 제공할 수 없습니다.
                       </p>
                     ) : deficit > 0 ? (
                       <div className="analysis-scenario">
                         <p className="analysis-scenario-intro">
-                          전년도 평균선 도달(격차: <strong>{deficit.toFixed(2)}점</strong>)을
-                          위한 가상 보완 시나리오:
+                          {referenceRecord.연도} 평균선 도달(격차:{" "}
+                          <strong>{deficit.toFixed(2)}점</strong>)을 위한 가상 보완 시나리오:
                         </p>
                         {analysis.isLookupBased ? (
                           <p className="lookup-warning">
@@ -305,8 +314,8 @@ function TargetBasket({
                       </div>
                     ) : (
                       <p className="analysis-success-message">
-                        🎉 전년도 합격자 평균 성적을 상회하고 있습니다. (단, 실제 합격 여부는
-                        면접 및 대학별 고사가 주요 변수로 작용합니다.)
+                        🎉 {referenceRecord.연도} 합격자 평균 성적을 상회하고 있습니다. (단,
+                        실제 합격 여부는 면접 및 대학별 고사가 주요 변수로 작용합니다.)
                       </p>
                     )}
 

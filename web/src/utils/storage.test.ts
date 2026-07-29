@@ -11,6 +11,7 @@ describe("simulator storage boundary", () => {
       [STORAGE_KEYS.toeic, "900"],
       [STORAGE_KEYS.gpaType, "4.5"],
       [STORAGE_KEYS.gpaRaw, "4.1"],
+      [STORAGE_KEYS.gpa100, "95.43"],
       [STORAGE_KEYS.targets, "[]"],
     ]);
     const snapshot = readSimulatorStorageSnapshot({
@@ -23,6 +24,7 @@ describe("simulator storage boundary", () => {
       [STORAGE_KEYS.toeic]: "900",
       [STORAGE_KEYS.gpaType]: "4.5",
       [STORAGE_KEYS.gpaRaw]: "4.1",
+      [STORAGE_KEYS.gpa100]: "95.43",
       [STORAGE_KEYS.targets]: "[]",
     });
   });
@@ -31,7 +33,7 @@ describe("simulator storage boundary", () => {
     const snapshot = readSimulatorStorageSnapshot(null);
 
     expect(snapshot.available).toBe(false);
-    expect(Object.values(snapshot.values)).toEqual([null, null, null, null]);
+    expect(Object.values(snapshot.values)).toEqual([null, null, null, null, null]);
   });
 
   it("does not expose partial values after a read failure", () => {
@@ -43,7 +45,7 @@ describe("simulator storage boundary", () => {
     });
 
     expect(snapshot.available).toBe(false);
-    expect(Object.values(snapshot.values)).toEqual([null, null, null, null]);
+    expect(Object.values(snapshot.values)).toEqual([null, null, null, null, null]);
   });
 
   it("reports successful writes", () => {
