@@ -277,6 +277,11 @@ body {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
+.university-logo--dark-plate {
+  border-color: rgba(148, 163, 184, 0.5);
+  background-color: #0f2f5f;
+}
+
 .university-logo--small {
   --logo-width: 26px;
   --logo-height: 20px;
@@ -1562,6 +1567,10 @@ html[data-theme="dark"] .university-logo {
 
 html[data-theme="dark"] .university-logo--theme-variant {
   background-color: rgba(15, 23, 42, 0.96);
+}
+
+html[data-theme="dark"] .university-logo--dark-plate {
+  background-color: #0f2f5f;
 }
 
 html[data-theme="dark"] .university-logo-image--light {

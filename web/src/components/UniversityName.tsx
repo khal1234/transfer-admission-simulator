@@ -3,6 +3,7 @@ type UniversityLogoSize = "small" | "medium" | "large";
 type UniversityLogoConfig = {
   src: string;
   darkSrc?: string;
+  darkPlate?: boolean;
   markOnly?: boolean;
   enlargeMark?: boolean;
 };
@@ -13,15 +14,13 @@ const UNIVERSITY_LOGOS: Readonly<Record<string, UniversityLogoConfig>> = {
   },
   경북대학교: {
     src: "/university-logos/kyungpook.png",
-    darkSrc: "/university-logos/kyungpook-dark.png",
-    markOnly: true,
   },
   부경대학교: {
     src: "/university-logos/pukyong.png",
   },
   부산대학교: {
     src: "/university-logos/pusan.png",
-    markOnly: true,
+    darkPlate: true,
   },
   인천대학교: {
     src: "/university-logos/incheon.png",
@@ -64,6 +63,7 @@ export function UniversityLogo({
     "university-logo",
     `university-logo--${size}`,
     logo.darkSrc ? "university-logo--theme-variant" : "",
+    logo.darkPlate ? "university-logo--dark-plate" : "",
     logo.markOnly ? "university-logo--mark-only" : "",
     logo.enlargeMark ? "university-logo--enlarge-mark" : "",
   ].filter(Boolean).join(" ");
