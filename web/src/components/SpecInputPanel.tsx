@@ -33,7 +33,7 @@ function SpecInputPanel({
     <section className="dashboard-column">
       <div className="card">
         <h2 className="card-title">
-          <UserCheck size={20} color="#1e3a8a" />
+          <UserCheck size={20} />
           내 편입 스펙 입력
         </h2>
 
@@ -119,7 +119,6 @@ function SpecInputPanel({
           <AlertTriangle
             className="disclaimer-icon"
             size={18}
-            color="#b45309"
           />
           <p className="disclaimer-text">
             4.5 및 4.3 평점 환산은 일반적인 선형 근사치이며, 대학별 산정 기준과 다를 수 있습니다.
