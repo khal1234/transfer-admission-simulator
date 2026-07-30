@@ -60,6 +60,7 @@ import {
 import {
   AlertTriangle,
   ChevronDown,
+  ExternalLink,
   Moon,
   School,
   Star,
@@ -68,6 +69,7 @@ import {
 
 // Static database imports validated before use
 import rawStandardData from "./data/편입_성적_통합.json";
+import { TRANSFER_ADMISSION_LINKS } from "./data/admissionLinks";
 
 const TrendChart = lazy(() => import("./components/TrendChart"));
 
@@ -518,6 +520,32 @@ export default function App() {
               합격 가능성이나 정보의 완전성·정확성을 보증하지 않으며, 최종 지원 판단과
               그 결과에 대한 책임은 이용자에게 있습니다.
             </p>
+          </details>
+          <details className="admission-links">
+            <summary>
+              <span>
+                <School size={17} aria-hidden="true" />
+                편입학 홈페이지 확인
+              </span>
+              <ChevronDown size={17} aria-hidden="true" />
+            </summary>
+            <div
+              className="admission-links-grid"
+              aria-label="대학교별 공식 편입학 홈페이지"
+            >
+              {TRANSFER_ADMISSION_LINKS.map(({ university, url }) => (
+                <a
+                  key={university}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${university} 편입학 홈페이지 새 탭에서 열기`}
+                >
+                  <span>{university}</span>
+                  <ExternalLink size={15} aria-hidden="true" />
+                </a>
+              ))}
+            </div>
           </details>
         </div>
         <div className="header-actions">

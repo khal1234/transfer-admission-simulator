@@ -80,6 +80,11 @@ body {
   margin-bottom: 6px;
 }
 
+.header-title-block {
+  flex: 1;
+  min-width: 0;
+}
+
 .header-title-block p {
   font-size: 14px;
   color: #94a3b8;
@@ -143,6 +148,102 @@ body {
   font-size: 12px;
   font-weight: 600;
   line-height: 1.55;
+}
+
+.admission-links {
+  display: block;
+  max-width: 840px;
+  margin-top: 10px;
+  border: 1px solid rgba(52, 211, 153, 0.42);
+  border-radius: 10px;
+  background-color: rgba(6, 78, 59, 0.24);
+  overflow: hidden;
+}
+
+.admission-links summary {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  color: #a7f3d0;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+  transition: background-color 0.2s ease;
+}
+
+.admission-links summary:hover {
+  background-color: rgba(16, 185, 129, 0.12);
+}
+
+.admission-links summary::-webkit-details-marker {
+  display: none;
+}
+
+.admission-links summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admission-links summary svg {
+  flex-shrink: 0;
+  color: #6ee7b7;
+}
+
+.admission-links summary > svg {
+  transition: transform 0.2s ease;
+}
+
+.admission-links[open] summary > svg {
+  transform: rotate(180deg);
+}
+
+.admission-links-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px 12px 12px;
+}
+
+.admission-links-grid a {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1px solid rgba(167, 243, 208, 0.22);
+  border-radius: 8px;
+  background-color: rgba(15, 23, 42, 0.42);
+  color: #ecfdf5;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.admission-links-grid a:hover {
+  border-color: rgba(110, 231, 183, 0.65);
+  background-color: rgba(16, 185, 129, 0.18);
+  transform: translateY(-1px);
+}
+
+.admission-links-grid a:focus-visible,
+.admission-links summary:focus-visible {
+  outline: 2px solid #6ee7b7;
+  outline-offset: -2px;
+}
+
+.admission-links-grid svg {
+  flex-shrink: 0;
+  color: #6ee7b7;
 }
 
 .header-status {
@@ -1608,6 +1709,25 @@ html[data-theme="dark"] .explorer-filters {
 
   .ai-disclaimer > p {
     font-size: 12px;
+  }
+
+  .admission-links {
+    width: 100%;
+  }
+
+  .admission-links summary {
+    min-height: 44px;
+    font-size: 12px;
+  }
+
+  .admission-links-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .admission-links-grid a {
+    min-height: 44px;
+    padding: 9px 10px;
   }
 
   .header-status {
