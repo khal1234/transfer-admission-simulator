@@ -68,7 +68,7 @@ function DepartmentExplorer({
     setSelectedUnivs((current) => (
       current.includes(university)
         ? current.filter((selected) => selected !== university)
-        : [...current, university]
+        : [university]
     ));
     setCurrentPage(1);
   };
