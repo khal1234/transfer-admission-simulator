@@ -10,7 +10,7 @@ type UniversityLogoConfig = {
 
 const UNIVERSITY_LOGOS: Readonly<Record<string, UniversityLogoConfig>> = {
   강원대학교: {
-    src: "/university-logos/kangwon.svg",
+    src: "/university-logos/kangwon.png",
   },
   경북대학교: {
     src: "/university-logos/kyungpook.png",
@@ -26,21 +26,16 @@ const UNIVERSITY_LOGOS: Readonly<Record<string, UniversityLogoConfig>> = {
     src: "/university-logos/incheon.png",
   },
   전남대학교: {
-    src: "/university-logos/chonnam.svg",
-    markOnly: true,
-    enlargeMark: true,
+    src: "/university-logos/chonnam.png",
   },
   전북대학교: {
-    src: "/university-logos/jeonbuk.svg",
-    markOnly: true,
-    enlargeMark: true,
+    src: "/university-logos/jeonbuk.png",
   },
   충남대학교: {
     src: "/university-logos/chungnam.png",
   },
   충북대학교: {
-    src: "/university-logos/chungbuk.png",
-    markOnly: true,
+    src: "/university-logos/chungbuk.svg",
   },
 };
 
