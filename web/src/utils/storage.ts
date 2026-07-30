@@ -4,6 +4,7 @@ export const STORAGE_KEYS = {
   gpaRaw: "t27_gpa_raw",
   gpa100: "t27_gpa_100",
   targets: "t27_targets",
+  theme: "t27_theme",
 } as const;
 
 export type SimulatorStorageKey =
@@ -26,6 +27,7 @@ function createEmptyValues(): Record<SimulatorStorageKey, null> {
     [STORAGE_KEYS.gpaRaw]: null,
     [STORAGE_KEYS.gpa100]: null,
     [STORAGE_KEYS.targets]: null,
+    [STORAGE_KEYS.theme]: null,
   };
 }
 
@@ -60,6 +62,7 @@ export function readSimulatorStorageSnapshot(
         [STORAGE_KEYS.gpaRaw]: storage.getItem(STORAGE_KEYS.gpaRaw),
         [STORAGE_KEYS.gpa100]: storage.getItem(STORAGE_KEYS.gpa100),
         [STORAGE_KEYS.targets]: storage.getItem(STORAGE_KEYS.targets),
+        [STORAGE_KEYS.theme]: storage.getItem(STORAGE_KEYS.theme),
       },
     };
   } catch {

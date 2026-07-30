@@ -60,8 +60,10 @@ import {
 import {
   AlertTriangle,
   ChevronDown,
+  Moon,
   School,
   Star,
+  Sun,
 } from "lucide-react";
 
 // Static database imports validated before use
@@ -73,6 +75,18 @@ type ChartTarget = {
   univ: string;
   dept: string;
 };
+
+type Theme = "light" | "dark";
+
+function getInitialTheme(savedTheme: string | null): Theme {
+  if (savedTheme === "light" || savedTheme === "dark") {
+    return savedTheme;
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
 
 const DEFAULT_TARGETS: Target[] = [
   { univ: "부산대학교", dept: "기계공학부" },
@@ -153,6 +167,9 @@ export default function App() {
   const [storageAvailable, setStorageAvailable] = useState(
     initialStorage.available,
   );
+  const [theme, setTheme] = useState<Theme>(() => (
+    getInitialTheme(initialStorage.values[STORAGE_KEYS.theme])
+  ));
   const [toeicInput, setToeicInput] = useState<string>(() => (
     restoreToeicInput(initialStorage.values[STORAGE_KEYS.toeic])
   ));
@@ -258,6 +275,20 @@ export default function App() {
   useEffect(() => {
     persistStorageValue(STORAGE_KEYS.targets, JSON.stringify(targets));
   }, [persistStorageValue, targets]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "dark" ? "#020617" : "#f5f7fb");
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    persistStorageValue(STORAGE_KEYS.theme, nextTheme);
+  }, [persistStorageValue, theme]);
 
   // Selected major for chart visualization
   const [chartTarget, setChartTarget] = useState<ChartTarget | null>(null);
@@ -489,9 +520,25 @@ export default function App() {
             </p>
           </details>
         </div>
-        <div className="header-status">
-          <School size={20} color="#10b981" />
-          <span>9개 대학교 연동 중</span>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="theme-toggle"
+            aria-label={`${theme === "dark" ? "라이트" : "다크"} 모드로 전환`}
+            aria-pressed={theme === "dark"}
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? (
+              <Sun size={18} aria-hidden="true" />
+            ) : (
+              <Moon size={18} aria-hidden="true" />
+            )}
+            <span>{theme === "dark" ? "라이트 모드" : "다크 모드"}</span>
+          </button>
+          <div className="header-status">
+            <School size={20} color="#10b981" />
+            <span>9개 대학교 연동 중</span>
+          </div>
         </div>
       </header>
 

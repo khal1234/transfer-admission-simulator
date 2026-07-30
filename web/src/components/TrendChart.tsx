@@ -253,21 +253,28 @@ function TrendChart({
             data={chartData}
             margin={{ top: 10, right: 12, left: 8, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis dataKey="year" tick={{ fontSize: 11, fontWeight: "600" }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+            <XAxis
+              dataKey="year"
+              tick={{ fill: "var(--text-secondary)", fontSize: 11, fontWeight: "600" }}
+              stroke="var(--border-color)"
+            />
             <YAxis
               width={54}
               domain={yAxisDomain}
-              tick={{ fontSize: 11, fontWeight: "600" }}
+              tick={{ fill: "var(--text-secondary)", fontSize: 11, fontWeight: "600" }}
+              stroke="var(--border-color)"
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "#1e293b",
-                color: "white",
+                backgroundColor: "var(--tooltip-bg)",
+                border: "1px solid var(--tooltip-border)",
+                color: "var(--tooltip-text)",
                 borderRadius: "10px",
                 fontSize: "12px",
               }}
-              itemStyle={{ color: "white" }}
+              itemStyle={{ color: "var(--tooltip-text)" }}
+              labelStyle={{ color: "var(--tooltip-text)" }}
             />
             <Legend wrapperStyle={{ fontSize: "11px", fontWeight: "600" }} />
             <Line
