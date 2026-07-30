@@ -17,6 +17,7 @@ import {
 import { getConversionFormula } from "../utils/formulaRegistry";
 import { getRecordYear } from "../utils/records";
 import { getRecordKey } from "../utils/targets";
+import UniversityName from "./UniversityName";
 
 type ChartTarget = {
   univ: string;
@@ -213,7 +214,9 @@ function TrendChart({
       <div className="chart-header-row">
         <div>
           <h3 className="chart-title">
-            📈 {target.univ} {target.dept} 입결 대시보드
+            <span aria-hidden="true">📈</span>
+            <UniversityName university={target.univ} logoSize="small" />
+            <span>{target.dept} 입결 대시보드</span>
           </h3>
           <p className="chart-subtitle">
             현재 선택 지표: {selectedMetric.label}

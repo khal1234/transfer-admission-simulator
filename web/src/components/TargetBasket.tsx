@@ -14,6 +14,7 @@ import type {
 } from "../utils/converter";
 import { getGpaMax, type GpaType } from "../utils/scoreInput";
 import type { Target } from "../utils/targets";
+import UniversityName from "./UniversityName";
 
 type RecentHistoryRow = {
   year: string;
@@ -124,10 +125,11 @@ function TargetBasket({
             return (
               <div className="target-card" key={key}>
                 <div className="target-card-header">
-                  <div className="univ-emblem-badge">{target.univ.charAt(0)}</div>
                   <div className="target-card-meta">
                     <h3>{target.dept}</h3>
-                    <p>{target.univ}</p>
+                    <p>
+                      <UniversityName university={target.univ} logoSize="small" />
+                    </p>
                     {(referenceRecord.합격자기준 === "최초"
                       || referenceRecord.합격자기준 === "최종") && (
                       <span

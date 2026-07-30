@@ -12,6 +12,7 @@ import ChartErrorBoundary from "./components/ChartErrorBoundary";
 import SpecInputPanel from "./components/SpecInputPanel";
 import TargetBasket, { type TargetSummary } from "./components/TargetBasket";
 import type { ChartMetric } from "./components/TrendChart";
+import UniversityName from "./components/UniversityName";
 import { 
   calculateScore, 
   calculateScoreDeficit,
@@ -541,7 +542,7 @@ export default function App() {
                   rel="noreferrer"
                   aria-label={`${university} 편입학 홈페이지 새 탭에서 열기`}
                 >
-                  <span>{university}</span>
+                  <UniversityName university={university} logoSize="small" />
                   <ExternalLink size={15} aria-hidden="true" />
                 </a>
               ))}

@@ -246,6 +246,74 @@ body {
   color: #6ee7b7;
 }
 
+/* University identity */
+.university-name-with-logo {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+
+.university-name-text {
+  min-width: 0;
+}
+
+.university-logo {
+  --logo-width: 30px;
+  --logo-height: 24px;
+  position: relative;
+  display: inline-flex;
+  width: var(--logo-width);
+  height: var(--logo-height);
+  flex: 0 0 var(--logo-width);
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 2px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.university-logo--small {
+  --logo-width: 26px;
+  --logo-height: 20px;
+  border-radius: 5px;
+}
+
+.university-logo--large {
+  --logo-width: 36px;
+  --logo-height: 30px;
+  border-radius: 7px;
+}
+
+.university-logo-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.university-logo-image--dark {
+  display: none;
+}
+
+.university-logo--mark-only .university-logo-image {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: auto;
+  max-width: none;
+  height: calc(100% - 4px);
+  transform: translateY(-50%);
+}
+
+.university-logo--mark-only.university-logo--enlarge-mark .university-logo-image {
+  height: calc((100% - 4px) * 1.4);
+}
+
 .header-status {
   display: flex;
   align-items: center;
@@ -684,22 +752,8 @@ body {
   align-items: flex-start;
 }
 
-.univ-emblem-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background-color: var(--primary-color);
-  color: white;
-  font-size: 11px;
-  font-weight: 800;
-}
-
 .target-card-meta {
   flex: 1;
-  padding-left: 10px;
 }
 
 .target-card-meta h3 {
@@ -710,6 +764,7 @@ body {
 }
 
 .target-card-meta p {
+  margin-top: 5px;
   font-size: 12px;
   color: var(--text-muted);
   font-weight: 600;
@@ -1171,6 +1226,8 @@ body {
 }
 
 .univ-chip {
+  display: inline-flex;
+  align-items: center;
   border: 1px solid var(--border-color);
   background-color: white;
   padding: 6px 14px;
@@ -1342,6 +1399,10 @@ body {
 }
 
 .chart-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   color: var(--text-primary);
   font-size: 16px;
   font-weight: 800;
@@ -1491,6 +1552,24 @@ html[data-theme="dark"] .app-header {
   background: linear-gradient(135deg, #172554 0%, #020617 100%);
   border: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: 0 14px 32px -12px rgba(0, 0, 0, 0.65);
+}
+
+html[data-theme="dark"] .university-logo {
+  border-color: rgba(148, 163, 184, 0.32);
+  background-color: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.38);
+}
+
+html[data-theme="dark"] .university-logo--theme-variant {
+  background-color: rgba(15, 23, 42, 0.96);
+}
+
+html[data-theme="dark"] .university-logo-image--light {
+  display: none;
+}
+
+html[data-theme="dark"] .university-logo-image--dark {
+  display: block;
 }
 
 html[data-theme="dark"] :is(

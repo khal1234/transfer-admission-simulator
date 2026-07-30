@@ -13,6 +13,7 @@ import {
   filterDepartmentSearchIndex,
 } from "../utils/departmentSearch";
 import { getRecordKey } from "../utils/targets";
+import UniversityName from "./UniversityName";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -137,7 +138,7 @@ function DepartmentExplorer({
               className={`univ-chip ${selectedUnivSet.has(university) ? "active" : ""}`}
               onClick={() => toggleUniversity(university)}
             >
-              {university}
+              <UniversityName university={university} logoSize="small" />
             </button>
           ))}
         </div>
@@ -178,7 +179,7 @@ function DepartmentExplorer({
                 return (
                   <tr key={key}>
                     <td className="university-name-cell">
-                      {record.대학명}
+                      <UniversityName university={record.대학명} />
                     </td>
                     <td>
                       <div className="dept-name-wrapper">
@@ -232,7 +233,11 @@ function DepartmentExplorer({
             return (
               <article className="department-result-card" key={key}>
                 <div className="department-result-heading">
-                  <span className="department-university">{record.대학명}</span>
+                  <UniversityName
+                    university={record.대학명}
+                    className="department-university"
+                    logoSize="small"
+                  />
                   <span className="department-count">
                     {record.모집인원 !== null ? `${record.모집인원}명 모집` : "인원 비공개"}
                   </span>
