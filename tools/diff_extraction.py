@@ -28,6 +28,8 @@ from extract_spreadsheets import (  # noqa: E402
     extract_all,
     normalize_name,
 )
+from extract_pdfs import SPECS as PDF_SPECS  # noqa: E402
+from extract_pdfs import extract_one as extract_pdf_one  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT / "results"
@@ -50,6 +52,32 @@ def load(name):
         return json.load(f)
 
 
+def publishes_map(univ):
+    """그 대학 원본이 각 필드를 싣는가.
+
+    스프레드시트 쪽은 사람이 파일을 열어 확인한 사실(SOURCE_PUBLISHES)을 쓰고,
+    PDF 쪽은 추출 사양의 raw/conv 선언에서 끌어온다. 강원대처럼 원점수와
+    환산점수를 모두 싣는 곳은 '변환' 열 유무로 이미 갈라져 있다.
+    """
+    if univ in SOURCE_PUBLISHES:
+        return SOURCE_PUBLISHES[univ]
+
+    spec = PDF_SPECS.get(univ)
+    if spec is None:
+        return {}
+
+    labels = spec["labels"]
+    has_pair_english = "english_raw" in labels
+    has_pair_gpa = "gpa_raw" in labels
+
+    return {
+        "토익원": has_pair_english or spec["english_is_raw"],
+        "토익환산": has_pair_english or not spec["english_is_raw"],
+        "학점원": has_pair_gpa or spec["gpa_is_raw"],
+        "학점환산": has_pair_gpa or not spec["gpa_is_raw"],
+    }
+
+
 def close_enough(a, b):
     if a is None and b is None:
         return True
@@ -63,10 +91,19 @@ def main():
     show_all = "--full" in sys.argv
 
     extracted = extract_all()
+    covered = {(univ, year) for univ, year, _ in EXTRACTORS}
+
+    # PDF 17칸도 같은 방식으로 합친다. 의심 행은 대조에 넣지 않고 따로 센다.
+    pdf_suspects = []
+    for univ, spec in PDF_SPECS.items():
+        for year in spec["years"]:
+            records, suspects = extract_pdf_one(univ, year, spec)
+            extracted.extend(records)
+            pdf_suspects.extend(suspects)
+            covered.add((univ, year))
+
     standard = load("편입_성적_통합.json")
     exceptions = load("편입_예외학과_통합.json")
-
-    covered = {(univ, year) for univ, year, _ in EXTRACTORS}
 
     # results 를 (대학, 연도, 정규화이름) 으로 색인한다. 예외도 함께 넣어야
     # '예외로 옮긴 것'을 누락으로 잘못 세지 않는다.
@@ -110,7 +147,7 @@ def main():
 
         matched += 1
         _, record = found
-        publishes = SOURCE_PUBLISHES[row["대학명"]]
+        publishes = publishes_map(row["대학명"])
 
         for field, pub_key, label in COMPARABLE_FIELDS:
             source_value = row[field]
