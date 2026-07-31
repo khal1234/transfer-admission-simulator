@@ -194,6 +194,38 @@ export function resolveDepartmentAliases(normalizedQuery: string): string[] {
   return [...targets];
 }
 
+/**
+ * 정렬용 표준명 — 같은 과인데 대학마다 다르게 부르는 꼬리를 뗀다.
+ *
+ * '기계'로 검색하면 기계공학과·기계공학부·기계공학전공이 학과명 가나다순에
+ * 밀려 사이사이 다른 과를 끼고 흩어졌다. 찾는 사람 입장에서 이 셋은 같은 과라
+ * 한 뭉텅이로 보여야 한다.
+ *
+ * 꼬리는 '전공 → 과 → 부' 순서로 딱 하나만 뗀다. '학과'를 통째로 떼면
+ * '기계공학과'가 '기계공'이 되어 '기계공학부'(→'기계공학')와 도리어 갈라진다.
+ * '학'은 이름의 일부라 떼지 않는다 — 간호학과·간호학부가 모두 '간호학'으로
+ * 모인다.
+ *
+ * '교육'이 붙은 학과는 이 규칙에서 저절로 갈라진다. '기계공학교육과'는
+ * '기계공학교육'이 되어 '기계공학'과 다른 자리에 놓인다. 사용자 말대로 교육과
+ * 여부가 학부/학과 표기 차이보다 훨씬 큰 차이라서 그래야 맞다.
+ */
+export function getDepartmentGroupKey(department: string): string {
+  const withoutDetail = department
+    .replace(/[（(].*?[)）]/g, "")
+    .replace(/[ㆍ‧・･]/g, "·")
+    .replace(/\s/g, "")
+    .trim();
+
+  for (const suffix of ["전공", "과", "부"]) {
+    if (withoutDetail.length > suffix.length && withoutDetail.endsWith(suffix)) {
+      return withoutDetail.slice(0, -suffix.length);
+    }
+  }
+
+  return withoutDetail;
+}
+
 function getChosung(text: string): string {
   let result = "";
 
@@ -281,10 +313,16 @@ export function filterDepartmentSearchIndex(
         : [];
     });
 
-  // 학과명 기준으로 모은다. 원본 JSON이 대학별로 묶여 있어 그대로 두면
+  // 표준명 기준으로 모은다. 원본 JSON이 대학별로 묶여 있어 그대로 두면
   // '기계공학과'와 '기계공학부'가 대학 순서에 밀려 멀리 떨어져 나온다.
   // 찾는 사람은 같은 과를 대학끼리 견주고 싶어 하므로 과가 먼저다.
   return results.sort((a, b) => {
+    const byGroup = getDepartmentGroupKey(a.학과)
+      .localeCompare(getDepartmentGroupKey(b.학과), "ko");
+    if (byGroup !== 0) {
+      return byGroup;
+    }
+
     const byDepartment = a.학과.localeCompare(b.학과, "ko");
     return byDepartment !== 0
       ? byDepartment

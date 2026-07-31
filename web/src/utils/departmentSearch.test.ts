@@ -4,6 +4,7 @@ import {
   buildDepartmentSearchIndex,
   decomposeToJamo,
   filterDepartmentSearchIndex,
+  getDepartmentGroupKey,
   resolveDepartmentAliases,
 } from "./departmentSearch";
 
@@ -145,6 +146,56 @@ describe("result ordering", () => {
       "기계공학부/부산대학교",
       "기계공학부/충남대학교",
       "화학공학과/강원대학교",
+    ]);
+  });
+});
+
+describe("getDepartmentGroupKey", () => {
+  it("treats 과/부/전공 as the same unit", () => {
+    expect(getDepartmentGroupKey("기계공학과")).toBe("기계공학");
+    expect(getDepartmentGroupKey("기계공학부")).toBe("기계공학");
+    expect(getDepartmentGroupKey("기계공학전공")).toBe("기계공학");
+  });
+
+  // 교육과 여부는 학부/학과 표기 차이보다 훨씬 큰 차이다.
+  it("keeps teaching departments apart", () => {
+    expect(getDepartmentGroupKey("기계공학교육과")).toBe("기계공학교육");
+    expect(getDepartmentGroupKey("기계공학교육과"))
+      .not.toBe(getDepartmentGroupKey("기계공학과"));
+  });
+
+  it("drops the parenthesised sub-track and normalises the middle dot", () => {
+    expect(getDepartmentGroupKey("기계의용·메카트로닉스공학부(기계의용공학전공)"))
+      .toBe("기계의용·메카트로닉스공학");
+    expect(getDepartmentGroupKey("농업토목ㆍ생물산업공학부 (농업토목공학전공)"))
+      .toBe("농업토목·생물산업공학");
+  });
+
+  // '학'까지 떼면 '기계공학과'가 '기계공'이 되어 도리어 갈라진다.
+  it("does not strip 학 from the stem", () => {
+    expect(getDepartmentGroupKey("간호학과")).toBe("간호학");
+    expect(getDepartmentGroupKey("간호학부")).toBe("간호학");
+    expect(getDepartmentGroupKey("기계설계공학")).toBe("기계설계공학");
+  });
+});
+
+describe("grouped ordering", () => {
+  it("puts 학과/학부/전공 of the same department in one block", () => {
+    const grouped = buildDepartmentSearchIndex([
+      createRecord("부경대학교", "기계공학전공"),
+      createRecord("경북대학교", "기계공학교육과"),
+      createRecord("인천대학교", "기계공학과"),
+      createRecord("부산대학교", "기계공학부"),
+    ]);
+
+    expect(
+      filterDepartmentSearchIndex(grouped, "기계", new Set())
+        .map((record) => record.학과),
+    ).toEqual([
+      "기계공학과",
+      "기계공학부",
+      "기계공학전공",
+      "기계공학교육과",
     ]);
   });
 });
