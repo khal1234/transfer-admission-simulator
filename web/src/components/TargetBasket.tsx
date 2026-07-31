@@ -178,72 +178,60 @@ function TargetBasket({
 
                 <div className="target-card-body">
                   <div className="compare-container">
-                    <div className="compare-row">
-                      <span className="compare-label">
-                        {referenceRecord.연도}년도 합격 평균 대비
-                      </span>
+                    {/* 접힌 상태에서 한 줄로 읽히게 묶는다. 예전에는 라벨-내
+                        지표합-합격선-차이가 각각 한 줄씩 차지해 카드 하나가
+                        419px 였고, 지망 여럿을 동시에 볼 수가 없었다. */}
+                    <div className="compare-summary">
                       {score.status === "safe" && (
-                        <span className="status-badge status-safe">
-                          🟢 {referenceRecord.연도} 평균 상회
-                        </span>
+                        <span className="status-badge status-safe">🟢 상회</span>
                       )}
                       {score.status === "borderline" && (
-                        <span className="status-badge status-borderline">
-                          🟡 {referenceRecord.연도} 평균 근접
-                        </span>
+                        <span className="status-badge status-borderline">🟡 근접</span>
                       )}
                       {score.status === "risk" && (
-                        <span className="status-badge status-risk">
-                          🔴 {referenceRecord.연도} 평균 미달
-                        </span>
+                        <span className="status-badge status-risk">🔴 미달</span>
                       )}
                       {score.status === "unknown" && (
                         <span className="status-badge status-unknown">
-                          {scoreInputInvalid ? "⚪ 점수 입력 확인" : "⚪ 데이터 부족"}
+                          {scoreInputInvalid ? "⚪ 입력 확인" : "⚪ 자료 부족"}
+                        </span>
+                      )}
+
+                      <span className="compare-scores">
+                        <span
+                          className="compare-score compare-score-primary"
+                          title="지표합 = 공인영어 환산점수 + 전적대 환산점수. 대학마다 배점이 달라 절대값 비교는 의미 없으며, 같은 대학 내 합격선과의 격차만 참고하세요"
+                        >
+                          {score.myIndexSum !== null
+                            ? score.myIndexSum
+                            : scoreInputInvalid
+                              ? "입력 확인 필요"
+                              : "계산 불가"}
+                          <HelpCircle size={12} className="compare-help" />
+                        </span>
+                        <span className="compare-versus">vs</span>
+                        <span className="compare-score compare-score-secondary">
+                          {score.acceptedIndexSum !== null
+                            ? score.acceptedIndexSum
+                            : "비공개"}
+                        </span>
+                        <span className="compare-accepted-label">
+                          {referenceRecord.연도} 합격선
+                        </span>
+                      </span>
+
+                      {score.diff !== null && (
+                        <span className={`score-diff ${score.diff >= 0 ? "positive" : "negative"}`}>
+                          {score.diff >= 0 ? `+${score.diff}` : score.diff}점
                         </span>
                       )}
                     </div>
+
                     {comparisonYearNotice !== null && (
                       <p className="comparison-notice">{comparisonYearNotice}</p>
                     )}
                     {formulaNotice !== null && (
                       <p className="formula-notice">⚠️ {formulaNotice}</p>
-                    )}
-
-                    <div className="compare-row compare-row-spaced">
-                      <span className="compare-index-label">
-                        내 스펙 지표합
-                        <span
-                          className="compare-help"
-                          title="지표합 = 공인영어 환산점수 + 전적대 환산점수. 대학마다 배점이 달라 절대값 비교는 의미 없으며, 같은 대학 내 합격선과의 격차만 참고하세요"
-                        >
-                          <HelpCircle size={12} />
-                        </span>
-                      </span>
-                      <span className="compare-score compare-score-primary">
-                        {score.myIndexSum !== null
-                          ? `${score.myIndexSum}점`
-                          : scoreInputInvalid
-                            ? "입력 확인 필요"
-                            : "계산 불가"}
-                      </span>
-                    </div>
-
-                    <div className="compare-row">
-                      <span className="compare-index-label">
-                        합격선 지표합 ({referenceRecord.연도} 평균)
-                      </span>
-                      <span className="compare-score compare-score-secondary">
-                        {score.acceptedIndexSum !== null
-                          ? `${score.acceptedIndexSum}점`
-                          : "비공개"}
-                      </span>
-                    </div>
-
-                    {score.diff !== null && (
-                      <div className={`score-diff ${score.diff >= 0 ? "positive" : "negative"}`}>
-                        {score.diff >= 0 ? `+${score.diff}` : score.diff}점 차이
-                      </div>
                     )}
 
                     {score.myIndexSum !== null
