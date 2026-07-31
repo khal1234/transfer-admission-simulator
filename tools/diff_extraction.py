@@ -107,13 +107,18 @@ def main():
 
     # results 를 (대학, 연도, 정규화이름) 으로 색인한다. 예외도 함께 넣어야
     # '예외로 옮긴 것'을 누락으로 잘못 세지 않는다.
+    # 한 레코드가 '학과'와 '학과_원본명' 두 이름으로 색인된다(원본은 당시명을,
+    # results 는 현재명을 쓰는 경우가 많다 — 강원대 2024는 77건 중 40건이 다르다).
+    # 고아 판정을 키 단위로 하면 현재명 키가 항상 고아로 잡히므로 레코드 단위로 센다.
     indexed = {}
-    for record in standard:
+    record_ids = {}
+    for position, record in enumerate(standard):
         key = (record["대학명"], record["연도"])
         if key not in covered:
             continue
+        record_ids[position] = record
         for name in (record.get("학과_원본명"), record.get("학과")):
-            indexed[(key[0], key[1], normalize_name(name))] = ("표준", record)
+            indexed[(key[0], key[1], normalize_name(name))] = ("표준", position, record)
 
     exception_keys = set()
     for record in exceptions:
@@ -127,6 +132,7 @@ def main():
     mismatched = []
     derived = defaultdict(int)
     matched = 0
+    matched_positions = set()
 
     seen_keys = set()
     for row in extracted:
@@ -146,7 +152,8 @@ def main():
             continue
 
         matched += 1
-        _, record = found
+        _, position, record = found
+        matched_positions.add(position)
         publishes = publishes_map(row["대학명"])
 
         for field, pub_key, label in COMPARABLE_FIELDS:
@@ -170,9 +177,9 @@ def main():
                 mismatched.append((row, label, source_value, result_value))
 
     orphans = []
-    for (univ, year, name), (_, record) in indexed.items():
-        if (univ, year, name) not in seen_keys:
-            orphans.append((univ, year, record.get("학과")))
+    for position, record in sorted(record_ids.items()):
+        if position not in matched_positions:
+            orphans.append((record["대학명"], record["연도"], record.get("학과")))
 
     def show(rows, limit=25):
         for line in rows[:None if show_all else limit]:
