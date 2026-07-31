@@ -749,10 +749,42 @@ body {
   font-weight: 600;
 }
 
+/* 최초/최종/미공개는 성격이 다른 값인데 전부 같은 회색이라 구별이 안 됐다.
+   숫자 뱃지(상회/근접/미달)와 헷갈리지 않게 채도는 낮게 두고 색으로만 나눈다. */
 .acceptance-basis {
+  display: inline-block;
   font-size: 10px;
   font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: help;
+}
+
+.acceptance-basis-first {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.acceptance-basis-final {
+  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.acceptance-basis-unknown {
   color: var(--text-muted);
+  background: rgba(148, 163, 184, 0.14);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+html[data-theme="dark"] .acceptance-basis-first {
+  color: #fbbf24;
+}
+
+html[data-theme="dark"] .acceptance-basis-final {
+  color: #93c5fd;
 }
 
 .btn-remove-target {
@@ -1272,6 +1304,11 @@ body {
 
 .master-table tr:hover td {
   background-color: #f8fafc;
+}
+
+/* 같은 과 묶음의 경계. 행 사이 실선은 이미 있으니 여기만 진하게 준다. */
+.master-table tr.department-group-start td {
+  border-top: 2px solid var(--border-color);
 }
 
 .explorer-university-column {
@@ -2501,6 +2538,155 @@ html[data-theme="dark"] .spec-panel-values {
   }
 }
 
+/* ── 지망 카드 압축 (좁은 화면) ────────────────────────────
+   375x812 에서 카드 하나가 541~627px 이었다. 화면 하나에 한 장이라
+   지망 아홉을 견주려면 5000px 를 스크롤해야 했다. 폭이 좁아 요약 줄이
+   세 줄로 접히는 게 가장 컸다(120px).
+
+   핵심은 요약 줄의 '51.24 vs 55.14 2025 합격선'이 바로 아래 3개년 줄의
+   기준 연도 행과 같은 값이라는 점이다. 좁은 화면에서는 큰 숫자를 지우고
+   3개년 줄에 숫자를 맡긴다. 판정 뱃지와 격차는 남겨 눈에 걸리게 둔다. */
+@media (max-width: 899px) {
+  .compare-summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 8px;
+    row-gap: 4px;
+  }
+
+  /* 3개년 줄이 같은 숫자를 연도까지 붙여 보여준다. */
+  .compare-summary .compare-scores {
+    display: none;
+  }
+
+  .compare-summary .status-badge {
+    grid-column: 1;
+  }
+
+  .compare-summary .score-diff {
+    grid-column: 2;
+    font-size: 20px;
+  }
+
+  .compare-years {
+    margin-top: 6px;
+    font-size: 12.5px;
+  }
+
+  .compare-year {
+    gap: 6px;
+  }
+
+  .compare-action {
+    font-size: 12.5px;
+  }
+
+  /* 학과명 아래로 대학·기준이 각각 한 줄씩 쌓여 103px 를 먹고 있었다. */
+  .target-card-header {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .target-card-header .target-card-meta {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 3px 8px;
+    min-width: 0;
+  }
+
+  .target-card-header h3 {
+    font-size: 15px;
+    line-height: 1.3;
+  }
+
+  .target-card-header .target-card-meta > p {
+    margin: 0;
+  }
+
+  .comparison-notice,
+  .formula-notice,
+  .compare-split-notice {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  /* 접힌 토글 셋('근거 보기'·'상세 분석 보기'·'차트')이 각자 한 줄씩 먹어
+     150px 였다. 넓은 화면에서 이미 쓰는 수법을 그대로 가져온다 — 접혀 있을
+     때는 한 줄에 나란히, 펼칠 때만 제 줄을 차지한다.
+
+     푸터가 body 의 형제라 셋을 한 줄에 놓으려면 같은 flex 문맥에 있어야 한다.
+     body 를 display:contents 로 두면 마크업을 안 건드리고 그렇게 된다. */
+  /* flex 로 짜면 안 된다. 폭이 내용에서 정해지는 칸 안에서는 flex-basis:100%
+     가 순환 참조가 되어 줄바꿈이 일어나지 않고 카드가 가로로 늘어난다
+     (실측: 카드가 710px 로 삐져나갔다). 그리드는 열이 컨테이너 폭에서
+     확정되므로 그런 일이 없다. */
+  .target-card {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: 6px;
+  }
+
+  .target-card-body {
+    display: contents;
+  }
+
+  .target-card-header,
+  .target-card-body > .compare-container {
+    grid-column: 1 / -1;
+  }
+
+  .target-card-body > .compare-container {
+    margin-bottom: 0;
+  }
+
+  /* 열을 못박지 않고 자동 배치에 맡긴다. 못박아 두면 '근거 보기'를 펼쳤을 때
+     나머지 둘이 2·3열에 그대로 남아 1열이 빈 채로 다음 줄이 시작된다. */
+  .target-card-body > .score-basis:not([open]),
+  .target-card-body > .target-details:not([open]),
+  .target-card > .target-card-footer {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+  }
+
+  /* 펼치면 그때 제 줄을 차지한다. 내용이 좁은 칸에 갇히지 않게. */
+  .target-card-body > .score-basis[open],
+  .target-card-body > .target-details[open] {
+    grid-column: 1 / -1;
+  }
+
+  .target-card-body > .score-basis:not([open]) .score-basis-summary,
+  .target-card-body > .target-details:not([open]) .target-details-summary,
+  .target-card-footer .btn-card-action {
+    justify-content: center;
+    width: 100%;
+    padding: 10px 6px;
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+}
+
+/* 토글 문구의 넓은 화면용/좁은 화면용 두 벌. 폭이 110px 남짓이라 긴 문구는
+   줄바꿈되어 그 줄만 두 배로 높아진다. 헤더 안내문에서 쓰는 방식과 같다. */
+.summary-label-narrow {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .summary-label-wide {
+    display: none;
+  }
+
+  .summary-label-narrow {
+    display: inline;
+  }
+}
+
 /* ── 지망 한 줄 배치 (넓은 화면) ────────────────────────────── */
 
 /* 접었을 때 한 줄로 읽히게 한다. 학과·요약 지표·차트 버튼을 가로로 놓고,
@@ -2550,6 +2736,71 @@ html[data-theme="dark"] .spec-panel-values {
 
 }
 
+/* ── 판정 기준 연도 전환 ──────────────────────────────────── */
+.basket-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.basket-title-row .card-title {
+  margin: 0;
+}
+
+.basis-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-subtle, rgba(148, 163, 184, 0.1));
+}
+
+.basis-switch-label {
+  padding: 0 6px 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.basis-switch-option {
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.basis-switch-option:hover {
+  color: var(--text-primary);
+}
+
+.basis-switch-option.active {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .basis-switch {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .basis-switch-option {
+    flex: 1;
+    padding: 8px 4px;
+    text-align: center;
+  }
+}
+
 /* ── 지망 요약 한 줄 (compare-summary) ─────────────────────── */
 
 /* 상태 · 내 지표합 vs 합격선 · 차이를 한 줄에 놓는다.
@@ -2558,15 +2809,26 @@ html[data-theme="dark"] .spec-panel-values {
   display: block;
 }
 
+/* flex + margin-left:auto 로 두면 격차(-0.8점)의 x좌표가 앞 숫자 자릿수에
+   끌려다닌다. 카드를 세로로 쌓아 보는 화면이라 그게 전부 어긋나 보였고,
+   필요 점수 문구는 남은 폭에 밀려 잘리기까지 했다. 열을 고정한다:
+   상태 · 점수 · 격차를 각자 제 칸에 넣고, 필요 점수는 아래 제 줄로 내린다. */
 .compare-summary {
-  display: flex;
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr) 80px;
   align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px 14px;
+  column-gap: 10px;
+  row-gap: 6px;
 }
 
 .compare-summary .status-badge {
+  grid-column: 1;
+  justify-self: start;
   flex-shrink: 0;
+}
+
+.compare-summary .compare-scores {
+  grid-column: 2;
 }
 
 .compare-scores {
@@ -2613,11 +2875,97 @@ html[data-theme="dark"] .spec-panel-values {
 }
 
 .compare-summary .score-diff {
+  grid-column: 3;
   margin: 0;
-  margin-left: auto;
+  text-align: right;
   font-size: 17px;
   font-weight: 800;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 최근 3개년 합격선 대조 줄 ─────────────────────────────
+   요약 줄이 최신 한 해만 보여줘서 그 해가 유독 빡셌는지 알 수 없었다.
+   카드 압축을 되돌리지 않도록 한 해당 한 줄, 18px 안쪽으로 묶는다. */
+.compare-years {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.compare-year {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.compare-year-label {
+  font-weight: 700;
+  min-width: 34px;
+}
+
+/* 판정과 보완 시나리오가 어느 해를 근거로 나왔는지 한눈에 짚이게. */
+.compare-year-reference {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.compare-year-basis {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.compare-year-scores {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.compare-year-versus {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.compare-year-diff {
+  margin-left: auto;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.compare-year-diff.positive {
+  color: var(--status-safe);
+}
+
+.compare-year-diff.negative {
+  color: var(--status-risk);
+}
+
+.compare-year-empty {
+  font-style: italic;
+}
+
+/* '왜 26년도밖에 없지'에 답하는 줄. 경고가 아니라 안내라 색은 차분하게. */
+.compare-split-notice {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.55;
 }
 
 /* 차이가 이미 숫자로 있으니 막대는 가늘게. 자리만 잡고 눈에 덜 띄게 둔다. */
@@ -2868,27 +3216,20 @@ html[data-theme="dark"] .compare-score-primary {
 
 /* ── 요약 줄의 행동 지표 (compare-action) ──────────────────── */
 
-/* '뭘 얼마나 올려야 하나'는 사용자가 실제로 하는 판단이다. 차이 옆 빈자리에
-   둔다. 미달이면 필요 점수, 상회면 어느 쪽이 효율적인지. */
+/* '뭘 얼마나 올려야 하나'는 사용자가 실제로 하는 판단이다. 요약 줄 아래
+   제 줄에 둔다. 미달이면 필요 점수, 상회면 어느 쪽이 효율적인지.
+   차이 옆에 붙여 두던 시절에는 남은 폭에 밀려 '⚡ TOEIC +60 필...' 처럼
+   잘렸고, 시작 위치도 앞 숫자 자릿수에 따라 카드마다 달랐다. */
 .compare-action {
-  flex-basis: 100%;
+  grid-column: 1 / -1;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
-  white-space: nowrap;
 }
 
 .compare-action::before {
   content: "⚡ ";
   color: var(--status-borderline);
-}
-
-@media (min-width: 900px) {
-  /* 넓은 화면에서는 차이 옆에 같은 줄로 붙인다. */
-  .compare-action {
-    flex-basis: auto;
-    margin-left: 12px;
-  }
 }
 
 html[data-theme="dark"] .compare-action {
