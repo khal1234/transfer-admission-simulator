@@ -506,14 +506,11 @@ export default function App() {
               {standardTargetKeys.size.toLocaleString("ko-KR")}개 모집단위
             </span>
           </p>
-          <details className="ai-disclaimer">
-            <summary>
-              <span>
-                <AlertTriangle size={17} aria-hidden="true" />
-                AI 참고용 · 지원 전 공식 모집요강 확인
-              </span>
-              <ChevronDown size={17} aria-hidden="true" />
-            </summary>
+          <aside className="ai-disclaimer" aria-label="서비스 이용 주의사항">
+            <div className="ai-disclaimer-title">
+              <AlertTriangle size={17} aria-hidden="true" />
+              AI 참고용 · 지원 전 공식 모집요강 확인
+            </div>
             <p>
               본 서비스는 AI를 활용해 제작된 참고용 시뮬레이터로, 데이터·환산식·계산
               결과가 부정확하거나 최신 모집요강과 다를 수 있습니다. 지원 전 각 대학
@@ -521,7 +518,7 @@ export default function App() {
               합격 가능성이나 정보의 완전성·정확성을 보증하지 않으며, 최종 지원 판단과
               그 결과에 대한 책임은 이용자에게 있습니다.
             </p>
-          </details>
+          </aside>
           <details className="admission-links">
             <summary>
               <span>

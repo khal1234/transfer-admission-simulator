@@ -105,41 +105,20 @@ body {
   overflow: hidden;
 }
 
-.ai-disclaimer summary {
+.ai-disclaimer-title {
   display: flex;
   min-height: 42px;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 8px 12px;
   color: #fde68a;
   font-size: 12px;
   font-weight: 700;
-  cursor: pointer;
-  list-style: none;
 }
 
-.ai-disclaimer summary::-webkit-details-marker {
-  display: none;
-}
-
-.ai-disclaimer summary span {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ai-disclaimer summary svg {
+.ai-disclaimer-title svg {
   flex-shrink: 0;
   color: #fde68a;
-}
-
-.ai-disclaimer summary > svg {
-  transition: transform 0.2s ease;
-}
-
-.ai-disclaimer[open] summary > svg {
-  transform: rotate(180deg);
 }
 
 .ai-disclaimer > p {
@@ -1754,7 +1733,7 @@ html[data-theme="dark"] .explorer-filters {
     margin-top: 10px;
   }
 
-  .ai-disclaimer summary {
+  .ai-disclaimer-title {
     min-height: 44px;
     font-size: 12px;
   }
