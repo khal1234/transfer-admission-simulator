@@ -13,7 +13,13 @@ import type {
   DepartmentRecord,
 } from "../utils/converter";
 import { getGpaMax, type GpaType } from "../utils/scoreInput";
+import {
+  explainAcceptedScore,
+  explainMyScore,
+  getFormulaBasis,
+} from "../utils/scoreExplanation";
 import type { Target } from "../utils/targets";
+import ScoreBasis from "./ScoreBasis";
 import UniversityName from "./UniversityName";
 
 type RecentHistoryRow = {
@@ -120,6 +126,21 @@ function TargetBasket({
             const analysisPanelState = getAnalysisPanelState(
               comparisonUnavailable,
               needsImprovement,
+            );
+
+            // 결과 숫자만으로는 무엇을 근거로 나온 값인지 알 수 없다.
+            // 특히 합격선은 대학 공개값과 우리가 환산한 값이 섞여 있다.
+            const myScoreBasis = explainMyScore(
+              target.univ,
+              referenceRecord.연도,
+              toeic,
+              gpaType,
+              gpaRaw,
+            );
+            const acceptedScoreBasis = explainAcceptedScore(referenceRecord);
+            const formulaBasis = getFormulaBasis(
+              target.univ,
+              referenceRecord.연도,
             );
 
             return (
@@ -243,6 +264,12 @@ function TargetBasket({
                         </div>
                       )}
                   </div>
+
+                  <ScoreBasis
+                    mine={myScoreBasis}
+                    accepted={acceptedScoreBasis}
+                    formulaBasis={formulaBasis}
+                  />
 
                   <details className="target-details">
                     <summary className="target-details-summary">

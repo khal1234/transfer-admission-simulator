@@ -2217,3 +2217,159 @@ html[data-theme="dark"] .explorer-filters {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ── 지표합 근거 펼치기 (ScoreBasis) ───────────────────────── */
+
+.score-basis {
+  margin-top: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.score-basis-summary {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  list-style: none;
+}
+
+.score-basis-summary::-webkit-details-marker {
+  display: none;
+}
+
+.score-basis-summary::before {
+  content: "▸ ";
+  color: var(--text-muted);
+}
+
+.score-basis[open] .score-basis-summary::before {
+  content: "▾ ";
+}
+
+.score-basis-body {
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.score-basis-section {
+  margin-top: 10px;
+}
+
+.score-basis-heading {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.score-basis-heading strong {
+  color: var(--text-primary);
+}
+
+.score-basis-note {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.score-basis-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.score-basis-item {
+  padding: 6px 0;
+  border-top: 1px dashed var(--border-color);
+}
+
+.score-basis-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.score-basis-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.score-basis-value {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.score-basis-tag {
+  padding: 1px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* 대학이 그대로 공개한 값과 우리가 환산한 값은 신뢰도가 다르다 — 색으로 가른다. */
+.score-basis-tag.source-university-published {
+  border-color: var(--status-safe);
+  color: var(--status-safe);
+}
+
+.score-basis-tag.source-derived-from-published-raw {
+  border-color: var(--status-borderline);
+  color: var(--status-borderline);
+}
+
+.score-basis-detail {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  word-break: keep-all;
+}
+
+.score-basis-formula {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.score-basis-formula-text {
+  margin: 0 0 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  word-break: keep-all;
+}
+
+.score-basis-verified {
+  margin: 0;
+  font-size: 11px;
+  color: var(--status-safe);
+}
+
+.score-basis-warnings {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.score-basis-warnings li {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--status-borderline);
+  word-break: keep-all;
+}
+
+.score-basis-disclaimer {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  word-break: keep-all;
+}
