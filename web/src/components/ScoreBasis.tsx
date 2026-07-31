@@ -70,19 +70,15 @@ function FormulaBasisNote({ basis }: { basis: FormulaBasis }) {
         </p>
       )}
 
-      {warnings.length === 0
-        ? (
-          <p className="score-basis-verified">
-            모집요강 표기와 계산식이 일치하는 것을 확인했습니다
-          </p>
-        )
-        : (
-          <ul className="score-basis-warnings">
-            {warnings.map((warning) => (
-              <li key={warning}>⚠️ {warning}</li>
-            ))}
-          </ul>
-        )}
+      {/* 이상이 없을 때는 아무 말도 하지 않는다. '확인했습니다' 한 줄은
+          정보를 더하지 않으면서 세로만 먹는다. 경고가 없다는 것 자체가 신호다. */}
+      {warnings.length > 0 && (
+        <ul className="score-basis-warnings">
+          {warnings.map((warning) => (
+            <li key={warning}>⚠️ {warning}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
