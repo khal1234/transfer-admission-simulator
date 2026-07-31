@@ -18,3 +18,10 @@ Thumbs.db
 .vscode/
 .idea/
 *.local
+
+# Local Netlify folder
+.netlify
+
+# Local scratch & tool logs
+scratchpad/
+tools/*.log
