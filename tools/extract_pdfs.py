@@ -96,6 +96,7 @@ SPECS = {
         "years": ["2024", "2025", "2026"],
         "type_labels": ["전형구분"],
         "type_keep": "일반편입",
+        "type_column": 0,
         # 2024는 헤더 첫 줄이 병합돼 '모집단위명' 이 독립 셀로 안 잡힌다.
         "unit_column": 2,
         "labels": {
@@ -140,7 +141,7 @@ SPECS = {
             "recruit": ["모집인원"],
             "applied": ["지원인원"],
             "enrolled": [],
-            "english": ["최종합격자토익점수평균", "토익점수평균"],
+            "english": ["최종합격자토익점수평균", "토익점수평균", "TOEIC성적", "TOEIC"],
             "gpa": [],
         },
         "english_is_raw": True,
@@ -201,6 +202,7 @@ SPECS = {
         "years": ["2024"],
         "type_labels": ["전형구분"],
         "type_keep": "일반편입",
+        "header_depth": 1,
         "labels": {
             "unit": ["모집단위"],
             "recruit": ["모집인원"],
@@ -255,11 +257,28 @@ def resolve_columns(table, spec):
 
         if "unit" not in found and spec.get("unit_column") is not None:
             found["unit"] = spec["unit_column"]
+        # 강원대 2024는 '전형구분'이 병합된 헤더 문구 안에 묻혀 독립 셀로 안 잡힌다.
+        # 못 찾으면 전형 필터가 통째로 죽어 학사편입이 섞여 들어간다.
+        if "type" not in found and spec.get("type_column") is not None:
+            found["type"] = spec["type_column"]
 
         if "unit" in found:
-            # 헤더가 몇 줄인지는 표마다 다르다(충북대 1줄, 인천대 3줄, 나머지 2줄).
-            # 마지막 헤더 행의 번호를 돌려준다 — 데이터는 그 다음 줄부터다.
-            return found, i + spec.get("header_depth", 2) - 1
+            # 헤더가 몇 줄인지는 표마다 다르다(충북대 1줄, 인천대 2026은 3줄,
+            # 같은 인천대라도 2024는 2줄이다). 고정하면 데이터 첫 줄을 먹거나
+            # 헤더를 데이터로 읽는다. 그래서 '학과명 칸에 진짜 이름이 나오는
+            # 첫 줄'을 찾아 거기서부터 데이터로 본다.
+            unit_col = found["unit"]
+            last_header = i
+            for k in range(i, min(i + 4, len(table))):
+                cell_text = squash(table[k][unit_col]) if unit_col < len(table[k]) else ""
+                if cell_text and not any(
+                    word in cell_text for word in
+                    ("모집단위", "학과(부)", "지원현황", "구분", "평균")
+                ):
+                    last_header = k - 1
+                    break
+                last_header = k
+            return found, last_header
 
     return None, None
 
@@ -318,8 +337,11 @@ def extract_one(univ, year, spec):
             if not unit_text or squash(unit_text).startswith("모집단위"):
                 continue
 
+            # 전형 필터가 걸린 대학인데 아직 구분을 못 읽었으면 넣지 않는다.
+            # 예전에는 비어 있으면 통과시켰는데, 그 탓에 헤더를 잘못 세어
+            # 구분이 안 잡힌 표가 통째로 섞여 들어갔다(강원대-전북대 2024).
             keep = spec.get("type_keep")
-            if keep and carried.get("type", "") and keep not in carried["type"]:
+            if keep and keep not in carried.get("type", ""):
                 continue
 
             if looks_shifted(row, cols):
@@ -364,7 +386,26 @@ def extract_one(univ, year, spec):
                 캠퍼스=carried.get("campus"),
             ))
 
-    return records, suspects
+    # 같은 모집단위가 두 번 나오면 뒤엣것은 다른 전형(학사편입 등)이 새어든
+    # 것이다. 전북대 2024는 학사편입 구간 표시가 마지막 쪽에만 렌더링돼서
+    # 앞쪽 학사편입 페이지가 일반편입으로 넘어온다. 앞 것을 남기고 뒤엣것은
+    # 의심 행으로 돌린다 — 어느 쪽이 맞는지 기계가 단정하지 않는다.
+    seen = set()
+    deduped = []
+    for record in records:
+        key = record["학과_정규화"]
+        if key in seen:
+            suspects.append((year, univ, [
+                f"중복 모집단위 '{record['학과_원본명']}'",
+                f"모집 {record['모집인원']}",
+                f"지원 {record['지원인원']}",
+                f"합격 {record['합격인원']}",
+            ]))
+            continue
+        seen.add(key)
+        deduped.append(record)
+
+    return deduped, suspects
 
 
 def extract_all_pdfs():
