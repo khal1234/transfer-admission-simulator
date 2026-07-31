@@ -186,6 +186,12 @@ def main():
     else:
         print(" 없음")
 
+    print()
+    print("!! R2가 1.0000이라고 해서 추출이 옳다는 뜻이 아니다.")
+    print("   원본이 환산점수만 공개하는 대학은 원점수가 환산식을 뒤집어 만들어진")
+    print("   값이라, 이 대조가 순환 논증이 된다(실측: 14칸 중 13칸). 어느 칸이")
+    print("   그런지는 `python tools/audit_circularity.py` 가 가른다. 먼저 볼 것.")
+
 
 if __name__ == "__main__":
     main()
