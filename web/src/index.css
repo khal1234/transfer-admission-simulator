@@ -3153,12 +3153,6 @@ html[data-theme="dark"] .compare-score-primary {
     align-items: start;
   }
 
-  /* 펼친 패널을 반쪽 카드에 가두면 같은 행의 반대편 아래가 통째로 빈다.
-     상세 내용을 여는 동안에만 카드를 전체 폭으로 써서 흐름과 가독성을 지킨다. */
-  .basket-grid > .target-card:has(.score-basis[open], .target-details[open]) {
-    grid-column: 1 / -1;
-  }
-
   .target-card {
     grid-template-columns: minmax(150px, 210px) minmax(220px, 1fr) auto;
     grid-template-areas: none;
@@ -3204,7 +3198,8 @@ html[data-theme="dark"] .compare-score-primary {
     padding: 0;
   }
 
-  /* 펼치면 제 줄을 차지한다. 좁은 칸에 내용이 갇히지 않게. */
+  /* 펼치면 카드 내부에서 제 줄을 차지한다. 장바구니의 2열 배치는 유지해
+     열린 근거·상세 분석도 해당 학교 카드 폭 안에서만 보이게 한다. */
   .target-card .score-basis[open],
   .target-card .target-details[open] {
     grid-column: 1 / -1;
