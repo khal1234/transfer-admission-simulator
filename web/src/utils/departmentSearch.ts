@@ -5,13 +5,52 @@ const KOREAN_CHOSUNG = [
   "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
 ];
 
+const KOREAN_JUNGSUNG = [
+  "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ",
+  "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ",
+];
+
+const KOREAN_JONGSUNG = [
+  "", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ",
+  "ㄻ", "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ",
+  "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ",
+];
+
 export type SearchableDepartmentRecord = {
   record: DepartmentRecord;
   normalizedDepartment: string;
   normalizedOriginalDepartment: string;
   departmentChosung: string;
   originalDepartmentChosung: string;
+  departmentJamo: string;
+  originalDepartmentJamo: string;
 };
+
+/**
+ * 한글을 자모로 풀어 늘어놓는다. '기계' -> 'ㄱㅣㄱㅖ'
+ *
+ * 이러면 타이핑 중간 상태가 자연스럽게 걸린다. '기계공'을 치는 도중에는 반드시
+ * '기곅'을 거치는데('기계'+ㄱ), 글자 단위로 비교하면 그 순간 결과가 사라진다.
+ * 자모로 펴면 'ㄱㅣㄱㅖㄱ'이 'ㄱㅣㄱㅖㄱㅗㅇ'의 앞부분이라 계속 걸린다.
+ * 사용자가 '오타'라고 부른 것도 실은 이 중간 상태였다.
+ */
+export function decomposeToJamo(text: string): string {
+  let result = "";
+
+  for (const character of text) {
+    const code = character.charCodeAt(0) - 44032;
+
+    if (code >= 0 && code <= 11171) {
+      result += KOREAN_CHOSUNG[Math.floor(code / 588)] ?? "";
+      result += KOREAN_JUNGSUNG[Math.floor((code % 588) / 28)] ?? "";
+      result += KOREAN_JONGSUNG[code % 28] ?? "";
+    } else {
+      result += character;
+    }
+  }
+
+  return result;
+}
 
 /**
  * 줄여 부르는 이름 → 실제 학과명에 들어 있는 조각.
@@ -82,6 +121,64 @@ function normalizeSearchText(value: string): string {
  * 타이핑 도중에도 걸리도록 줄임말이 입력으로 시작하는 경우까지 본다
  * ('컴' -> '컴공' -> 컴퓨터공학...).
  */
+/** 두 문자열이 한 글자 이내로 다른가 (치환·삽입·삭제 각 1회까지). */
+function isWithinOneEdit(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1) {
+    return false;
+  }
+
+  const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+
+  while (i < shorter.length && j < longer.length) {
+    if (shorter[i] === longer[j]) {
+      i += 1;
+      j += 1;
+      continue;
+    }
+
+    edits += 1;
+    if (edits > 1) {
+      return false;
+    }
+
+    if (shorter.length === longer.length) {
+      i += 1;
+    }
+    j += 1;
+  }
+
+  return edits + (longer.length - j) + (shorter.length - i) <= 1;
+}
+
+/**
+ * 자모 한 개 차이까지 봐주는 부분 일치.
+ *
+ * '기곜'은 '기계' 뒤에 ㅋ 을 잘못 누른 것이라 자모로 펴도 'ㄱㅣㄱㅖㅋ' 가 되어
+ * 'ㄱㅣㄱㅖㄱㅗㅇ' 의 부분 문자열이 아니다. 이런 진짜 오타는 편집거리로만 잡힌다.
+ * 정확히 친 사람의 결과를 흐리지 않도록, 정확 일치가 하나도 없을 때만 쓴다.
+ */
+export function fuzzyJamoIncludes(haystack: string, needle: string): boolean {
+  if (needle.length < 3) {
+    return false;
+  }
+
+  for (let start = 0; start <= haystack.length - needle.length + 1; start += 1) {
+    for (const length of [needle.length - 1, needle.length, needle.length + 1]) {
+      if (length <= 0 || start + length > haystack.length) {
+        continue;
+      }
+      if (isWithinOneEdit(haystack.slice(start, start + length), needle)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export function resolveDepartmentAliases(normalizedQuery: string): string[] {
   if (normalizedQuery === "") {
     return [];
@@ -122,6 +219,10 @@ export function buildDepartmentSearchIndex(
     normalizedOriginalDepartment: normalizeSearchText(record.학과_원본명),
     departmentChosung: getChosung(record.학과),
     originalDepartmentChosung: getChosung(record.학과_원본명),
+    departmentJamo: decomposeToJamo(normalizeSearchText(record.학과)),
+    originalDepartmentJamo: decomposeToJamo(
+      normalizeSearchText(record.학과_원본명),
+    ),
   }));
 }
 
@@ -146,11 +247,15 @@ export function filterDepartmentSearchIndex(
       return [searchable.record];
     }
 
+    // 자모로 편 비교는 글자 단위 비교를 포함한다('기계'가 걸리면 'ㄱㅣㄱㅖ'도
+    // 걸린다). 그래서 글자 비교는 따로 두지 않고 자모 비교로 대신한다.
+    const queryJamo = decomposeToJamo(normalizedQuery);
+
     const matches = isChosungOnly
       ? searchable.departmentChosung.includes(normalizedQuery)
         || searchable.originalDepartmentChosung.includes(normalizedQuery)
-      : searchable.normalizedDepartment.includes(normalizedQuery)
-        || searchable.normalizedOriginalDepartment.includes(normalizedQuery)
+      : searchable.departmentJamo.includes(queryJamo)
+        || searchable.originalDepartmentJamo.includes(queryJamo)
         || aliasTargets.some((target) =>
           searchable.normalizedDepartment.includes(target)
           || searchable.normalizedOriginalDepartment.includes(target));
@@ -158,10 +263,28 @@ export function filterDepartmentSearchIndex(
     return matches ? [searchable.record] : [];
   });
 
+  // 정확히 친 사람의 결과를 흐리지 않도록, 하나도 안 걸렸을 때만 오타를 봐준다.
+  const results = matched.length > 0 || normalizedQuery === "" || isChosungOnly
+    ? matched
+    : searchableRecords.flatMap((searchable) => {
+      if (
+        selectedUniversities.size > 0
+        && !selectedUniversities.has(searchable.record.대학명)
+      ) {
+        return [];
+      }
+
+      const queryJamo = decomposeToJamo(normalizedQuery);
+      return fuzzyJamoIncludes(searchable.departmentJamo, queryJamo)
+        || fuzzyJamoIncludes(searchable.originalDepartmentJamo, queryJamo)
+        ? [searchable.record]
+        : [];
+    });
+
   // 학과명 기준으로 모은다. 원본 JSON이 대학별로 묶여 있어 그대로 두면
   // '기계공학과'와 '기계공학부'가 대학 순서에 밀려 멀리 떨어져 나온다.
   // 찾는 사람은 같은 과를 대학끼리 견주고 싶어 하므로 과가 먼저다.
-  return matched.sort((a, b) => {
+  return results.sort((a, b) => {
     const byDepartment = a.학과.localeCompare(b.학과, "ko");
     return byDepartment !== 0
       ? byDepartment

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DepartmentRecord } from "./converter";
 import {
   buildDepartmentSearchIndex,
+  decomposeToJamo,
   filterDepartmentSearchIndex,
   resolveDepartmentAliases,
 } from "./departmentSearch";
@@ -94,6 +95,34 @@ describe("abbreviation search", () => {
 
   it("returns nothing for a word that is not an abbreviation", () => {
     expect(resolveDepartmentAliases("존재하지않는말")).toEqual([]);
+  });
+});
+
+describe("typing mid-syllable", () => {
+  // '기계공'을 치는 도중에는 반드시 '기곅'을 거친다('기계' + ㄱ).
+  // 글자 단위로 비교하면 그 순간 결과가 사라져 오타처럼 느껴진다.
+  it("keeps matching while a syllable is still being assembled", () => {
+    expect(
+      filterDepartmentSearchIndex(searchIndex, "기곅", new Set())
+        .map((record) => record.학과),
+    ).toEqual(["기계공학부"]);
+  });
+
+  it("matches the completed word the same way", () => {
+    expect(
+      filterDepartmentSearchIndex(searchIndex, "기계공", new Set())
+        .map((record) => record.학과),
+    ).toEqual(["기계공학부"]);
+  });
+
+  it("decomposes Hangul into its jamo in order", () => {
+    expect(decomposeToJamo("기계")).toBe("ㄱㅣㄱㅖ");
+    expect(decomposeToJamo("기곅")).toBe("ㄱㅣㄱㅖㄱ");
+    expect(decomposeToJamo("공")).toBe("ㄱㅗㅇ");
+  });
+
+  it("leaves non-Hangul untouched", () => {
+    expect(decomposeToJamo("AI융합")).toBe("AIㅇㅠㅇㅎㅏㅂ");
   });
 });
 
