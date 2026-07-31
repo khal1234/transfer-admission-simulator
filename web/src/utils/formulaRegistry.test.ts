@@ -3,12 +3,6 @@ import { getConversionFormula } from "./formulaRegistry";
 
 describe("getConversionFormula", () => {
   it("marks estimated and lookup-based formulas explicitly", () => {
-    expect(getConversionFormula("강원대학교", "2026")).toMatchObject({
-      confidence: "estimated",
-      provenance: "documented-for-year",
-      reverseCalculationMode: "linear",
-      convertGpa: null,
-    });
     expect(getConversionFormula("전북대학교", "2026")).toMatchObject({
       confidence: "lookup-approximation",
       provenance: "documented-for-year",
@@ -16,6 +10,17 @@ describe("getConversionFormula", () => {
     });
     expect(getConversionFormula("충북대학교", "2026")).toMatchObject({
       confidence: "estimated",
+      provenance: "documented-for-year",
+      reverseCalculationMode: "linear",
+      convertGpa: null,
+    });
+  });
+
+  it("marks 강원대 2026 verified after the guideline was checked", () => {
+    // 26_강원대_모집요강.pdf 13쪽: 공인영어 150점(60%) + 면접 100점(40%),
+    // 전적대학성적 미반영. 추정으로 두었던 배율이 원문과 일치했다.
+    expect(getConversionFormula("강원대학교", "2026")).toMatchObject({
+      confidence: "verified",
       provenance: "documented-for-year",
       reverseCalculationMode: "linear",
       convertGpa: null,

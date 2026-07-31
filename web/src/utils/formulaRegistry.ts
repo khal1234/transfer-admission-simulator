@@ -29,8 +29,11 @@ const GANGWON_STANDARD: ConversionFormula = {
   convertGpa: (gpa100) => gpa100 * 0.75,
 };
 
+// 26_강원대_모집요강.pdf 13쪽 전형요소별 배점표로 확인했다.
+// 일반/학사 전체 모집단위: 공인영어 150점(60%) + 면접 100점(40%) = 250점,
+// 전적대학성적 미반영. 추정으로 두었던 배율이 원문과 일치했다.
 const GANGWON_2026: ConversionFormula = {
-  confidence: "estimated",
+  confidence: "verified",
   provenance: "documented-for-year",
   reverseCalculationMode: "linear",
   englishSlope: 150 / 990,

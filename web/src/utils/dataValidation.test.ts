@@ -29,8 +29,14 @@ const preparableRecord = {
 };
 
 describe("department data validation", () => {
+  // 2026-07-31 원문 대조로 데이터를 고치면서 건수가 바뀌었다(1922 → 1923).
+  //   경북대 2024: 학과명이 '2','4' 인 오염 레코드 2건을 빼고, 그 자리에 있어야 할
+  //                농업토목ㆍ생물산업공학부 2개 전공을 넣었다.
+  //   경북대 2025: 병합셀 때문에 통째로 빠져 있던 생물학과 1건을 넣었다.
+  // 격리 대상이 0이 된 것도 같은 작업의 결과다 — 숫자 학과명과 100 초과 백분위가
+  // 데이터에서 사라졌다. 근거는 tools/apply_fixes.py 의 머리말에 있다.
   it("accepts the current generated datasets", () => {
-    expect(validateDepartmentRecords(rawStandardData)).toHaveLength(1922);
+    expect(validateDepartmentRecords(rawStandardData)).toHaveLength(1923);
     expect(validateExceptionDepartmentRecords(rawExceptionData)).toHaveLength(267);
   });
 
@@ -38,10 +44,10 @@ describe("department data validation", () => {
     const standard = prepareDepartmentRecords(rawStandardData);
     const exceptions = prepareExceptionDepartmentRecords(rawExceptionData);
 
-    expect(standard.records).toHaveLength(1920);
-    expect(standard.affectedRecordCount).toBe(13);
+    expect(standard.records).toHaveLength(1923);
+    expect(standard.affectedRecordCount).toBe(0);
     expect(exceptions.records).toHaveLength(267);
-    expect(exceptions.affectedRecordCount).toBe(11);
+    expect(exceptions.affectedRecordCount).toBe(0);
   });
 
   it("rejects a malformed score field", () => {

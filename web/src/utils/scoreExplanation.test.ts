@@ -145,16 +145,16 @@ describe("getFormulaBasis", () => {
     expect(basis?.confidence).toBe("verified");
   });
 
-  it("withholds the documented text where it contradicts our formula", () => {
-    // 강원대 2026은 모집요강 JSON(영어 100점-학점 반영)과 계산식(영어 150점-학점
-    // 미반영)이 어긋난 채로 남아 있다. 원문 대조 전까지는 원문 표기를 보여주면
-    // 화면의 숫자와 모순되는 설명이 붙으므로 감춘다.
+  it("shows the documented text once the source was verified", () => {
+    // 강원대 2026은 JSON(영어 100점-학점 반영)과 계산식(영어 150점-학점 미반영)이
+    // 어긋나 원문 표기를 감추던 칸이었다. 26_강원대_모집요강.pdf 13쪽 배점표로
+    // 계산식 쪽이 맞는 것이 확인돼 JSON을 고쳤고, 이제 원문을 보여준다.
     const basis = getFormulaBasis("강원대학교", "2026");
 
-    expect(basis?.documentedFormulaUnverified).toBe(true);
-    expect(basis?.englishFormulaText).toBeNull();
-    expect(basis?.gpaFormulaText).toBeNull();
-    expect(basis?.confidence).toBe("estimated");
+    expect(basis?.documentedFormulaUnverified).toBe(false);
+    expect(basis?.englishFormulaText).toContain("150");
+    expect(basis?.gpaFormulaText).toBeNull();  // 전적대 미반영
+    expect(basis?.confidence).toBe("verified");
   });
 
   it("surfaces a formula assumed from another year", () => {
