@@ -90,8 +90,11 @@ function ScoreBasis({ mine, accepted, formulaBasis }: ScoreBasisProps) {
 
   return (
     <details className="score-basis">
+      {/* 좁은 화면에서는 토글 셋을 한 줄에 놓느라 폭이 110px 남짓이다.
+          긴 문구가 줄바꿈되면 그 줄만 두 배로 높아진다. */}
       <summary className="score-basis-summary">
-        이 점수가 나온 근거 보기
+        <span className="summary-label-wide">이 점수가 나온 근거 보기</span>
+        <span className="summary-label-narrow">근거 보기</span>
       </summary>
 
       <div className="score-basis-body">

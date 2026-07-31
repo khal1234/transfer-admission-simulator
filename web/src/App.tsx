@@ -23,7 +23,9 @@ import {
   getLatestComparableRecord,
   getLatestRecord,
   getRecordYear,
+  isComparableRecord,
 } from "./utils/records";
+import { getDepartmentGroupKey } from "./utils/departmentSearch";
 import { getConversionFormula } from "./utils/formulaRegistry";
 import {
   isGpaType,
@@ -43,7 +45,9 @@ import {
 import {
   getRecordKey,
   getTargetKey,
+  isComparisonBasis,
   parseSavedTargets,
+  type ComparisonBasis,
   type Target,
 } from "./utils/targets";
 import {
@@ -144,6 +148,63 @@ function getSortedRecordYears(records: DepartmentRecord[]): string[] {
   );
 }
 
+type YearComparison = {
+  year: string;
+  score: ReturnType<typeof calculateScore>;
+};
+
+/**
+ * 판정을 어느 해에 걸 것인가.
+ *
+ * 최신 한 해로 고정하면 그 해가 유독 빡셌을 때 실제보다 비관적으로, 무른
+ * 해였을 때 낙관적으로 읽힌다. 사용자가 물은 두 경우를 다 열어둔다 —
+ * 합격선이 가장 낮았던 해로 보고 싶을 때와, 그래도 최신 기준으로만 보고
+ * 싶을 때.
+ *
+ * 순위는 합격선 원값이 아니라 격차로 매긴다. 연도마다 배점이 달라(강원대
+ * 2026은 영어 150점 만점, 2025는 100점+전적대) 합격선 숫자끼리 비교하면
+ * 배점이 큰 해가 늘 '높은 해'로 잡힌다. 격차는 내 점수도 그 해 식으로
+ * 환산한 뒤의 값이라 연도끼리 견줄 수 있다.
+ *
+ * 성적 입력 전에는 격차가 없으므로 순위를 못 매긴다. 그때는 최신으로 둔다.
+ */
+function pickBasisRecord(
+  comparisons: YearComparison[],
+  historyByYear: ReadonlyMap<string, DepartmentRecord>,
+  basis: ComparisonBasis,
+): DepartmentRecord | undefined {
+  const comparable = comparisons.filter(
+    (comparison) => comparison.score.acceptedIndexSum !== null,
+  );
+
+  if (comparable.length === 0) {
+    return undefined;
+  }
+
+  const ranked = comparable.filter(
+    (comparison) => comparison.score.diff !== null,
+  );
+
+  // recentRecordYears 가 내림차순이라 첫 항목이 최신이다.
+  if (basis === "latest" || ranked.length === 0) {
+    return historyByYear.get(comparable[0].year);
+  }
+
+  const chosen = ranked.reduce((best, comparison) => {
+    const bestDiff = best.score.diff ?? 0;
+    const currentDiff = comparison.score.diff ?? 0;
+
+    if (basis === "lowest") {
+      // 격차가 가장 작은 해 = 그 해라면 가장 붙기 쉬웠다.
+      return currentDiff > bestDiff ? comparison : best;
+    }
+
+    return currentDiff < bestDiff ? comparison : best;
+  });
+
+  return historyByYear.get(chosen.year);
+}
+
 function getRenamedHistoryText(history: DepartmentRecord[]): string {
   return history
     .flatMap((record) => (
@@ -200,6 +261,11 @@ export default function App() {
       DEFAULT_TARGETS,
     )
   ));
+
+  const [comparisonBasis, setComparisonBasis] = useState<ComparisonBasis>(() => {
+    const saved = initialStorage.values[STORAGE_KEYS.comparisonBasis];
+    return isComparisonBasis(saved) ? saved : "latest";
+  });
 
   const toeic = useMemo(() => parseToeicInput(toeicInput), [toeicInput]);
   const gpaRaw = useMemo(
@@ -293,6 +359,11 @@ export default function App() {
     persistStorageValue(STORAGE_KEYS.theme, nextTheme);
   }, [persistStorageValue, theme]);
 
+  const changeComparisonBasis = useCallback((nextBasis: ComparisonBasis) => {
+    setComparisonBasis(nextBasis);
+    persistStorageValue(STORAGE_KEYS.comparisonBasis, nextBasis);
+  }, [persistStorageValue]);
+
   // Selected major for chart visualization
   const [chartTarget, setChartTarget] = useState<ChartTarget | null>(null);
   const [chartMetric, setChartMetric] = useState<ChartMetric>("toeic_orig");
@@ -320,6 +391,39 @@ export default function App() {
     () => getSortedRecordYears(standardRecords).slice(0, 3),
     [standardRecords],
   );
+
+  /**
+   * (대학, 표준명, 연도) → 그 해 실제로 뽑은 모집단위 이름들.
+   *
+   * 사용자는 보통 2026 학과명으로 찾아 담는데, 그 과가 24~25에 여러 전공으로
+   * 쪼개져 있었으면 이력이 통째로 비어 '왜 없지, 이거 왜 따로 해놨냐'가 된다.
+   * 표준명(학과/학부/전공 꼬리와 괄호를 뗀 이름)이 같은 모집단위를 그 해에서
+   * 찾아 알려주면, 없는 게 아니라 다른 칸에 있다는 걸 짚어줄 수 있다.
+   *
+   * 이름이 바뀐 것인지 그 해에 그 세부전공만 안 뽑은 것인지는 이 데이터로
+   * 구별하지 못한다. 그래서 화면 문구도 '같은 계열의 다른 모집단위'까지만
+   * 말하고 승계 관계라고 단정하지 않는다.
+   */
+  const departmentsByGroupAndYear = useMemo(() => {
+    const grouped = new Map<string, string[]>();
+
+    standardRecords.forEach((record) => {
+      const groupKey = [
+        record.대학명,
+        getDepartmentGroupKey(record.학과),
+        record.연도,
+      ].join("|");
+      const existing = grouped.get(groupKey);
+
+      if (existing === undefined) {
+        grouped.set(groupKey, [record.학과]);
+      } else if (!existing.includes(record.학과)) {
+        existing.push(record.학과);
+      }
+    });
+
+    return grouped;
+  }, [standardRecords]);
   const targetKeySet = useMemo(() => new Set(targets.map(getTargetKey)), [targets]);
 
   const latestExplorerRecords = useMemo(() => {
@@ -420,7 +524,43 @@ export default function App() {
         return [];
       }
 
-      const comparableRecord = getLatestComparableRecord(history);
+      const historyByYear = new Map(history.map((record) => [record.연도, record]));
+
+      // 최신 한 해만 대조하면 그 해가 유독 빡셌는지 무른 해였는지 알 수 없다.
+      // 연도마다 배점과 환산식이 달라(강원대 2026은 전적대 미반영 등) 합격선만
+      // 갈아끼우면 안 되고 내 지표합도 그 해 식으로 다시 계산해야 한다.
+      const yearlyComparisons = recentRecordYears.map((year) => {
+        const yearRecord = historyByYear.get(year) ?? null;
+        const comparableYearRecord = yearRecord !== null
+          && isComparableRecord(yearRecord)
+          ? yearRecord
+          : null;
+
+        return {
+          year,
+          hasRecord: yearRecord !== null,
+          siblingDepartments: yearRecord !== null
+            ? []
+            : (departmentsByGroupAndYear.get([
+              target.univ,
+              getDepartmentGroupKey(target.dept),
+              year,
+            ].join("|")) ?? []).filter((dept) => dept !== target.dept),
+          score: calculateScore(
+            target.univ,
+            year,
+            toeic,
+            gpa100,
+            comparableYearRecord,
+          ),
+        };
+      });
+
+      const comparableRecord = pickBasisRecord(
+        yearlyComparisons,
+        historyByYear,
+        comparisonBasis,
+      ) ?? getLatestComparableRecord(history);
       const referenceRecord = comparableRecord ?? latestRecord;
       const score = calculateScore(
         target.univ,
@@ -432,7 +572,13 @@ export default function App() {
       const deficit = calculateScoreDeficit(score.diff);
       const analysis = deficit === null
         ? null
-        : analyzeScoreDeficit(target.univ, referenceRecord.연도, gpaType, deficit);
+        : analyzeScoreDeficit(
+          target.univ,
+          referenceRecord.연도,
+          gpaType,
+          deficit,
+          toeic,
+        );
       const formula = getConversionFormula(
         target.univ,
         referenceRecord.연도
@@ -447,7 +593,6 @@ export default function App() {
             ? "이 대학의 구간 환산표는 연속식으로 근사한 참고값이며 실제 환산점수와 차이가 날 수 있습니다."
             : null,
       ].filter((notice): notice is string => notice !== null);
-      const historyByYear = new Map(history.map((record) => [record.연도, record]));
 
       return [{
         key,
@@ -463,6 +608,7 @@ export default function App() {
           ? formulaNotices.join(" ")
           : null,
         renamedHistoryText: getRenamedHistoryText(history),
+        yearlyComparisons,
         recentHistoryRows: recentRecordYears.map((year) => ({
           year,
           record: historyByYear.get(year) ?? null,
@@ -474,6 +620,8 @@ export default function App() {
       }];
     });
   }, [
+    comparisonBasis,
+    departmentsByGroupAndYear,
     exceptionHistory,
     gpa100,
     gpaType,
@@ -641,7 +789,8 @@ export default function App() {
                   )}
                 >
                   <TrendChart
-                    target={chartTarget}
+                    focusedTarget={chartTarget}
+                    targets={targets}
                     recordsByDepartment={recordsByDepartment}
                     metric={chartMetric}
                     onMetricChange={setChartMetric}
@@ -658,6 +807,8 @@ export default function App() {
             toeic={toeic}
             gpaRaw={gpaRaw}
             gpaType={gpaType}
+            comparisonBasis={comparisonBasis}
+            onComparisonBasisChange={changeComparisonBasis}
             onToggleTarget={toggleTarget}
             onSelectChart={selectChart}
           />

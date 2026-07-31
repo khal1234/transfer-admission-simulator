@@ -5,37 +5,30 @@ import {
   writeSimulatorStorageValue,
 } from "./storage";
 
+// 키 목록을 테스트에 베껴 두면 저장 항목을 하나 늘릴 때마다 여기가 깨진다.
+// 이 테스트가 확인하려는 건 '전부 읽는가'이지 '여섯 개인가'가 아니다.
+const ALL_KEYS = Object.values(STORAGE_KEYS);
+
 describe("simulator storage boundary", () => {
   it("reads every simulator value from an available storage", () => {
-    const values = new Map<string, string>([
-      [STORAGE_KEYS.toeic, "900"],
-      [STORAGE_KEYS.gpaType, "4.5"],
-      [STORAGE_KEYS.gpaRaw, "4.1"],
-      [STORAGE_KEYS.gpa100, "95.43"],
-      [STORAGE_KEYS.targets, "[]"],
-      [STORAGE_KEYS.theme, "dark"],
-    ]);
+    const values = new Map<string, string>(
+      ALL_KEYS.map((key, index) => [key, `저장값${index}`]),
+    );
     const snapshot = readSimulatorStorageSnapshot({
       getItem: (key) => values.get(key) ?? null,
       setItem: vi.fn(),
     });
 
     expect(snapshot.available).toBe(true);
-    expect(snapshot.values).toEqual({
-      [STORAGE_KEYS.toeic]: "900",
-      [STORAGE_KEYS.gpaType]: "4.5",
-      [STORAGE_KEYS.gpaRaw]: "4.1",
-      [STORAGE_KEYS.gpa100]: "95.43",
-      [STORAGE_KEYS.targets]: "[]",
-      [STORAGE_KEYS.theme]: "dark",
-    });
+    expect(snapshot.values).toEqual(Object.fromEntries(values));
   });
 
   it("returns safe empty values when storage is unavailable", () => {
     const snapshot = readSimulatorStorageSnapshot(null);
 
     expect(snapshot.available).toBe(false);
-    expect(Object.values(snapshot.values)).toEqual([null, null, null, null, null, null]);
+    expect(Object.keys(snapshot.values).sort()).toEqual([...ALL_KEYS].sort());
+    expect(Object.values(snapshot.values)).toEqual(ALL_KEYS.map(() => null));
   });
 
   it("does not expose partial values after a read failure", () => {
@@ -47,7 +40,7 @@ describe("simulator storage boundary", () => {
     });
 
     expect(snapshot.available).toBe(false);
-    expect(Object.values(snapshot.values)).toEqual([null, null, null, null, null, null]);
+    expect(Object.values(snapshot.values)).toEqual(ALL_KEYS.map(() => null));
   });
 
   it("reports successful writes", () => {
