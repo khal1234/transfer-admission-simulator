@@ -108,7 +108,7 @@ function TargetBasket({
           <BookOpen size={40} color="var(--text-muted)" />
           <p>현재 담겨 있는 지망 대학이 없습니다.</p>
           <span className="basket-empty-description">
-            위의 <strong>모집단위 탐색</strong>에서 관심 있는 학과의
+            <strong>모집단위 탐색</strong>에서 관심 있는 학과의
             ‘지망 추가’ 버튼을 눌러보세요.
           </span>
         </div>

@@ -457,11 +457,15 @@ body {
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  /* 모바일에서도 PC와 같은 순서로 둔다 — 입력 다음이 결과다.
+     예전에는 explorer 가 results 앞에 있었는데, 375px 기준으로 탐색 영역이
+     2694px(페이지의 64%)라 '동시 환산 비교'를 보려면 그만큼을 스크롤해
+     지나가야 했다. 점프 링크도 explorer 뒤에 있어 소용이 없었다. */
   grid-template-areas:
     "spec"
+    "results"
     "explorer"
-    "target-jump"
-    "results";
+    "target-jump";
   gap: 24px;
 }
 
@@ -483,11 +487,16 @@ body {
 }
 
 @media (min-width: 1024px) {
+  /* 예전에는 좌측 380px 을 스펙 입력이 상시 차지하고 결과가 남는 폭을 썼다.
+     한 번 쓰고 안 보는 영역이 폭을 계속 먹은 탓에, 정작 계속 보는 장바구니가
+     1400px 화면에서도 2열까지밖에 못 폈다. 이제 세 영역 모두 전체 폭을 쓰고,
+     스펙은 접힌 한 줄로 위에 둔다. 폭은 장바구니가 가져간다. */
   .dashboard-grid {
-    grid-template-columns: 380px 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-      "spec results"
-      "explorer explorer";
+      "spec"
+      "results"
+      "explorer";
   }
 }
 
@@ -652,10 +661,13 @@ body {
   flex: 1;
 }
 
+/* 제목이 '동시 환산 비교'인데 세로 한 줄로 쌓이면 동시에 볼 수가 없다.
+   폭이 허락하는 만큼 나란히 놓는다. 1300px 이면 3~4장이 한 화면에 들어온다. */
 .basket-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
+  align-items: start;
 }
 
 @media (min-width: 768px) {
@@ -2171,15 +2183,18 @@ html[data-theme="dark"] .explorer-filters {
     text-align: left;
   }
 
+  /* 탐색 목록이 길어 어디까지 내려가든 장바구니로 돌아올 수 있어야 한다.
+     그리드 칸에 두면 그 칸이 화면에 들어와야만 보여서 소용이 없었다. */
   .mobile-target-dock {
-    grid-area: target-jump;
-    justify-self: end;
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 20;
     display: flex;
     width: fit-content;
     min-height: 52px;
     align-items: center;
     gap: 8px;
-    margin: -4px 4px 0 0;
     padding: 10px 12px 10px 16px;
     border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: 99px;
@@ -2391,4 +2406,92 @@ html[data-theme="dark"] .explorer-filters {
 .score-derived-mark.approximate {
   color: var(--status-borderline);
   vertical-align: baseline;
+}
+
+/* ── 스펙 입력 접이식 바 (SpecInputPanel) ──────────────────── */
+
+/* 한 번 입력하면 다시 볼 일이 드문 영역이다. 평소에는 값만 한 줄로 보이고,
+   '수정'을 눌러야 펼쳐진다. 화면 폭은 계속 보는 장바구니가 가져간다. */
+.spec-panel {
+  padding: 0;
+}
+
+.spec-panel-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 16px 20px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.spec-panel-summary::-webkit-details-marker {
+  display: none;
+}
+
+.spec-panel-title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+}
+
+.spec-panel-values {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.spec-panel-toggle {
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.spec-panel .spec-close-label,
+.spec-panel[open] .spec-open-label {
+  display: none;
+}
+
+.spec-panel[open] .spec-close-label {
+  display: inline;
+}
+
+.spec-panel-body {
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* 펼쳤을 때도 세로로 길게 늘어뜨리지 않는다 — 두 입력을 나란히 둔다. */
+@media (min-width: 768px) {
+  .spec-panel-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 0 28px;
+    align-items: start;
+    padding-top: 16px;
+  }
+
+  .spec-panel-body > .disclaimer-box {
+    grid-column: 1 / -1;
+  }
+}
+
+html[data-theme="dark"] .spec-panel-values {
+  color: #a5b4fc;
+}
+
+/* 고정 지망 버튼이 마지막 내용을 가리지 않도록 아래 여백을 준다. */
+@media (max-width: 900px) {
+  .app-container {
+    padding-bottom: 88px;
+  }
 }

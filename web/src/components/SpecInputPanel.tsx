@@ -29,14 +29,35 @@ function SpecInputPanel({
   onGpaRawInputBlur,
   onGpaTypeChange,
 }: SpecInputPanelProps) {
-  return (
-    <section className="dashboard-column">
-      <div className="card">
-        <h2 className="card-title">
-          <UserCheck size={20} />
-          내 편입 스펙 입력
-        </h2>
+  // 한 번 입력하고 나면 다시 볼 일이 드문 영역이다. 예전에는 이것이 좌측
+  // 380px 세로 컬럼을 상시 점유해서, 정작 계속 보는 장바구니가 남는 폭에서
+  // 2열까지밖에 못 폈다. 평소에는 값만 한 줄로 접어두고 필요할 때 편다.
+  const summaryText = [
+    toeic === null ? "TOEIC 미입력" : `TOEIC ${toeic}점`,
+    gpaRaw === null
+      ? "GPA 미입력"
+      : gpaType === "100"
+        ? `GPA ${gpaRaw}/100`
+        : `GPA ${gpaRaw}/${getGpaMax(gpaType)}`,
+    gpa100 === null || gpaType === "100" ? null : `백분위 ${gpa100}`,
+  ].filter(Boolean).join(" · ");
 
+  return (
+    <section className="dashboard-column spec-section">
+      <details className="card spec-panel">
+        <summary className="spec-panel-summary">
+          <span className="card-title spec-panel-title">
+            <UserCheck size={20} />
+            내 편입 스펙
+          </span>
+          <span className="spec-panel-values">{summaryText}</span>
+          <span className="spec-panel-toggle">
+            <span className="spec-open-label">수정</span>
+            <span className="spec-close-label">접기</span>
+          </span>
+        </summary>
+
+        <div className="spec-panel-body">
         <div className="spec-input-group">
           <label htmlFor="toeic-score">공인영어성적 (TOEIC)</label>
           <div className="input-with-suffix input-with-suffix-spaced">
@@ -126,7 +147,8 @@ function SpecInputPanel({
             입력하는 것을 강력히 권장합니다.
           </p>
         </div>
-      </div>
+        </div>
+      </details>
     </section>
   );
 }
