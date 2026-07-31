@@ -23,10 +23,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from extract_spreadsheets import (  # noqa: E402
-    EXTRACTORS,
     SOURCE_PUBLISHES,
     extract_all,
     normalize_name,
+    validate_extracted_records,
 )
 from extract_pdfs import SPECS as PDF_SPECS  # noqa: E402
 from extract_pdfs import extract_one as extract_pdf_one  # noqa: E402
@@ -107,14 +107,27 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     show_all = "--full" in sys.argv
 
-    extracted = extract_all()
-    covered = {(univ, year) for univ, year, _ in EXTRACTORS}
+    spreadsheet_result = extract_all()
+    extracted = list(spreadsheet_result.records)
+    covered = set(spreadsheet_result.covered)
+    failures = [
+        f"{failure.year} {failure.university} "
+        f"[{failure.error_type}] {failure.message}"
+        for failure in spreadsheet_result.failures
+    ]
 
     # PDF 17칸도 같은 방식으로 합친다. 의심 행은 대조에 넣지 않고 따로 센다.
     pdf_suspects = []
     for univ, spec in PDF_SPECS.items():
         for year in spec["years"]:
-            records, suspects = extract_pdf_one(univ, year, spec)
+            try:
+                records, suspects = extract_pdf_one(univ, year, spec)
+                validate_extracted_records(univ, year, records)
+            except Exception as exc:
+                failures.append(
+                    f"{year} {univ} [{exc.__class__.__name__}] {exc}"
+                )
+                continue
             extracted.extend(records)
             pdf_suspects.extend(suspects)
             covered.add((univ, year))
@@ -122,33 +135,34 @@ def main():
     standard = load("편입_성적_통합.json")
     exceptions = load("편입_예외학과_통합.json")
 
-    # results 를 (대학, 연도, 정규화이름) 으로 색인한다. 예외도 함께 넣어야
-    # '예외로 옮긴 것'을 누락으로 잘못 세지 않는다.
+    # results 를 (대학, 연도, 정규화이름) 으로 색인한다. 표준과 예외 모두
+    # 실제 값까지 같은 방식으로 대조한다.
     # 한 레코드가 '학과'와 '학과_원본명' 두 이름으로 색인된다(원본은 당시명을,
     # results 는 현재명을 쓰는 경우가 많다 — 강원대 2024는 77건 중 40건이 다르다).
     # 고아 판정을 키 단위로 하면 현재명 키가 항상 고아로 잡히므로 레코드 단위로 센다.
     indexed = {}
     record_ids = {}
-    for position, record in enumerate(standard):
-        key = (record["대학명"], record["연도"])
-        if key not in covered:
-            continue
-        record_ids[position] = record
-        for name in (record.get("학과_원본명"), record.get("학과")):
-            indexed[(key[0], key[1], normalize_name(name))] = ("표준", position, record)
-
-    exception_keys = set()
-    for record in exceptions:
-        key = (record["대학명"], record["연도"])
-        if key not in covered:
-            continue
-        for name in (record.get("학과_원본명"), record.get("학과")):
-            exception_keys.add((key[0], key[1], normalize_name(name)))
+    for category, collection in (("표준", standard), ("예외", exceptions)):
+        for position, record in enumerate(collection):
+            key = (record["대학명"], record["연도"])
+            if key not in covered:
+                continue
+            identity = (category, position)
+            record_ids[identity] = record
+            for name in (record.get("학과_원본명"), record.get("학과")):
+                lookup_key = (key[0], key[1], normalize_name(name))
+                existing = indexed.get(lookup_key)
+                if existing is not None and existing[:2] != identity:
+                    failures.append(
+                        f"results 키 중복 [{lookup_key[0]} {lookup_key[1]} {lookup_key[2]}]"
+                    )
+                indexed[lookup_key] = (category, position, record)
 
     missing = []
     mismatched = []
     derived = defaultdict(int)
     matched = 0
+    matched_by_category = defaultdict(int)
     matched_positions = set()
 
     seen_keys = set()
@@ -160,9 +174,6 @@ def main():
         seen_keys.add(key)
         seen_keys.add((row["대학명"], row["연도"], row["학과_정규화"]))
 
-        if key in exception_keys:
-            continue
-
         found = indexed.get(key)
         if found is None:
             # 원본에 성적이 전혀 없는 행(모집인원 없음 등)은 누락이라 부르지 않는다.
@@ -173,8 +184,9 @@ def main():
             continue
 
         matched += 1
-        _, position, record = found
-        matched_positions.add(position)
+        category, position, record = found
+        matched_by_category[category] += 1
+        matched_positions.add((category, position))
         publishes = publishes_map(row["대학명"])
 
         for field, pub_key, label in COMPARABLE_FIELDS:
@@ -187,7 +199,7 @@ def main():
                 continue
 
             if not close_enough(source_value, result_value):
-                mismatched.append((row, label, source_value, result_value))
+                mismatched.append((category, row, label, source_value, result_value))
 
         for field, label in COUNT_FIELDS:
             source_value = row[field]
@@ -195,16 +207,16 @@ def main():
             if source_value is None:
                 continue
             if not close_enough(source_value, result_value):
-                mismatched.append((row, label, source_value, result_value))
+                mismatched.append((category, row, label, source_value, result_value))
 
     orphans = []
-    for position, record in sorted(record_ids.items()):
-        if position in matched_positions:
+    for identity, record in sorted(record_ids.items()):
+        if identity in matched_positions:
             continue
         known = (record["대학명"], record["연도"], record.get("학과"))
         if known in KNOWN_UNEXTRACTED:
             continue
-        orphans.append(known)
+        orphans.append((identity[0], *known))
 
     def show(rows, limit=25):
         for line in rows[:None if show_all else limit]:
@@ -213,6 +225,10 @@ def main():
             print(f"  ... 외 {len(rows) - limit}건 (--full 로 전부)")
 
     print(f"=== 대조 결과: 원본 {len(extracted)}행 / 일치 확인 {matched}건 ===")
+    print(
+        f"    표준 {matched_by_category['표준']}건 / "
+        f"예외 {matched_by_category['예외']}건을 인원·점수까지 비교"
+    )
     print()
 
     real_missing = [m for m in missing if m[1]]
@@ -229,15 +245,18 @@ def main():
     print()
 
     print(f"[B] results 에 있는데 원본에 없다 — {len(orphans)}건")
-    show(["{} {} {}".format(y, u.replace("대학교", "대"), n) for u, y, n in orphans])
+    show([
+        "[{}] {} {} {}".format(category, y, u.replace("대학교", "대"), n)
+        for category, u, y, n in orphans
+    ])
     print()
 
     print(f"[C] 값 불일치 — {len(mismatched)}건")
     show([
         "{} {} {:<24} {:<10} 원본 {} / results {}".format(
-            r["연도"], r["대학명"].replace("대학교", "대"),
+            r["연도"], f"[{category}] {r['대학명'].replace('대학교', '대')}",
             r["학과_원본명"][:22], label, src, res)
-        for r, label, src, res in mismatched
+        for category, r, label, src, res in mismatched
     ])
     print()
 
@@ -246,6 +265,33 @@ def main():
         print("  {} {} {:<12} {}건".format(
             key[1], key[0].replace("대학교", "대"), key[2], derived[key]))
 
+    print()
+    print(f"[PDF 의심 행] {len(pdf_suspects)}건")
+    for item in pdf_suspects[:None if show_all else 25]:
+        if isinstance(item, str):
+            print("  " + item)
+        else:
+            year, univ, cells = item
+            print(f"  {year} {univ}: " + " | ".join(str(cell) for cell in cells))
+    if not show_all and len(pdf_suspects) > 25:
+        print(f"  ... 외 {len(pdf_suspects) - 25}건 (--full 로 전부)")
+
+    print()
+    print(f"[추출 실패] {len(failures)}건")
+    for failure in failures:
+        print("  " + failure)
+
+    comparison_issues = len(real_missing) + len(orphans) + len(mismatched)
+    if failures or pdf_suspects:
+        print("\n!! 추출 실패 또는 PDF 의심 행이 있어 결과를 신뢰할 수 없습니다.")
+        print("!! 실패한 대학·연도는 covered에서 제외했으며 고아 판정을 하지 않았습니다.")
+        return 1
+    if comparison_issues:
+        print(f"\n!! 대조 차이 {comparison_issues}건 — 확인이 필요합니다.")
+        return 1
+    print("\n원본↔results 대조가 모두 일치합니다.")
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

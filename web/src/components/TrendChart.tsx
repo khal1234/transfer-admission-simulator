@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { X } from "lucide-react";
 import {
   CartesianGrid,
@@ -14,6 +14,7 @@ import {
   calculateAcceptedScoreBreakdown,
   type DepartmentRecord,
 } from "../utils/converter";
+import { getCompetitionRatio } from "../utils/competition";
 import { getConversionFormula } from "../utils/formulaRegistry";
 import { getRecordYear } from "../utils/records";
 import {
@@ -22,6 +23,7 @@ import {
   isDerived,
 } from "../utils/scoreProvenance";
 import { getRecordKey } from "../utils/targets";
+import { focusElement } from "../utils/focusManagement";
 
 type ChartTarget = {
   univ: string;
@@ -108,14 +110,6 @@ function isChartMetric(value: string): value is ChartMetric {
   return value in CHART_METRIC_CONFIG;
 }
 
-function getCompetitionRatio(record: DepartmentRecord): number | null {
-  if (!record.모집인원 || !record.지원인원 || record.모집인원 <= 0) {
-    return null;
-  }
-
-  return Math.round((record.지원인원 / record.모집인원) * 100) / 100;
-}
-
 function roundToTwoDecimals(value: number): number {
   return Math.round(value * 100) / 100;
 }
@@ -172,7 +166,12 @@ function TrendChart({
   onMetricChange,
   onClose,
 }: TrendChartProps) {
+  const initialControlRef = useRef<HTMLSelectElement | null>(null);
   const selectedMetric = CHART_METRIC_CONFIG[metric];
+
+  useEffect(() => {
+    focusElement(initialControlRef.current);
+  }, []);
 
   /**
    * 지망마다 연도별 기록을 뽑는다. 클릭해서 연 지망을 맨 앞에 둬서 색과
@@ -346,6 +345,8 @@ function TrendChart({
         </div>
         <div className="chart-controls">
           <select
+            ref={initialControlRef}
+            data-chart-initial-focus="true"
             aria-label="차트 지표 선택"
             className="chart-metric-select"
             value={metric}

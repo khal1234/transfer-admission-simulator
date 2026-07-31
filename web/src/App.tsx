@@ -66,6 +66,7 @@ import {
   prepareExceptionDepartmentRecords,
   type ExceptionDepartmentRecord,
 } from "./utils/dataValidation";
+import { focusElement } from "./utils/focusManagement";
 
 import {
   AlertTriangle,
@@ -316,6 +317,7 @@ export default function App() {
   const [chartTarget, setChartTarget] = useState<ChartTarget | null>(null);
   const [chartMetric, setChartMetric] = useState<ChartMetric>("toeic_orig");
   const chartRegionRef = useRef<HTMLDivElement | null>(null);
+  const chartTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const recordsByDepartment = useMemo(() => {
     const grouped = new Map<string, DepartmentRecord[]>();
@@ -402,10 +404,20 @@ export default function App() {
         : [...currentTargets, target]
     ));
   }, []);
-  const closeChart = useCallback(() => setChartTarget(null), []);
-  const selectChart = useCallback((univ: string, dept: string) => {
+  const closeChart = useCallback(() => {
+    setChartTarget(null);
+    window.requestAnimationFrame(() => focusElement(chartTriggerRef.current));
+  }, []);
+  const selectChart = useCallback((univ: string, dept: string, trigger: HTMLButtonElement) => {
+    chartTriggerRef.current = trigger;
     setChartTarget({ univ, dept });
   }, []);
+
+  useEffect(() => {
+    if (chartTarget !== null && !targetKeySet.has(getTargetKey(chartTarget))) {
+      setChartTarget(null);
+    }
+  }, [chartTarget, targetKeySet]);
 
   useEffect(() => {
     if (chartTarget === null) {
@@ -413,6 +425,7 @@ export default function App() {
     }
 
     const frameId = window.requestAnimationFrame(() => {
+      focusElement(chartRegionRef.current);
       chartRegionRef.current?.scrollIntoView({
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
           ? "auto"
@@ -525,6 +538,7 @@ export default function App() {
           referenceRecord.연도,
           gpaType,
           deficit,
+          gpaRaw,
           toeic,
         );
       const formula = getConversionFormula(
@@ -562,6 +576,9 @@ export default function App() {
         recentHistoryRows: recentRecordYears.map((year) => ({
           year,
           record: historyByYear.get(year) ?? null,
+          siblingDepartments: yearlyComparisons.find(
+            (comparison) => comparison.year === year,
+          )?.siblingDepartments ?? [],
           exclusionReason: exceptionHistory.recordsByKeyAndYear.get(
             `${key}::${year}`
           )?.제거사유 ?? null,
@@ -573,6 +590,7 @@ export default function App() {
     comparisonBasis,
     departmentsByGroupAndYear,
     exceptionHistory,
+    gpaRaw,
     gpa100,
     gpaType,
     recentRecordYears,
@@ -726,7 +744,7 @@ export default function App() {
 
         <section className="dashboard-column results-area">
           {chartTarget !== null && (
-            <div className="chart-region" ref={chartRegionRef}>
+            <div className="chart-region" ref={chartRegionRef} tabIndex={-1}>
               <ChartErrorBoundary
                 key={`${chartTarget.univ}::${chartTarget.dept}`}
                 onClose={closeChart}

@@ -11,6 +11,7 @@ import type {
   calculateScore,
   DepartmentRecord,
 } from "../utils/converter";
+import { formatCompetitionRatio } from "../utils/competition";
 import { getGpaMax, type GpaType } from "../utils/scoreInput";
 import {
   explainAcceptedScore,
@@ -22,16 +23,13 @@ import {
   getToeicDisclosure,
 } from "../utils/scoreProvenance";
 import type { ComparisonBasis, Target } from "../utils/targets";
+import {
+  getRecentHistoryStatus,
+  type RecentHistoryRow,
+} from "../utils/historyStatus";
 import RawScoreValue from "./RawScoreValue";
 import ScoreBasis from "./ScoreBasis";
 import UniversityName from "./UniversityName";
-
-type RecentHistoryRow = {
-  year: string;
-  record: DepartmentRecord | null;
-  exclusionReason: string | null;
-  exceptionLookupStatus: "loading" | "ready" | "error";
-};
 
 type YearlyComparison = {
   year: string;
@@ -65,7 +63,7 @@ type TargetBasketProps = {
   comparisonBasis: ComparisonBasis;
   onComparisonBasisChange: (basis: ComparisonBasis) => void;
   onToggleTarget: (univ: string, dept: string) => void;
-  onSelectChart: (univ: string, dept: string) => void;
+  onSelectChart: (univ: string, dept: string, trigger: HTMLButtonElement) => void;
 };
 
 /**
@@ -99,19 +97,6 @@ const COMPARISON_BASIS_OPTIONS: {
       + "보수적으로 잡고 싶을 때 씁니다.",
   },
 ];
-
-function getCompetitionRatio(record: DepartmentRecord): number | null {
-  if (!record.모집인원 || !record.지원인원 || record.모집인원 <= 0) {
-    return null;
-  }
-
-  return Math.round((record.지원인원 / record.모집인원) * 100) / 100;
-}
-
-function formatCompetitionRatio(record: DepartmentRecord): string {
-  const ratio = getCompetitionRatio(record);
-  return ratio === null ? "-" : `${Math.round(ratio * 10) / 10}:1`;
-}
 
 /**
  * 부족한 점수를 메우는 경로를 한 줄로 적는다.
@@ -215,8 +200,6 @@ function TargetBasket({
   onToggleTarget,
   onSelectChart,
 }: TargetBasketProps) {
-  const scoreInputInvalid = toeic === null || gpaRaw === null;
-
   return (
     <div className="card basket-card" id="target-basket">
       <div className="basket-title-row">
@@ -278,6 +261,9 @@ function TargetBasket({
             renamedHistoryText,
             recentHistoryRows,
           }) => {
+            // 입력 필수 여부는 선택한 대학·연도 공식이 결정한다. 영어만 반영하는
+            // 전형은 GPA가 비어 있어도 지표합을 정상 계산할 수 있다.
+            const scoreInputInvalid = score.myIndexSum === null;
             const comparisonUnavailable = deficit === null || analysis === null;
             const needsImprovement = !comparisonUnavailable && deficit > 0;
             const analysisPanelState = getAnalysisPanelState(
@@ -675,25 +661,25 @@ function TargetBasket({
                               record,
                               exclusionReason,
                               exceptionLookupStatus,
+                              siblingDepartments,
                             }) => {
+                              const status = getRecentHistoryStatus({
+                                year,
+                                record,
+                                exclusionReason,
+                                exceptionLookupStatus,
+                                siblingDepartments,
+                              });
                               if (record === null) {
-                                const unavailableLabel = exceptionLookupStatus === "loading"
-                                  ? "예외 이력 확인 중"
-                                  : exceptionLookupStatus === "error"
-                                    ? "이력 확인 불가"
-                                    : exclusionReason === null
-                                      ? "미선발"
-                                      : "별도 전형 · 비교 제외";
-
                                 return (
                                   <tr key={year}>
                                     <td>{year}년</td>
                                     <td
                                       colSpan={5}
-                                      className="history-unavailable"
-                                      title={exclusionReason ?? undefined}
+                                      className={`history-unavailable history-${status.kind}`}
+                                      title={status.title}
                                     >
-                                      {unavailableLabel}
+                                      {status.label}
                                     </td>
                                   </tr>
                                 );
@@ -701,7 +687,10 @@ function TargetBasket({
 
                               return (
                                 <tr key={record.연도}>
-                                  <td>{record.연도}년</td>
+                                  <td>
+                                    {record.연도}년
+                                    <span className="sr-only"> · {status.label}</span>
+                                  </td>
                                   <td>{record.모집인원 ?? "-"}</td>
                                   <td>{record.지원인원 ?? "-"}</td>
                                   <td>{formatCompetitionRatio(record)}</td>
@@ -733,7 +722,11 @@ function TargetBasket({
                   <button
                     type="button"
                     className="btn-card-action"
-                    onClick={() => onSelectChart(target.univ, target.dept)}
+                    onClick={(event) => onSelectChart(
+                      target.univ,
+                      target.dept,
+                      event.currentTarget,
+                    )}
                   >
                     <TrendingUp size={14} />
                     <span className="summary-label-wide">입결 추이 차트</span>

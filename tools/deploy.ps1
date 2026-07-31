@@ -25,6 +25,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "netlify-site.ps1")
+
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $WebDir = Join-Path $ProjectRoot "web"
 $DistDir = Join-Path $WebDir "dist"
@@ -57,9 +59,18 @@ if (-not (Test-Path (Join-Path $DistDir "index.html"))) {
 Set-Location $ProjectRoot
 
 # --no-build: Netlify 쪽에서 다시 빌드하지 않는다. 자동 빌드가 꺼져 있어도 이 경로는 동작한다.
-$DeployArgs = @("deploy", "--dir=web/dist", "--no-build", "--message=$Message")
+# --site: 현재 디렉터리의 우연한 link 상태가 아니라 SSOT의 사이트로 고정한다.
+$DeployArgs = @(
+    "deploy",
+    "--site=$($NetlifySite.Id)",
+    "--dir=web/dist",
+    "--no-build",
+    "--message=$Message"
+)
 
 if ($Production) {
+    # 실제 게시 직전에 API가 돌려준 ID·이름·URL 셋을 모두 확인한다.
+    Get-VerifiedNetlifySite "netlify" | Out-Null
     Write-Host ""
     Write-Host "[deploy] 프로덕션 게시입니다 — 15크레딧이 소모됩니다." -ForegroundColor Red
     $answer = Read-Host "계속하려면 'yes' 를 입력하세요"

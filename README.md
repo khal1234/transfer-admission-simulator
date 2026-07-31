@@ -38,6 +38,7 @@
 
 - Node.js `^20.19.0` 또는 `>=22.12.0`
 - npm
+- 데이터 추출 도구 사용 시 Python 3.11 이상
 
 ### 설치 및 실행
 
@@ -68,8 +69,43 @@ npm run build
 npm audit
 ```
 
-현재 기준으로 유틸리티 테스트 102건과 TypeScript strict 검사, 린트 및
+현재 기준으로 웹 테스트 168건과 TypeScript strict 검사, 린트 및
 프로덕션 빌드를 통과합니다.
+
+### 데이터 추출·감사 도구
+
+Python 도구의 외부 패키지는 루트의 `requirements-tools.txt`에 버전을
+고정했습니다. 원본 스프레드시트와 PDF는 저장소 루트의 `data/`에 두어야 하며,
+누락 의존성·누락/손상 원본·0행 추출·스키마 오류가 하나라도 있으면 추출과
+대조는 nonzero로 종료합니다.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements-tools.txt
+
+python3 tools/extract_spreadsheets.py
+python3 tools/extract_pdfs.py
+python3 tools/diff_extraction.py
+python3 tools/audit_data_parity.py
+python3 tools/apply_fixes.py --dry-run
+```
+
+`tools/apply_fixes.py`의 실제 쓰기 모드는 표준·예외 CSV를 인메모리 JSON에서
+재생성합니다. JSON 재파싱, 행 수, 키 중복, JSON↔CSV parity 및
+`results/`↔`web/src/data/` SHA-256 검증이 모두 끝난 뒤에만 같은 디렉터리의
+임시 파일을 교체하며, 교체 실패 시 기존 파일 전체를 복구합니다. 현재 JSON을
+기준으로 CSV만 다시 맞춰야 할 때는 다음 명령을 사용합니다.
+
+```bash
+python3 tools/audit_data_parity.py --repair-csv
+```
+
+Python 도구의 격리 단위 테스트는 원본 파일 없이 실행할 수 있습니다.
+
+```bash
+python3 -m unittest tools/test_tools_pipeline.py tools/test_deployment_config.py -v
+```
 
 ## 프로젝트 구조
 

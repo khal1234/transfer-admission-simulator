@@ -279,7 +279,26 @@ function findMinimumIncrease(
     }
   }
 
-  return found === null ? null : found * step;
+  return found === null ? null : Math.round(found * step * 100) / 100;
+}
+
+function getGpaScaleMax(gpaScaleType: "100" | "4.5" | "4.3"): number {
+  return gpaScaleType === "100" ? 100 : Number(gpaScaleType);
+}
+
+function convertGpaInputToScore(
+  formula: NonNullable<ReturnType<typeof getConversionFormula>>,
+  gpaScaleType: "100" | "4.5" | "4.3",
+  gpaInput: number,
+): number {
+  if (formula.convertGpa === null) {
+    return 0;
+  }
+
+  const gpa100 = gpaScaleType === "100"
+    ? Math.max(0, Math.min(100, gpaInput))
+    : convertGpaTo100Scale(gpaInput, Number(gpaScaleType) as 4.5 | 4.3);
+  return Math.round(formula.convertGpa(gpa100) * 100) / 100;
 }
 
 /**
@@ -295,6 +314,7 @@ export function analyzeScoreDeficit(
   year: string,
   gpaScaleType: "100" | "4.5" | "4.3",
   deficit: number,
+  currentGpa: number | null,
   currentToeic: number | null = null
 ): {
   isLookupBased: boolean;
@@ -352,9 +372,17 @@ export function analyzeScoreDeficit(
       // Clean to multiple of 5 since TOEIC is in 5 point intervals
       toeicNeeded = Math.ceil(toeicNeeded / 5) * 5;
     }
-    // 전적대 성적은 모든 대학이 비례식이라 구간 눌림이 없다 — 기울기로 충분하다.
-    if (gpaSlopeRaw > 0) {
-      gpaNeeded = Math.round((deficit / gpaSlopeRaw) * 100) / 100;
+    if (currentGpa !== null && formula !== null && formula.convertGpa !== null) {
+      const gpaFormula = formula;
+      const maxGpa = getGpaScaleMax(gpaScaleType);
+      const clampedGpa = Math.max(0, Math.min(maxGpa, currentGpa));
+      gpaNeeded = findMinimumIncrease(
+        (value) => convertGpaInputToScore(gpaFormula, gpaScaleType, value),
+        clampedGpa,
+        maxGpa,
+        0.01,
+        deficit,
+      );
     }
   }
 
