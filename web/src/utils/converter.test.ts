@@ -214,12 +214,40 @@ describe("analyzeScoreDeficit characteristics", () => {
     });
   });
 
-  it("does not invent exact targets for lookup-based formulas", () => {
+  it("still estimates targets for lookup-based formulas, flagged as approximate", () => {
     const result = analyzeScoreDeficit("전북대학교", "2026", "100", 5);
 
     expect(result.isLookupBased).toBe(true);
-    expect(result.toeicNeeded).toBeNull();
+    // 5점 격차 / (0.101 * 0.8 점당) ≈ 62점 → 5점 단위로 올림
+    expect(result.toeicNeeded).toBe(65);
+    expect(result.gpaNeeded).toBe(8.33);
+  });
+
+  // 충남대는 구간 환산표라 역산을 아예 거부하고 있었다. 정방향 환산은 같은
+  // 근사식으로 이미 화면에 띄우면서 역방향만 막는 건 앞뒤가 안 맞았다.
+  it("reverses the Chungnam lookup table instead of refusing", () => {
+    const result = analyzeScoreDeficit("충남대학교", "2026", "100", 6, 800);
+
+    expect(result.isLookupBased).toBe(true);
+    // 60 - (990-t)/8.3333 에서 6점을 더 얻으려면 50점이 필요하다.
+    expect(result.toeicNeeded).toBe(50);
+    // 2026 전형은 전적대 성적을 반영하지 않는다.
     expect(result.gpaNeeded).toBeNull();
+  });
+
+  // 하한 구간에 눌린 사용자에게 기울기 나눗셈은 닿지 않는 목표를 적어준다.
+  it("accounts for the flat floor of a lookup table", () => {
+    const flooredStart = analyzeScoreDeficit("충남대학교", "2026", "100", 20, 600);
+    const slopeOnly = Math.ceil(Math.ceil(20 / (1 / 8.33333333)) / 5) * 5;
+
+    expect(flooredStart.toeicNeeded).not.toBeNull();
+    expect(flooredStart.toeicNeeded!).toBeGreaterThan(slopeOnly);
+  });
+
+  it("reports no single-metric path when even a perfect score falls short", () => {
+    const result = analyzeScoreDeficit("충남대학교", "2026", "100", 40, 800);
+
+    expect(result.toeicNeeded).toBeNull();
   });
 
   it("preserves the current 2026 Chungbuk linear estimate", () => {

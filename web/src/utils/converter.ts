@@ -242,13 +242,60 @@ export function convertGpaTo100Scale(gpa: number, scale: 4.5 | 4.3): number {
 }
 
 /**
+ * 우리가 쓰는 환산식을 그대로 거꾸로 풀어 필요한 최소 상승폭을 찾는다.
+ *
+ * 기울기 나눗셈이면 한 줄로 끝나지만, 구간 환산표를 직선으로 근사한 대학은
+ * 상·하한에 눌린 구간이 있어 거기서는 기울기가 0이다. 그 구간에 있는
+ * 사용자에게 기울기 나눗셈은 실제로는 닿지 않는 목표를 '이만큼만 올리면
+ * 된다'고 적어준다. 환산식이 단조 증가이므로 이분 탐색으로 실제 값을 찾는다.
+ *
+ * 만점까지 올려도 격차를 못 메우면 null 을 돌려준다 — 없는 경로를 적는 것보다
+ * 낫다.
+ */
+function findMinimumIncrease(
+  convert: (value: number) => number,
+  current: number,
+  max: number,
+  step: number,
+  requiredGain: number
+): number | null {
+  const base = convert(current);
+  const maxSteps = Math.floor((max - current) / step + 1e-9);
+  if (maxSteps <= 0) {
+    return null;
+  }
+
+  let low = 1;
+  let high = maxSteps;
+  let found: number | null = null;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    if (convert(current + mid * step) - base >= requiredGain - 1e-9) {
+      found = mid;
+      high = mid - 1;
+    } else {
+      low = mid + 1;
+    }
+  }
+
+  return found === null ? null : found * step;
+}
+
+/**
  * Calculates raw score increments and return analysis report for user.
+ *
+ * 구간 환산표 대학이라고 역산을 거부하지 않는다. 화면에 이미 같은 근사식으로
+ * 뽑은 내 환산점수와 격차를 띄워놓고 그 격차를 메울 점수만 '산출 불가'라고
+ * 적는 건 앞뒤가 안 맞는다. 근사의 정확도는 정방향이나 역방향이나 같다.
+ * 대신 isLookupBased 로 근사라는 사실을 함께 돌려주고, 화면에서 ≈ 로 구별한다.
  */
 export function analyzeScoreDeficit(
   univ: string,
   year: string,
   gpaScaleType: "100" | "4.5" | "4.3",
-  deficit: number
+  deficit: number,
+  currentToeic: number | null = null
 ): {
   isLookupBased: boolean;
   toeicNeeded: number | null;
@@ -289,12 +336,23 @@ export function analyzeScoreDeficit(
   let toeicNeeded: number | null = null;
   let gpaNeeded: number | null = null;
 
-  if (deficit > 0 && !isLookupBased) {
-    if (toeicSlope > 0) {
+  if (deficit > 0) {
+    if (currentToeic !== null && formula !== null) {
+      // 현재 점수를 알면 환산식을 직접 되짚는다. 상·하한 구간까지 반영된다.
+      const clamped = Math.max(100, Math.min(990, currentToeic));
+      toeicNeeded = findMinimumIncrease(
+        formula.convertEnglish,
+        clamped,
+        990,
+        5, // TOEIC은 5점 단위로만 나온다
+        deficit
+      );
+    } else if (toeicSlope > 0) {
       toeicNeeded = Math.ceil(deficit / toeicSlope);
       // Clean to multiple of 5 since TOEIC is in 5 point intervals
       toeicNeeded = Math.ceil(toeicNeeded / 5) * 5;
     }
+    // 전적대 성적은 모든 대학이 비례식이라 구간 눌림이 없다 — 기울기로 충분하다.
     if (gpaSlopeRaw > 0) {
       gpaNeeded = Math.round((deficit / gpaSlopeRaw) * 100) / 100;
     }
