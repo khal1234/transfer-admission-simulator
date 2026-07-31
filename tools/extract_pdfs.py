@@ -230,8 +230,11 @@ def resolve_columns(table, spec):
         # 헤더 후보: '모집단위' 가 보이거나, 인원 열 이름이 나란히 있는 행.
         # 강원대 2024는 헤더 첫 줄이 통째로 병합돼 '모집단위명' 이 독립 셀로
         # 잡히지 않는다. 그래서 '모집인원'+'지원인원' 도 헤더 신호로 본다.
+        # '포함'이 아니라 '시작'으로 본다. 표 위의 안내문에 그 낱말이 섞여 있으면
+        # (경북대 2024: "※ 입학인원이 1명인 모집단위는 개인정보...") 진짜 헤더보다
+        # 먼저 걸려서, 두 줄 아래에 있는 성적 열을 통째로 놓친다.
         is_header = (
-            any("모집단위" in t for t in texts)
+            any(t.startswith("모집단위") for t in texts)
             or (any(t.startswith("모집인원") for t in texts)
                 and any(t.startswith("지원인원") for t in texts))
         )
