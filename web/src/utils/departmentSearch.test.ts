@@ -3,6 +3,7 @@ import type { DepartmentRecord } from "./converter";
 import {
   buildDepartmentSearchIndex,
   filterDepartmentSearchIndex,
+  resolveDepartmentAliases,
 } from "./departmentSearch";
 
 function createRecord(
@@ -65,5 +66,56 @@ describe("department search", () => {
         new Set(["부산대학교"]),
       ).map((record) => record.학과),
     ).toEqual(["기계공학부", "생명과학과"]);
+  });
+});
+
+describe("abbreviation search", () => {
+  // 검색이 부분 문자열 일치만 하던 시절에는 '컴공'으로 '컴퓨터공학과'가 안 나왔다.
+  // 안내 문구에 예시로 적혀 있는데도 그랬다.
+  it("finds a department by the abbreviation people actually use", () => {
+    expect(
+      filterDepartmentSearchIndex(searchIndex, "컴공", new Set())
+        .map((record) => record.학과),
+    ).toEqual(["컴퓨터학부"]);
+  });
+
+  it("matches while the abbreviation is still being typed", () => {
+    expect(
+      filterDepartmentSearchIndex(searchIndex, "컴", new Set())
+        .map((record) => record.학과),
+    ).toEqual(["컴퓨터학부"]);
+  });
+
+  it("expands an abbreviation to every spelling it covers", () => {
+    expect(resolveDepartmentAliases("컴공")).toContain("컴퓨터공학");
+    expect(resolveDepartmentAliases("전전")).toContain("전기전자");
+    expect(resolveDepartmentAliases("사복")).toContain("사회복지");
+  });
+
+  it("returns nothing for a word that is not an abbreviation", () => {
+    expect(resolveDepartmentAliases("존재하지않는말")).toEqual([]);
+  });
+});
+
+describe("result ordering", () => {
+  // 원본 JSON이 대학별로 묶여 있어 그대로 두면 같은 과가 대학 순서에 밀려
+  // 멀리 떨어져 나왔다. 찾는 사람은 같은 과를 대학끼리 견주고 싶어 한다.
+  it("groups the same department across universities", () => {
+    const grouped = buildDepartmentSearchIndex([
+      createRecord("충남대학교", "기계공학부"),
+      createRecord("강원대학교", "화학공학과"),
+      createRecord("경북대학교", "기계공학과"),
+      createRecord("부산대학교", "기계공학부"),
+    ]);
+
+    expect(
+      filterDepartmentSearchIndex(grouped, "", new Set())
+        .map((record) => `${record.학과}/${record.대학명}`),
+    ).toEqual([
+      "기계공학과/경북대학교",
+      "기계공학부/부산대학교",
+      "기계공학부/충남대학교",
+      "화학공학과/강원대학교",
+    ]);
   });
 });
