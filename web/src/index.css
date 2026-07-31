@@ -33,6 +33,18 @@
   letter-spacing: -0.3px;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 body {
   background-color: #f5f7fb;
   color: var(--text-primary);
@@ -1187,6 +1199,361 @@ html[data-theme="dark"] .acceptance-basis-final {
 .explorer-card {
   grid-area: explorer;
   margin-top: 0;
+}
+
+/* Curated transfer interview and study reviews */
+.transfer-reviews-card {
+  margin-top: 24px;
+}
+
+.transfer-reviews-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.transfer-reviews-heading .card-title {
+  margin-bottom: 8px;
+}
+
+.transfer-reviews-heading p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.transfer-reviews-total {
+  flex-shrink: 0;
+  border-radius: 99px;
+  padding: 7px 12px;
+  background-color: #ecfdf5;
+  color: #047857;
+  font-size: 12px;
+}
+
+.transfer-review-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  align-items: start;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.transfer-review-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.transfer-review-tab {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border-color);
+  border-radius: 99px;
+  padding: 6px 11px;
+  background-color: #fff;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+}
+
+.transfer-review-tab:hover {
+  border-color: var(--primary-color);
+  background-color: #f0f4ff;
+  color: var(--primary-color);
+}
+
+.transfer-review-tab.active {
+  border-color: var(--primary-color);
+  background-color: var(--primary-color);
+  color: #fff;
+}
+
+.transfer-review-tab-count {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  padding: 0 5px;
+  background-color: #e2e8f0;
+  color: #475569;
+  font-size: 10px;
+}
+
+.transfer-review-tab.active .transfer-review-tab-count {
+  background-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.transfer-review-search {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 11px;
+  padding: 0 12px;
+  background-color: #fff;
+  color: var(--text-muted);
+}
+
+.transfer-review-search:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.08);
+}
+
+.transfer-review-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.transfer-review-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.transfer-review-search button {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 0;
+  padding: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.transfer-review-result-count {
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.transfer-review-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 14px;
+}
+
+.transfer-review-group {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 13px;
+  background-color: #f8fafc;
+}
+
+.transfer-review-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-color);
+  padding: 11px 13px;
+  background-color: #f1f5f9;
+}
+
+.transfer-review-group-heading h3 {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.transfer-review-group-heading span {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.transfer-review-links {
+  display: flex;
+  flex-direction: column;
+}
+
+.transfer-review-link {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-color);
+  padding: 13px;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.transfer-review-link:last-child {
+  border-bottom: 0;
+}
+
+.transfer-review-link:hover {
+  background-color: #eef6ff;
+  color: var(--primary-color);
+}
+
+.transfer-review-link > svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.transfer-review-link:hover > svg {
+  color: var(--primary-color);
+}
+
+.transfer-review-link-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.transfer-review-link-content strong {
+  font-size: 13px;
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.transfer-review-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.transfer-review-kind,
+.transfer-review-comparison {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 5px;
+  padding: 2px 6px;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.transfer-review-comparison {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.transfer-review-meta {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.transfer-review-empty {
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 32px 20px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.transfer-review-source-note {
+  margin-top: 16px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+html[data-theme="dark"] .transfer-reviews-total {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+}
+
+html[data-theme="dark"] :is(
+  .transfer-review-tab,
+  .transfer-review-search,
+  .transfer-review-group
+) {
+  background-color: #111827;
+}
+
+html[data-theme="dark"] .transfer-review-group-heading {
+  background-color: #172033;
+}
+
+html[data-theme="dark"] .transfer-review-link:hover {
+  background-color: #172554;
+}
+
+html[data-theme="dark"] .transfer-review-kind {
+  background-color: rgba(14, 165, 233, 0.16);
+  color: #7dd3fc;
+}
+
+html[data-theme="dark"] .transfer-review-comparison {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+}
+
+@media (max-width: 900px) {
+  .transfer-review-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .transfer-review-groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .transfer-reviews-card {
+    margin-top: 16px;
+  }
+
+  .transfer-reviews-heading {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .transfer-reviews-total {
+    align-self: flex-start;
+  }
+
+  .transfer-review-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-right: -16px;
+    padding-right: 16px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .transfer-review-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .transfer-review-tab {
+    flex-shrink: 0;
+    min-height: 40px;
+  }
+
+  .transfer-review-search {
+    min-height: 44px;
+  }
+
+  .transfer-review-link {
+    min-height: 68px;
+  }
 }
 
 .explorer-filters {

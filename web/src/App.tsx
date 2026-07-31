@@ -11,6 +11,7 @@ import DepartmentExplorer from "./components/DepartmentExplorer";
 import ChartErrorBoundary from "./components/ChartErrorBoundary";
 import SpecInputPanel from "./components/SpecInputPanel";
 import TargetBasket, { type TargetSummary } from "./components/TargetBasket";
+import TransferReviewLinks from "./components/TransferReviewLinks";
 import type { ChartMetric } from "./components/TrendChart";
 import UniversityName from "./components/UniversityName";
 import { 
@@ -763,6 +764,8 @@ export default function App() {
           />
         </section>
       </div>
+
+      <TransferReviewLinks />
     </div>
   );
 }
