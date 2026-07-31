@@ -2,7 +2,6 @@ import { memo } from "react";
 import {
   BookOpen,
   ChevronDown,
-  HelpCircle,
   Star,
   Trash2,
   TrendingUp,
@@ -13,7 +12,18 @@ import type {
   DepartmentRecord,
 } from "../utils/converter";
 import { getGpaMax, type GpaType } from "../utils/scoreInput";
-import type { Target } from "../utils/targets";
+import {
+  explainAcceptedScore,
+  explainMyScore,
+  getFormulaBasis,
+} from "../utils/scoreExplanation";
+import {
+  getGpaDisclosure,
+  getToeicDisclosure,
+} from "../utils/scoreProvenance";
+import type { ComparisonBasis, Target } from "../utils/targets";
+import RawScoreValue from "./RawScoreValue";
+import ScoreBasis from "./ScoreBasis";
 import UniversityName from "./UniversityName";
 
 type RecentHistoryRow = {
@@ -23,11 +33,21 @@ type RecentHistoryRow = {
   exceptionLookupStatus: "loading" | "ready" | "error";
 };
 
+type YearlyComparison = {
+  year: string;
+  /** 그 해에 이 모집단위를 아예 안 뽑았는지, 뽑았는데 성적을 안 냈는지는 다르다. */
+  hasRecord: boolean;
+  /** 그 해에 같은 계열을 뽑은 다른 모집단위 이름들. 자료가 빈 이유를 설명한다. */
+  siblingDepartments: string[];
+  score: ReturnType<typeof calculateScore>;
+};
+
 export type TargetSummary = {
   key: string;
   target: Target;
   referenceRecord: DepartmentRecord;
   score: ReturnType<typeof calculateScore>;
+  yearlyComparisons: YearlyComparison[];
   deficit: number | null;
   analysis: ReturnType<typeof analyzeScoreDeficit> | null;
   comparisonYearNotice: string | null;
@@ -42,9 +62,43 @@ type TargetBasketProps = {
   toeic: number | null;
   gpaRaw: number | null;
   gpaType: GpaType;
+  comparisonBasis: ComparisonBasis;
+  onComparisonBasisChange: (basis: ComparisonBasis) => void;
   onToggleTarget: (univ: string, dept: string) => void;
   onSelectChart: (univ: string, dept: string) => void;
 };
+
+/**
+ * 판정을 어느 해에 걸지 고르는 자리.
+ *
+ * 최신 한 해로 고정하면 그 해가 유독 빡셌을 때 실제보다 비관적으로 읽힌다.
+ * 반대로 무른 해였으면 낙관적으로 읽힌다. 3개년 줄에 숫자는 이미 다 있지만,
+ * 뱃지와 필요 점수는 한 해에만 걸리므로 그 한 해를 고를 수 있어야 한다.
+ */
+const COMPARISON_BASIS_OPTIONS: {
+  value: ComparisonBasis;
+  label: string;
+  title: string;
+}[] = [
+  {
+    value: "latest",
+    label: "최신",
+    title: "가장 최근에 합격 평균이 공개된 연도를 기준으로 판정합니다.",
+  },
+  {
+    value: "lowest",
+    label: "합격선 낮은 해",
+    title: "최근 3개년 중 내 격차가 가장 작았던 해 — 그 해였다면 가장 붙기 "
+      + "쉬웠던 해입니다. 연도마다 배점이 달라 합격선 숫자끼리 직접 견주지 않고 "
+      + "격차로 고릅니다.",
+  },
+  {
+    value: "highest",
+    label: "합격선 높은 해",
+    title: "최근 3개년 중 내 격차가 가장 컸던 해 — 가장 빡셌던 해 기준으로 "
+      + "보수적으로 잡고 싶을 때 씁니다.",
+  },
+];
 
 function getCompetitionRatio(record: DepartmentRecord): number | null {
   if (!record.모집인원 || !record.지원인원 || record.모집인원 <= 0) {
@@ -57,6 +111,86 @@ function getCompetitionRatio(record: DepartmentRecord): number | null {
 function formatCompetitionRatio(record: DepartmentRecord): string {
   const ratio = getCompetitionRatio(record);
   return ratio === null ? "-" : `${Math.round(ratio * 10) / 10}:1`;
+}
+
+/**
+ * 부족한 점수를 메우는 경로를 한 줄로 적는다.
+ *
+ * 필요량만 그대로 적으면 'GPA +20.95' 같은 말이 나온다. 4.5 만점에서 도달할 수
+ * 없는 값인데 마치 방법이 있는 것처럼 읽힌다. 만점을 넘는 경로는 빼고, 둘 다
+ * 넘으면 단독으로는 안 된다고 밝힌다. 상세 분석 패널도 같은 기준을 쓴다.
+ *
+ * 구간 환산표를 근사한 대학은 값 앞에 ≈ 를 붙인다. 원점수 칸에서 쓰는 표기와
+ * 같은 뜻이다(RawScoreValue.tsx).
+ */
+function buildImprovementText(
+  analysis: NonNullable<TargetSummary["analysis"]>,
+  toeic: number | null,
+  gpaRaw: number | null,
+  gpaType: GpaType,
+): string {
+  const paths: string[] = [];
+
+  if (analysis.toeicNeeded !== null && toeic !== null) {
+    if (toeic + analysis.toeicNeeded <= 990) {
+      paths.push(`TOEIC +${analysis.toeicNeeded}`);
+    }
+  }
+
+  if (analysis.gpaNeeded !== null && gpaRaw !== null) {
+    if (gpaRaw + analysis.gpaNeeded <= getGpaMax(gpaType)) {
+      paths.push(`전적대 +${analysis.gpaNeeded}`);
+    }
+  }
+
+  if (paths.length > 0) {
+    const text = `${paths.join(" 또는 ")} 필요`;
+    return analysis.isLookupBased ? `≈ ${text}` : text;
+  }
+
+  return "한 요소만으로는 도달 불가";
+}
+
+const LOOKUP_APPROXIMATION_HINT =
+  "구간 환산표를 직선으로 근사해 역산한 추정치입니다. 실제 환산표에서는 구간 "
+  + "경계에 따라 몇 점 차이가 날 수 있습니다.";
+
+/**
+ * 합격자 기준 뱃지 한 칸.
+ *
+ * 최초합격자 평균과 최종등록자 평균은 성격이 다르다 — 최초 평균은 상위권이
+ * 빠지기 전 값이라 보통 더 높다. 그런데 두 뱃지가 같은 회색이라 나란히 놓고도
+ * 구별이 안 됐다. 색을 나누고, 대학이 어느 쪽인지 밝히지 않은 경우(경북대·
+ * 전남대 전체, 부산대 일부)는 뱃지 자체가 사라져 '왜 얘만 없지'가 됐던 것을
+ * 미공개라고 적어 드러낸다.
+ */
+function getAcceptanceBasisBadge(
+  basis: DepartmentRecord["합격자기준"],
+): { modifier: string; label: string; title: string } {
+  if (basis === "최초") {
+    return {
+      modifier: "acceptance-basis-first",
+      label: "최초합격자 기준",
+      title: "합격자 발표 직후의 최초합격자 평균입니다. 상위권이 다른 대학으로 "
+        + "빠지기 전 값이라 최종등록자 평균보다 높게 잡히는 편입니다.",
+    };
+  }
+
+  if (basis === "최종") {
+    return {
+      modifier: "acceptance-basis-final",
+      label: "최종합격자 기준",
+      title: "추가합격까지 끝난 뒤의 최종등록자 평균입니다. 최초합격자 평균보다 "
+        + "낮게 잡히는 편입니다.",
+    };
+  }
+
+  return {
+    modifier: "acceptance-basis-unknown",
+    label: "합격자 기준 미공개",
+    title: "이 대학은 공개한 평균이 최초합격자 기준인지 최종등록자 기준인지 "
+      + "밝히지 않았습니다. 다른 대학과 견줄 때 이 점을 감안해 주세요.",
+  };
 }
 
 function getAnalysisPanelState(
@@ -76,6 +210,8 @@ function TargetBasket({
   toeic,
   gpaRaw,
   gpaType,
+  comparisonBasis,
+  onComparisonBasisChange,
   onToggleTarget,
   onSelectChart,
 }: TargetBasketProps) {
@@ -83,21 +219,47 @@ function TargetBasket({
 
   return (
     <div className="card basket-card" id="target-basket">
-      <h2 className="card-title">
-        <Star
-          size={20}
-          color="var(--status-borderline)"
-          fill="var(--status-borderline)"
-        />
-        내 지망 대학 장바구니 (동시 환산 비교)
-      </h2>
+      <div className="basket-title-row">
+        <h2 className="card-title">
+          <Star
+            size={20}
+            color="var(--status-borderline)"
+            fill="var(--status-borderline)"
+          />
+          내 지망 대학 장바구니 (동시 환산 비교)
+        </h2>
+
+        {targetCount > 0 && (
+          <div
+            className="basis-switch"
+            role="group"
+            aria-label="판정 기준 연도"
+          >
+            <span className="basis-switch-label">판정 기준</span>
+            {COMPARISON_BASIS_OPTIONS.map(({ value, label, title }) => (
+              <button
+                key={value}
+                type="button"
+                className={`basis-switch-option ${
+                  comparisonBasis === value ? "active" : ""
+                }`}
+                aria-pressed={comparisonBasis === value}
+                title={title}
+                onClick={() => onComparisonBasisChange(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {targetCount === 0 ? (
         <div className="basket-empty">
           <BookOpen size={40} color="var(--text-muted)" />
           <p>현재 담겨 있는 지망 대학이 없습니다.</p>
           <span className="basket-empty-description">
-            위의 <strong>모집단위 탐색</strong>에서 관심 있는 학과의
+            <strong>모집단위 탐색</strong>에서 관심 있는 학과의
             ‘지망 추가’ 버튼을 눌러보세요.
           </span>
         </div>
@@ -108,6 +270,7 @@ function TargetBasket({
             target,
             referenceRecord,
             score,
+            yearlyComparisons,
             deficit,
             analysis,
             comparisonYearNotice,
@@ -122,6 +285,21 @@ function TargetBasket({
               needsImprovement,
             );
 
+            // 결과 숫자만으로는 무엇을 근거로 나온 값인지 알 수 없다.
+            // 특히 합격선은 대학 공개값과 우리가 환산한 값이 섞여 있다.
+            const myScoreBasis = explainMyScore(
+              target.univ,
+              referenceRecord.연도,
+              toeic,
+              gpaType,
+              gpaRaw,
+            );
+            const acceptedScoreBasis = explainAcceptedScore(referenceRecord);
+            const formulaBasis = getFormulaBasis(
+              target.univ,
+              referenceRecord.연도,
+            );
+
             return (
               <div className="target-card" key={key}>
                 <div className="target-card-header">
@@ -130,15 +308,20 @@ function TargetBasket({
                     <p>
                       <UniversityName university={target.univ} logoSize="small" />
                     </p>
-                    {(referenceRecord.합격자기준 === "최초"
-                      || referenceRecord.합격자기준 === "최종") && (
-                      <span
-                        className="acceptance-basis"
-                        title="이 대학이 공개하는 합격자 평균 성적이 최초합격자 기준인지 최종등록자 기준인지를 나타냅니다"
-                      >
-                        [{referenceRecord.합격자기준}합격자 기준]
-                      </span>
-                    )}
+                    {(() => {
+                      const badge = getAcceptanceBasisBadge(
+                        referenceRecord.합격자기준,
+                      );
+
+                      return (
+                        <span
+                          className={`acceptance-basis ${badge.modifier}`}
+                          title={badge.title}
+                        >
+                          [{badge.label}]
+                        </span>
+                      );
+                    })()}
                   </div>
                   <button
                     type="button"
@@ -152,72 +335,179 @@ function TargetBasket({
 
                 <div className="target-card-body">
                   <div className="compare-container">
-                    <div className="compare-row">
-                      <span className="compare-label">
-                        {referenceRecord.연도}년도 합격 평균 대비
-                      </span>
+                    {/* 접힌 상태에서 한 줄로 읽히게 묶는다. 예전에는 라벨-내
+                        지표합-합격선-차이가 각각 한 줄씩 차지해 카드 하나가
+                        419px 였고, 지망 여럿을 동시에 볼 수가 없었다. */}
+                    <div className="compare-summary">
                       {score.status === "safe" && (
-                        <span className="status-badge status-safe">
-                          🟢 {referenceRecord.연도} 평균 상회
-                        </span>
+                        <span className="status-badge status-safe">🟢 상회</span>
                       )}
                       {score.status === "borderline" && (
-                        <span className="status-badge status-borderline">
-                          🟡 {referenceRecord.연도} 평균 근접
-                        </span>
+                        <span className="status-badge status-borderline">🟡 근접</span>
                       )}
                       {score.status === "risk" && (
-                        <span className="status-badge status-risk">
-                          🔴 {referenceRecord.연도} 평균 미달
-                        </span>
+                        <span className="status-badge status-risk">🔴 미달</span>
                       )}
                       {score.status === "unknown" && (
                         <span className="status-badge status-unknown">
-                          {scoreInputInvalid ? "⚪ 점수 입력 확인" : "⚪ 데이터 부족"}
+                          {scoreInputInvalid ? "⚪ 입력 확인" : "⚪ 자료 부족"}
+                        </span>
+                      )}
+
+                      <span className="compare-scores">
+                        <span
+                          className="compare-score compare-score-primary"
+                          title="지표합 = 공인영어 환산점수 + 전적대 환산점수. 대학마다 배점이 달라 절대값 비교는 의미 없으며, 같은 대학 내 합격선과의 격차만 참고하세요"
+                        >
+                          {score.myIndexSum !== null
+                            ? score.myIndexSum
+                            : scoreInputInvalid
+                              ? "입력 확인 필요"
+                              : "계산 불가"}
+                        </span>
+                        <span className="compare-versus">vs</span>
+                        <span className="compare-score compare-score-secondary">
+                          {score.acceptedIndexSum !== null
+                            ? score.acceptedIndexSum
+                            : "비공개"}
+                        </span>
+                        <span className="compare-accepted-label">
+                          {referenceRecord.연도} 합격선
+                        </span>
+                      </span>
+
+                      {score.diff !== null && (
+                        <span className={`score-diff ${score.diff >= 0 ? "positive" : "negative"}`}>
+                          {score.diff >= 0 ? `+${score.diff}` : score.diff}점
+                        </span>
+                      )}
+
+                      {/* 사용자가 실제로 하는 판단은 '뭘 얼마나 올려야 하나'다.
+                          그게 상세 분석 안에 접혀 있고, 참고용인 과거 평균이
+                          앞자리를 차지하고 있었다. 접힌 상태에서도 보이게 올린다. */}
+                      {analysis !== null && (
+                        <span
+                          className="compare-action"
+                          title={needsImprovement && analysis.isLookupBased
+                            ? LOOKUP_APPROXIMATION_HINT
+                            : undefined}
+                        >
+                          {needsImprovement
+                            ? buildImprovementText(
+                              analysis,
+                              toeic,
+                              gpaRaw,
+                              gpaType,
+                            )
+                            : analysis.recommendedMetric === "toeic"
+                              ? `TOEIC이 유리 (+10 → +${analysis.toeicEfficiency}점)`
+                              : analysis.recommendedMetric === "gpa"
+                                ? `전적대가 유리 (+0.1 → +${analysis.gpaEfficiency}점)`
+                                : ""}
                         </span>
                       )}
                     </div>
+
+                    {/* 한 해만 대조하면 그 해가 유독 빡셌는지 무른 해였는지
+                        알 수 없다. 배점이 바뀐 해는 내 지표합도 같이 움직이므로
+                        연도마다 내 점수와 합격선을 나란히 둔다. */}
+                    <ul className="compare-years">
+                      {yearlyComparisons.map(({
+                        year,
+                        hasRecord,
+                        siblingDepartments,
+                        score: yearScore,
+                      }) => (
+                        <li
+                          key={year}
+                          className={`compare-year ${
+                            year === referenceRecord.연도 ? "compare-year-reference" : ""
+                          }`}
+                        >
+                          <span className="compare-year-label">{year}</span>
+                          {/* 좁은 화면에서는 요약 줄의 '2025 합격선' 라벨을
+                              감추므로, 어느 해로 판정했는지는 여기서만 읽힌다.
+                              색·굵기로만 표시하면 그 화면에서 근거가 사라진다. */}
+                          {year === referenceRecord.연도 && (
+                            <span className="compare-year-basis">기준</span>
+                          )}
+                          {!hasRecord ? (
+                            // '모집 없음'이라고 단정하면 안 된다. 그 해에 안 뽑은
+                            // 경우와 다른 이름으로 뽑은 경우를 지금 데이터로는
+                            // 구별하지 못한다(강원대 기계의용 계열 등).
+                            <span
+                              className="compare-year-empty"
+                              title={siblingDepartments.length > 0
+                                ? `이 이름으로는 자료가 없습니다. 그 해에는 ${
+                                  siblingDepartments.map((dept) => `「${dept}」`).join(", ")
+                                }(으)로 뽑았습니다.`
+                                : "그 해에 모집하지 않았거나, 학과 이름이 달라 이 모집단위로 잡히지 않은 경우입니다."}
+                            >
+                              {siblingDepartments.length > 0
+                                ? `다른 이름으로 모집 (${siblingDepartments.length}개)`
+                                : "자료 없음"}
+                            </span>
+                          ) : yearScore.acceptedIndexSum === null ? (
+                            <span className="compare-year-empty">합격선 비공개</span>
+                          ) : (
+                            <>
+                              <span className="compare-year-scores">
+                                {yearScore.myIndexSum ?? "-"}
+                                <span className="compare-year-versus">vs</span>
+                                {yearScore.acceptedIndexSum}
+                              </span>
+                              <span
+                                className={`compare-year-diff ${
+                                  yearScore.diff !== null && yearScore.diff >= 0
+                                    ? "positive"
+                                    : "negative"
+                                }`}
+                              >
+                                {yearScore.diff === null
+                                  ? "-"
+                                  : yearScore.diff >= 0
+                                    ? `+${yearScore.diff}`
+                                    : yearScore.diff}
+                              </span>
+                            </>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* '왜 26년도밖에 없지'에 답하는 줄. 어느 칸에 있는지까지
+                        짚어줘야 사용자가 그 모집단위를 따로 담아 볼 수 있다.
+                        수치를 합치지는 않는다 — 쪼개진 전공의 평균을 우리가
+                        섞으면 대학이 낸 적 없는 숫자를 만들어내는 셈이다. */}
+                    {(() => {
+                      const splitYears = yearlyComparisons.filter(
+                        (comparison) => comparison.siblingDepartments.length > 0,
+                      );
+
+                      if (splitYears.length === 0) {
+                        return null;
+                      }
+
+                      const relatedDepartments = [...new Set(
+                        splitYears.flatMap((comparison) => comparison.siblingDepartments),
+                      )];
+
+                      return (
+                        <p className="compare-split-notice">
+                          📌 {splitYears.map((comparison) => comparison.year).join("·")}에는
+                          같은 계열을{" "}
+                          {relatedDepartments.map((dept) => `「${dept}」`).join(", ")}
+                          (으)로 뽑았습니다. 그 해 입결은 해당 모집단위를 따로 담아
+                          확인해 주세요.
+                        </p>
+                      );
+                    })()}
+
                     {comparisonYearNotice !== null && (
                       <p className="comparison-notice">{comparisonYearNotice}</p>
                     )}
                     {formulaNotice !== null && (
                       <p className="formula-notice">⚠️ {formulaNotice}</p>
-                    )}
-
-                    <div className="compare-row compare-row-spaced">
-                      <span className="compare-index-label">
-                        내 스펙 지표합
-                        <span
-                          className="compare-help"
-                          title="지표합 = 공인영어 환산점수 + 전적대 환산점수. 대학마다 배점이 달라 절대값 비교는 의미 없으며, 같은 대학 내 합격선과의 격차만 참고하세요"
-                        >
-                          <HelpCircle size={12} />
-                        </span>
-                      </span>
-                      <span className="compare-score compare-score-primary">
-                        {score.myIndexSum !== null
-                          ? `${score.myIndexSum}점`
-                          : scoreInputInvalid
-                            ? "입력 확인 필요"
-                            : "계산 불가"}
-                      </span>
-                    </div>
-
-                    <div className="compare-row">
-                      <span className="compare-index-label">
-                        합격선 지표합 ({referenceRecord.연도} 평균)
-                      </span>
-                      <span className="compare-score compare-score-secondary">
-                        {score.acceptedIndexSum !== null
-                          ? `${score.acceptedIndexSum}점`
-                          : "비공개"}
-                      </span>
-                    </div>
-
-                    {score.diff !== null && (
-                      <div className={`score-diff ${score.diff >= 0 ? "positive" : "negative"}`}>
-                        {score.diff >= 0 ? `+${score.diff}` : score.diff}점 차이
-                      </div>
                     )}
 
                     {score.myIndexSum !== null
@@ -244,9 +534,18 @@ function TargetBasket({
                       )}
                   </div>
 
+                  <ScoreBasis
+                    mine={myScoreBasis}
+                    accepted={acceptedScoreBasis}
+                    formulaBasis={formulaBasis}
+                  />
+
                   <details className="target-details">
                     <summary className="target-details-summary">
-                      <span className="details-closed-label">상세 분석 보기</span>
+                      <span className="details-closed-label">
+                        <span className="summary-label-wide">상세 분석 보기</span>
+                        <span className="summary-label-narrow">상세 분석</span>
+                      </span>
                       <span className="details-open-label">상세 분석 접기</span>
                       <ChevronDown size={18} />
                     </summary>
@@ -278,10 +577,10 @@ function TargetBasket({
                           {referenceRecord.연도} 평균선 도달(격차:{" "}
                           <strong>{deficit.toFixed(2)}점</strong>)을 위한 가상 보완 시나리오:
                         </p>
-                        {analysis.isLookupBased ? (
+                        {analysis.toeicNeeded === null
+                          && analysis.gpaNeeded === null ? (
                           <p className="lookup-warning">
-                            ⚠️ 이 대학은 구간 등급제 환산표를 사용하므로 산식으로 정확한 역산이
-                            불가능합니다. 홈페이지의 모집요강 환산표를 참고해 주세요.
+                            ⚠️ 만점까지 올려도 한 요소만으로는 이 격차를 메울 수 없습니다.
                           </p>
                         ) : (
                           <ul className="improvement-list">
@@ -289,6 +588,7 @@ function TargetBasket({
                               <li>
                                 • <strong>TOEIC만</strong> 올릴 시:{" "}
                                 <strong className="analysis-target">
+                                  {analysis.isLookupBased ? "≈ " : ""}
                                   +{analysis.toeicNeeded}점
                                 </strong>{" "}
                                 {toeic === null
@@ -302,6 +602,7 @@ function TargetBasket({
                               <li>
                                 • <strong>GPA만</strong> 올릴 시:{" "}
                                 <strong className="analysis-target">
+                                  {analysis.isLookupBased ? "≈ " : ""}
                                   +{analysis.gpaNeeded}점
                                 </strong>{" "}
                                 {gpaRaw === null
@@ -312,6 +613,14 @@ function TargetBasket({
                               </li>
                             )}
                           </ul>
+                        )}
+                        {analysis.isLookupBased && (
+                          <p className="lookup-warning">
+                            ⚠️ 이 대학은 구간 등급제 환산표를 씁니다. 위 값은 환산표를 직선으로
+                            근사해 역산한 <strong>추정치</strong>이며, 실제 환산표에서는 구간
+                            경계에 따라 몇 점 차이가 날 수 있습니다. 원서 접수 전에 모집요강
+                            환산표로 확인해 주세요.
+                          </p>
                         )}
                       </div>
                     ) : (
@@ -395,9 +704,19 @@ function TargetBasket({
                                   <td>{record.모집인원 ?? "-"}</td>
                                   <td>{record.지원인원 ?? "-"}</td>
                                   <td>{formatCompetitionRatio(record)}</td>
-                                  <td>{record.최종합격_토익원점수 ?? "비공개"}</td>
                                   <td>
-                                    {record.최종합격_학점원점수_100점만점 ?? "비공개"}
+                                    <RawScoreValue
+                                      value={record.최종합격_토익원점수}
+                                      note={getToeicDisclosure(record.대학명)}
+                                      suffix=""
+                                    />
+                                  </td>
+                                  <td>
+                                    <RawScoreValue
+                                      value={record.최종합격_학점원점수_100점만점}
+                                      note={getGpaDisclosure(record.대학명)}
+                                      suffix=""
+                                    />
                                   </td>
                                 </tr>
                               );
@@ -416,7 +735,8 @@ function TargetBasket({
                     onClick={() => onSelectChart(target.univ, target.dept)}
                   >
                     <TrendingUp size={14} />
-                    입결 추이 차트
+                    <span className="summary-label-wide">입결 추이 차트</span>
+                    <span className="summary-label-narrow">추이 차트</span>
                   </button>
                 </div>
               </div>

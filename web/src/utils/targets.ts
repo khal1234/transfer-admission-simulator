@@ -3,6 +3,17 @@ export type Target = {
   dept: string;
 };
 
+/** 합격/불합 판정을 최근 3개년 중 어느 해에 걸지. */
+const COMPARISON_BASES = ["latest", "lowest", "highest"] as const;
+export type ComparisonBasis = typeof COMPARISON_BASES[number];
+
+export function isComparisonBasis(
+  value: string | null,
+): value is ComparisonBasis {
+  return value !== null
+    && (COMPARISON_BASES as readonly string[]).includes(value);
+}
+
 export function getRecordKey(univ: string, dept: string): string {
   return `${univ}:::${dept}`;
 }

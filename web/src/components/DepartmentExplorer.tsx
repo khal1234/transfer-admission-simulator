@@ -11,8 +11,14 @@ import type { DepartmentRecord } from "../utils/converter";
 import {
   buildDepartmentSearchIndex,
   filterDepartmentSearchIndex,
+  getDepartmentGroupKey,
 } from "../utils/departmentSearch";
+import {
+  getGpaDisclosure,
+  getToeicDisclosure,
+} from "../utils/scoreProvenance";
 import { getRecordKey } from "../utils/targets";
+import RawScoreValue from "./RawScoreValue";
 import UniversityName from "./UniversityName";
 
 const ITEMS_PER_PAGE = 10;
@@ -172,12 +178,19 @@ function DepartmentExplorer({
                 </td>
               </tr>
             ) : (
-              paginatedRecords.map((record) => {
+              paginatedRecords.map((record, index) => {
                 const key = getRecordKey(record.대학명, record.학과);
                 const isAdded = targetKeys.has(key);
+                // 같은 과 묶음이 어디서 갈리는지 선 하나로 보여준다. 정렬만으로
+                // 붙여 놓으면 기계공학과-기계공학부-기계공학전공이 한 덩어리인지
+                // 그냥 우연히 이웃한 건지 구별이 안 된다.
+                const previousRecord = paginatedRecords[index - 1];
+                const startsGroup = previousRecord !== undefined
+                  && getDepartmentGroupKey(previousRecord.학과)
+                    !== getDepartmentGroupKey(record.학과);
 
                 return (
-                  <tr key={key}>
+                  <tr key={key} className={startsGroup ? "department-group-start" : ""}>
                     <td className="university-name-cell">
                       <UniversityName university={record.대학명} />
                     </td>
@@ -193,14 +206,16 @@ function DepartmentExplorer({
                       {record.모집인원 !== null ? `${record.모집인원}명` : "-"}
                     </td>
                     <td className="table-cell-center table-cell-bold">
-                      {record.최종합격_토익원점수 !== null
-                        ? `${record.최종합격_토익원점수}점`
-                        : "비공개"}
+                      <RawScoreValue
+                        value={record.최종합격_토익원점수}
+                        note={getToeicDisclosure(record.대학명)}
+                      />
                     </td>
                     <td className="table-cell-center table-cell-bold">
-                      {record.최종합격_학점원점수_100점만점 !== null
-                        ? `${record.최종합격_학점원점수_100점만점}점`
-                        : "비공개"}
+                      <RawScoreValue
+                        value={record.최종합격_학점원점수_100점만점}
+                        note={getGpaDisclosure(record.대학명)}
+                      />
                     </td>
                     <td className="table-cell-center">
                       <button
@@ -252,17 +267,19 @@ function DepartmentExplorer({
                   <div>
                     <dt>TOEIC 합격 평균</dt>
                     <dd>
-                      {record.최종합격_토익원점수 !== null
-                        ? `${record.최종합격_토익원점수}점`
-                        : "비공개"}
+                      <RawScoreValue
+                        value={record.최종합격_토익원점수}
+                        note={getToeicDisclosure(record.대학명)}
+                      />
                     </dd>
                   </div>
                   <div>
                     <dt>GPA 합격 평균</dt>
                     <dd>
-                      {record.최종합격_학점원점수_100점만점 !== null
-                        ? `${record.최종합격_학점원점수_100점만점}점`
-                        : "비공개"}
+                      <RawScoreValue
+                        value={record.최종합격_학점원점수_100점만점}
+                        note={getGpaDisclosure(record.대학명)}
+                      />
                     </dd>
                   </div>
                 </dl>

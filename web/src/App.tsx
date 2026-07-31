@@ -23,7 +23,13 @@ import {
   getLatestComparableRecord,
   getLatestRecord,
   getRecordYear,
+  isComparableRecord,
 } from "./utils/records";
+import { getDepartmentGroupKey } from "./utils/departmentSearch";
+import {
+  getComparisonYearNotice,
+  pickBasisRecord,
+} from "./utils/comparisonBasis";
 import { getConversionFormula } from "./utils/formulaRegistry";
 import {
   isGpaType,
@@ -43,7 +49,9 @@ import {
 import {
   getRecordKey,
   getTargetKey,
+  isComparisonBasis,
   parseSavedTargets,
+  type ComparisonBasis,
   type Target,
 } from "./utils/targets";
 import {
@@ -201,6 +209,11 @@ export default function App() {
     )
   ));
 
+  const [comparisonBasis, setComparisonBasis] = useState<ComparisonBasis>(() => {
+    const saved = initialStorage.values[STORAGE_KEYS.comparisonBasis];
+    return isComparisonBasis(saved) ? saved : "latest";
+  });
+
   const toeic = useMemo(() => parseToeicInput(toeicInput), [toeicInput]);
   const gpaRaw = useMemo(
     () => parseGpaInput(gpaRawInput, gpaType),
@@ -293,6 +306,11 @@ export default function App() {
     persistStorageValue(STORAGE_KEYS.theme, nextTheme);
   }, [persistStorageValue, theme]);
 
+  const changeComparisonBasis = useCallback((nextBasis: ComparisonBasis) => {
+    setComparisonBasis(nextBasis);
+    persistStorageValue(STORAGE_KEYS.comparisonBasis, nextBasis);
+  }, [persistStorageValue]);
+
   // Selected major for chart visualization
   const [chartTarget, setChartTarget] = useState<ChartTarget | null>(null);
   const [chartMetric, setChartMetric] = useState<ChartMetric>("toeic_orig");
@@ -320,6 +338,39 @@ export default function App() {
     () => getSortedRecordYears(standardRecords).slice(0, 3),
     [standardRecords],
   );
+
+  /**
+   * (대학, 표준명, 연도) → 그 해 실제로 뽑은 모집단위 이름들.
+   *
+   * 사용자는 보통 2026 학과명으로 찾아 담는데, 그 과가 24~25에 여러 전공으로
+   * 쪼개져 있었으면 이력이 통째로 비어 '왜 없지, 이거 왜 따로 해놨냐'가 된다.
+   * 표준명(학과/학부/전공 꼬리와 괄호를 뗀 이름)이 같은 모집단위를 그 해에서
+   * 찾아 알려주면, 없는 게 아니라 다른 칸에 있다는 걸 짚어줄 수 있다.
+   *
+   * 이름이 바뀐 것인지 그 해에 그 세부전공만 안 뽑은 것인지는 이 데이터로
+   * 구별하지 못한다. 그래서 화면 문구도 '같은 계열의 다른 모집단위'까지만
+   * 말하고 승계 관계라고 단정하지 않는다.
+   */
+  const departmentsByGroupAndYear = useMemo(() => {
+    const grouped = new Map<string, string[]>();
+
+    standardRecords.forEach((record) => {
+      const groupKey = [
+        record.대학명,
+        getDepartmentGroupKey(record.학과),
+        record.연도,
+      ].join("|");
+      const existing = grouped.get(groupKey);
+
+      if (existing === undefined) {
+        grouped.set(groupKey, [record.학과]);
+      } else if (!existing.includes(record.학과)) {
+        existing.push(record.학과);
+      }
+    });
+
+    return grouped;
+  }, [standardRecords]);
   const targetKeySet = useMemo(() => new Set(targets.map(getTargetKey)), [targets]);
 
   const latestExplorerRecords = useMemo(() => {
@@ -420,7 +471,43 @@ export default function App() {
         return [];
       }
 
-      const comparableRecord = getLatestComparableRecord(history);
+      const historyByYear = new Map(history.map((record) => [record.연도, record]));
+
+      // 최신 한 해만 대조하면 그 해가 유독 빡셌는지 무른 해였는지 알 수 없다.
+      // 연도마다 배점과 환산식이 달라(강원대 2026은 전적대 미반영 등) 합격선만
+      // 갈아끼우면 안 되고 내 지표합도 그 해 식으로 다시 계산해야 한다.
+      const yearlyComparisons = recentRecordYears.map((year) => {
+        const yearRecord = historyByYear.get(year) ?? null;
+        const comparableYearRecord = yearRecord !== null
+          && isComparableRecord(yearRecord)
+          ? yearRecord
+          : null;
+
+        return {
+          year,
+          hasRecord: yearRecord !== null,
+          siblingDepartments: yearRecord !== null
+            ? []
+            : (departmentsByGroupAndYear.get([
+              target.univ,
+              getDepartmentGroupKey(target.dept),
+              year,
+            ].join("|")) ?? []).filter((dept) => dept !== target.dept),
+          score: calculateScore(
+            target.univ,
+            year,
+            toeic,
+            gpa100,
+            comparableYearRecord,
+          ),
+        };
+      });
+
+      const comparableRecord = pickBasisRecord(
+        yearlyComparisons,
+        historyByYear,
+        comparisonBasis,
+      ) ?? getLatestComparableRecord(history);
       const referenceRecord = comparableRecord ?? latestRecord;
       const score = calculateScore(
         target.univ,
@@ -432,7 +519,13 @@ export default function App() {
       const deficit = calculateScoreDeficit(score.diff);
       const analysis = deficit === null
         ? null
-        : analyzeScoreDeficit(target.univ, referenceRecord.연도, gpaType, deficit);
+        : analyzeScoreDeficit(
+          target.univ,
+          referenceRecord.연도,
+          gpaType,
+          deficit,
+          toeic,
+        );
       const formula = getConversionFormula(
         target.univ,
         referenceRecord.연도
@@ -447,7 +540,6 @@ export default function App() {
             ? "이 대학의 구간 환산표는 연속식으로 근사한 참고값이며 실제 환산점수와 차이가 날 수 있습니다."
             : null,
       ].filter((notice): notice is string => notice !== null);
-      const historyByYear = new Map(history.map((record) => [record.연도, record]));
 
       return [{
         key,
@@ -456,13 +548,16 @@ export default function App() {
         score,
         deficit,
         analysis,
-        comparisonYearNotice: comparableRecord && comparableRecord.연도 !== latestRecord.연도
-          ? `${latestRecord.연도}에는 비교 가능한 합격 평균이 없어 최신 유효 자료인 ${comparableRecord.연도} 평균을 사용합니다.`
-          : null,
+        comparisonYearNotice: getComparisonYearNotice(
+          comparisonBasis,
+          comparableRecord,
+          latestRecord,
+        ),
         formulaNotice: formulaNotices.length > 0
           ? formulaNotices.join(" ")
           : null,
         renamedHistoryText: getRenamedHistoryText(history),
+        yearlyComparisons,
         recentHistoryRows: recentRecordYears.map((year) => ({
           year,
           record: historyByYear.get(year) ?? null,
@@ -474,6 +569,8 @@ export default function App() {
       }];
     });
   }, [
+    comparisonBasis,
+    departmentsByGroupAndYear,
     exceptionHistory,
     gpa100,
     gpaType,
@@ -641,7 +738,8 @@ export default function App() {
                   )}
                 >
                   <TrendChart
-                    target={chartTarget}
+                    focusedTarget={chartTarget}
+                    targets={targets}
                     recordsByDepartment={recordsByDepartment}
                     metric={chartMetric}
                     onMetricChange={setChartMetric}
@@ -658,6 +756,8 @@ export default function App() {
             toeic={toeic}
             gpaRaw={gpaRaw}
             gpaType={gpaType}
+            comparisonBasis={comparisonBasis}
+            onComparisonBasisChange={changeComparisonBasis}
             onToggleTarget={toggleTarget}
             onSelectChart={selectChart}
           />
