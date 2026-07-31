@@ -27,7 +27,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$SiteId = "b798737f-59ef-4a3a-801d-727b80edf1c4"
+. (Join-Path $PSScriptRoot "netlify-site.ps1")
+
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $LogPath = Join-Path $PSScriptRoot "set_builds.log"
 
@@ -52,14 +53,8 @@ if (-not $netlify) {
     }
 }
 
-# PS 5.1은 네이티브 exe로 인자를 넘길 때 큰따옴표를 벗겨버린다.
-# 그대로 주면 netlify CLI가 `{site_id:...}` 를 받아 JSON 파싱에 실패한다.
-function ConvertTo-NativeJsonArg([hashtable]$Object) {
-    ($Object | ConvertTo-Json -Depth 5 -Compress) -replace '"', '\"'
-}
-
 $body = ConvertTo-NativeJsonArg @{
-    site_id = $SiteId
+    site_id = $NetlifySite.Id
     body    = @{ build_settings = @{ stop_builds = $StopBuilds } }
 }
 
@@ -70,7 +65,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # 응답을 믿지 않고 다시 읽어서 확인한다.
-$verifyJson = & $netlify api getSite --data (ConvertTo-NativeJsonArg @{ site_id = $SiteId })
+$verifyJson = & $netlify api getSite --data (ConvertTo-NativeJsonArg @{ site_id = $NetlifySite.Id })
 if ($LASTEXITCODE -ne 0) {
     Write-Log "WARN  적용은 했으나 재확인(getSite) 실패 — 대시보드에서 직접 볼 것"
     exit 1

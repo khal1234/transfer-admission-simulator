@@ -27,7 +27,6 @@
 """
 import io
 import json
-import shutil
 import sys
 from pathlib import Path
 
@@ -35,15 +34,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from extract_pdfs import SPECS as PDF_SPECS  # noqa: E402
 from extract_pdfs import extract_one as extract_pdf_one  # noqa: E402
-from extract_spreadsheets import extract_all, normalize_name  # noqa: E402
+from extract_spreadsheets import (  # noqa: E402
+    extract_all,
+    normalize_name,
+    validate_extracted_records,
+)
+from data_artifacts import (  # noqa: E402
+    EXCEPTION,
+    FORMULA,
+    STANDARD,
+    save_artifact_generation,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT / "results"
 WEB_DATA_DIR = ROOT / "web" / "src" / "data"
-
-STANDARD = "편입_성적_통합.json"
-EXCEPTION = "편입_예외학과_통합.json"
-FORMULA = "편입_환산공식_통합.json"
 
 SCORE_FIELDS = [
     "최종합격_토익환산점수",
@@ -58,19 +63,32 @@ def load(path):
         return json.load(f)
 
 
-def save(path, data):
-    text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
-    with io.open(path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(text)
-
-
 def index_extracted():
     """(대학, 연도, 정규화이름) -> 원본에서 뽑은 레코드."""
-    records = extract_all()
+    result = extract_all()
+    records = list(result.records)
+    failures = [
+        f"{failure.year} {failure.university} "
+        f"[{failure.error_type}] {failure.message}"
+        for failure in result.failures
+    ]
     for univ, spec in PDF_SPECS.items():
         for year in spec["years"]:
-            got, _ = extract_pdf_one(univ, year, spec)
+            try:
+                got, _ = extract_pdf_one(univ, year, spec)
+                validate_extracted_records(univ, year, got)
+            except Exception as exc:
+                failures.append(
+                    f"{year} {univ} [{exc.__class__.__name__}] {exc}"
+                )
+                continue
             records.extend(got)
+
+    if failures:
+        details = "\n".join(f" - {failure}" for failure in failures)
+        raise RuntimeError(
+            "원본 추출 실패가 있어 수정 결과를 저장할 수 없습니다.\n" + details
+        )
 
     return {
         (r["대학명"], r["연도"], r["학과_정규화"]): r
@@ -118,7 +136,12 @@ def main():
     standard = load(RESULTS_DIR / STANDARD)
     exceptions = load(RESULTS_DIR / EXCEPTION)
     formulas = load(RESULTS_DIR / FORMULA)
-    extracted = index_extracted()
+    try:
+        extracted = index_extracted()
+    except RuntimeError as exc:
+        print(f"!! {exc}", file=sys.stderr)
+        print("!! dry-run과 실제 쓰기 모두 중단했습니다.", file=sys.stderr)
+        return 1
 
     changes = []
 
@@ -281,22 +304,28 @@ def main():
 
     if dry_run:
         print("\n--dry-run 이라 파일을 쓰지 않았다.")
-        return
+        return 0
 
     if not changes:
         print("\n바꿀 것이 없다.")
-        return
+        return 0
 
-    for name, data in ((STANDARD, standard), (EXCEPTION, exceptions),
-                       (FORMULA, formulas)):
-        target = RESULTS_DIR / name
-        save(target, data)
-        # web/src/data 는 results 의 사본이다. 갈라지지 않게 그대로 복사한다.
-        shutil.copyfile(target, WEB_DATA_DIR / name)
+    parity = save_artifact_generation(
+        RESULTS_DIR,
+        WEB_DATA_DIR,
+        {STANDARD: standard, EXCEPTION: exceptions, FORMULA: formulas},
+    )
 
     print(f"\nresults/ 와 web/src/data/ 양쪽에 반영했다.")
     print(f"표준 {len(standard)}건 / 예외 {len(exceptions)}건 / 공식 {len(formulas)}건")
+    for name, result in parity.items():
+        print(
+            f"{name}: JSON {result.json_rows}행 / CSV {result.csv_rows}행 / "
+            f"JSON-only {result.json_only} / CSV-only {result.csv_only} / "
+            f"값 차이 {result.value_mismatches} / 키 중복 {result.duplicate_keys}"
+        )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

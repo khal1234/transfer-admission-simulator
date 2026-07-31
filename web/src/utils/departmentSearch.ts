@@ -232,7 +232,7 @@ function getChosung(text: string): string {
   for (const character of text) {
     const code = character.charCodeAt(0) - 44032;
 
-    if (code >= 0 && code <= 11172) {
+    if (code >= 0 && code <= 11171) {
       result += KOREAN_CHOSUNG[Math.floor(code / 588)] ?? "";
     } else {
       result += character;

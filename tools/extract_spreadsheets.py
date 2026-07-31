@@ -19,7 +19,9 @@ import json
 import re
 import sys
 import unicodedata
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
@@ -331,25 +333,91 @@ SOURCE_PUBLISHES = {
 }
 
 
-def extract_all():
+@dataclass(frozen=True)
+class ExtractionFailure:
+    university: str
+    year: str
+    error_type: str
+    message: str
+
+
+@dataclass(frozen=True)
+class ExtractionResult:
+    records: list[dict]
+    failures: list[ExtractionFailure]
+    covered: set[tuple[str, str]]
+
+
+REQUIRED_RECORD_FIELDS = {
+    "대학명", "연도", "학과_원본명", "학과_정규화",
+    "모집인원", "지원인원", "합격인원",
+    "최종합격_토익환산점수", "최종합격_토익원점수",
+    "최종합격_학점환산점수", "최종합격_학점원점수_100점만점",
+}
+
+
+def validate_extracted_records(univ, year, records):
+    if not isinstance(records, list):
+        raise TypeError(f"추출기가 list 대신 {type(records).__name__} 반환")
+    if not records:
+        raise ValueError("원본에서 레코드를 한 행도 추출하지 못함")
+
+    seen = set()
+    for index, record in enumerate(records, start=1):
+        if not isinstance(record, dict):
+            raise TypeError(f"{index}번째 레코드가 object가 아님")
+        missing = REQUIRED_RECORD_FIELDS - record.keys()
+        if missing:
+            raise ValueError(f"{index}번째 레코드 스키마 누락: {sorted(missing)}")
+        if record["대학명"] != univ or record["연도"] != year:
+            raise ValueError(f"{index}번째 레코드 대학·연도 불일치")
+        normalized = record["학과_정규화"]
+        if not normalized:
+            raise ValueError(f"{index}번째 레코드 학과명이 비어 있음")
+        if normalized in seen:
+            raise ValueError(f"정규화 학과 키 중복: {record['학과_원본명']}")
+        seen.add(normalized)
+
+
+def extract_all(
+    extractors: list[tuple[str, str, Callable[[str], list[dict]]]] | None = None,
+) -> ExtractionResult:
     records = []
-    for univ, year, fn in EXTRACTORS:
+    failures = []
+    covered = set()
+    selected_extractors = EXTRACTORS if extractors is None else extractors
+    for univ, year, fn in selected_extractors:
         try:
             extracted = fn(year)
+            validate_extracted_records(univ, year, extracted)
         except Exception as exc:
-            print(f"!! {year} {univ} 추출 실패: {exc}", file=sys.stderr)
+            failures.append(ExtractionFailure(
+                university=univ,
+                year=year,
+                error_type=exc.__class__.__name__,
+                message=str(exc),
+            ))
             continue
         records.extend(extracted)
-    return records
+        covered.add((univ, year))
+    return ExtractionResult(records=records, failures=failures, covered=covered)
 
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    records = extract_all()
+    result = extract_all()
+    records = result.records
+
+    for failure in result.failures:
+        print(
+            f"!! {failure.year} {failure.university} 추출 실패 "
+            f"[{failure.error_type}]: {failure.message}",
+            file=sys.stderr,
+        )
 
     if "--dump" in sys.argv:
         print(json.dumps(records, ensure_ascii=False, indent=1))
-        return
+        return 1 if result.failures else 0
 
     from collections import Counter
 
@@ -373,7 +441,14 @@ def main():
 
     print()
     print(f"합계 {len(records)}건 / {len(counts)}칸")
+    if result.failures:
+        print(
+            f"!! {len(result.failures)}개 원본 추출 실패 — 결과를 신뢰할 수 없습니다.",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

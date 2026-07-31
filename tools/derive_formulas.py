@@ -24,6 +24,8 @@ ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT / "results"
 
 TOEIC_MAX = 990.0
+R2_THRESHOLD = 0.9999
+MAX_RESIDUAL_THRESHOLD = 0.5
 
 # (원점수 필드, 환산점수 필드, 표시 이름)
 PAIRS = [
@@ -82,6 +84,42 @@ def documented_gpa_slope(record):
     if f.get("공식유형") is None or f.get("비례계수") is None:
         return None
     return f["비례계수"] / 100.0
+
+
+def is_piecewise_formula(documented_record, label):
+    if documented_record is None:
+        return False
+    field = "공인영어_환산공식" if label == "영어" else "전적대성적_환산공식"
+    formula_type = documented_record[field].get("공식유형")
+    return formula_type in {"구간식", "환산표+비례식"}
+
+
+def classify_verdict(
+    documented_record,
+    label,
+    documented,
+    derived,
+    unit,
+    r2,
+    max_res,
+):
+    poor_fit = r2 < R2_THRESHOLD or max_res > MAX_RESIDUAL_THRESHOLD
+    if poor_fit and is_piecewise_formula(documented_record, label):
+        return "구간식 특성 · 선형 적합 판정 제외", False
+    if poor_fit:
+        return (
+            f"⚠ 비선형/혼합 의심 (R2 {r2:.4f}, 최대잔차 {max_res:.3f})",
+            True,
+        )
+    if documented is None:
+        return "판정 보류 · 문서값 없음", False
+    tolerance = max(0.05, abs(documented) * 0.02)
+    if abs(derived - documented) <= tolerance:
+        return f"일치 ({unit} {documented:.3f})", False
+    return (
+        f"★ 불일치 ({unit} 문서 {documented:.3f} / 데이터 {derived:.3f})",
+        True,
+    )
 
 
 def main():
@@ -148,21 +186,17 @@ def main():
                 derived = slope
                 unit = "기울기"
 
-            if documented is None:
-                verdict = "문서값 없음"
-            elif abs(derived - documented) <= max(0.05, abs(documented) * 0.02):
-                verdict = "일치 ({} {:.3f})".format(unit, documented)
-            else:
-                verdict = "★ 불일치 ({} 문서 {:.3f} / 데이터 {:.3f})".format(
-                    unit, documented, derived
-                )
+            verdict, is_conflict = classify_verdict(
+                doc, label, documented, derived, unit, r2, max_res
+            )
+            if is_conflict:
                 conflicts.append(
-                    "{} {} {} — {} 데이터 {:.3f} vs 문서 {:.3f} (n={}, R2={:.4f})".format(
-                        year, univ, label, unit, derived, documented, len(points), r2
+                    "{} {} {} — {} (n={}, R2={:.4f}, 최대잔차={:.3f})".format(
+                        year, univ, label, verdict, len(points), r2, max_res
                     )
                 )
 
-            if r2 < 0.9999:
+            if r2 < R2_THRESHOLD or max_res > MAX_RESIDUAL_THRESHOLD:
                 imperfect.append((key, label, r2, max_res, points, slope, intercept))
 
             print("{:<8}{:<6}{:<6}{:>5}{:>10.4f}{:>10.3f}{:>9.4f}{:>9.3f}   {}".format(
@@ -175,6 +209,19 @@ def main():
     if conflicts:
         for line in conflicts:
             print(" -", line)
+    else:
+        print(" 없음")
+
+    print()
+    print("=== 선형 적합 품질 경고 ===")
+    if imperfect:
+        for (univ, year), label, r2, max_res, points, slope, intercept in imperfect:
+            formula_kind = "구간식" if is_piecewise_formula(formulas.get((univ, year)), label) else "비례식/미상"
+            print(
+                f" - {year} {univ} {label} — {formula_kind}, n={len(points)}, "
+                f"R2={r2:.4f}, 최대잔차={max_res:.3f}, "
+                f"적합 y={slope:.6f}x{intercept:+.3f}"
+            )
     else:
         print(" 없음")
 

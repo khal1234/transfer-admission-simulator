@@ -94,12 +94,13 @@ function SpecInputPanel({
 
         <div className="spec-input-group">
           <label htmlFor="gpa-score">전적대학 평점 성적 (GPA)</label>
-          <div className="spec-tabs">
+          <div className="spec-tabs" role="group" aria-label="GPA 척도 선택">
             {(["100", "4.5", "4.3"] as const).map((type) => (
               <button
                 type="button"
                 key={type}
                 className={`spec-tab ${gpaType === type ? "active" : ""}`}
+                aria-pressed={gpaType === type}
                 onClick={() => onGpaTypeChange(type)}
               >
                 {type === "100" ? "백분위 (100)" : `${type} 만점`}

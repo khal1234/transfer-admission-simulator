@@ -204,10 +204,10 @@ describe("convertGpaTo100Scale", () => {
 
 describe("analyzeScoreDeficit characteristics", () => {
   it("preserves linear reverse calculations", () => {
-    expect(analyzeScoreDeficit("부산대학교", "2026", "100", 3)).toEqual({
+    expect(analyzeScoreDeficit("부산대학교", "2026", "100", 3, 90)).toEqual({
       isLookupBased: false,
       toeicNeeded: 100,
-      gpaNeeded: 10,
+      gpaNeeded: 9.99,
       toeicEfficiency: 0.3,
       gpaEfficiency: 0.03,
       recommendedMetric: "toeic",
@@ -215,7 +215,7 @@ describe("analyzeScoreDeficit characteristics", () => {
   });
 
   it("still estimates targets for lookup-based formulas, flagged as approximate", () => {
-    const result = analyzeScoreDeficit("전북대학교", "2026", "100", 5);
+    const result = analyzeScoreDeficit("전북대학교", "2026", "100", 5, 90);
 
     expect(result.isLookupBased).toBe(true);
     // 5점 격차 / (0.101 * 0.8 점당) ≈ 62점 → 5점 단위로 올림
@@ -226,7 +226,7 @@ describe("analyzeScoreDeficit characteristics", () => {
   // 충남대는 구간 환산표라 역산을 아예 거부하고 있었다. 정방향 환산은 같은
   // 근사식으로 이미 화면에 띄우면서 역방향만 막는 건 앞뒤가 안 맞았다.
   it("reverses the Chungnam lookup table instead of refusing", () => {
-    const result = analyzeScoreDeficit("충남대학교", "2026", "100", 6, 800);
+    const result = analyzeScoreDeficit("충남대학교", "2026", "100", 6, 90, 800);
 
     expect(result.isLookupBased).toBe(true);
     // 60 - (990-t)/8.3333 에서 6점을 더 얻으려면 50점이 필요하다.
@@ -237,7 +237,7 @@ describe("analyzeScoreDeficit characteristics", () => {
 
   // 하한 구간에 눌린 사용자에게 기울기 나눗셈은 닿지 않는 목표를 적어준다.
   it("accounts for the flat floor of a lookup table", () => {
-    const flooredStart = analyzeScoreDeficit("충남대학교", "2026", "100", 20, 600);
+    const flooredStart = analyzeScoreDeficit("충남대학교", "2026", "100", 20, 90, 600);
     const slopeOnly = Math.ceil(Math.ceil(20 / (1 / 8.33333333)) / 5) * 5;
 
     expect(flooredStart.toeicNeeded).not.toBeNull();
@@ -245,17 +245,58 @@ describe("analyzeScoreDeficit characteristics", () => {
   });
 
   it("reports no single-metric path when even a perfect score falls short", () => {
-    const result = analyzeScoreDeficit("충남대학교", "2026", "100", 40, 800);
+    const result = analyzeScoreDeficit("충남대학교", "2026", "100", 40, 90, 800);
 
     expect(result.toeicNeeded).toBeNull();
   });
 
   it("preserves the current 2026 Chungbuk linear estimate", () => {
-    const result = analyzeScoreDeficit("충북대학교", "2026", "100", 3);
+    const result = analyzeScoreDeficit("충북대학교", "2026", "100", 3, 90);
 
     expect(result.isLookupBased).toBe(false);
     expect(result.toeicNeeded).toBe(120);
     expect(result.gpaNeeded).toBeNull();
     expect(result.recommendedMetric).toBe("toeic");
+  });
+
+  it("never returns +0 for a positive Busan GPA deficit on the 4.5 scale", () => {
+    const result = analyzeScoreDeficit("부산대학교", "2026", "4.5", 0.01, 3.5);
+
+    expect(result.gpaNeeded).toBe(0.01);
+  });
+
+  it("returns the minimum 0.01 GPA increase whose forward conversion covers the deficit", () => {
+    const current = 3.5;
+    const deficit = 0.11;
+    const result = analyzeScoreDeficit("부산대학교", "2026", "4.5", deficit, current);
+    const before = convertRawToConv("부산대학교", "2026", null, convertGpaTo100Scale(current, 4.5));
+    const after = convertRawToConv(
+      "부산대학교",
+      "2026",
+      null,
+      convertGpaTo100Scale(current + result.gpaNeeded!, 4.5),
+    );
+
+    expect(result.gpaNeeded).not.toBeNull();
+    expect(after.gpaConv! - before.gpaConv!).toBeGreaterThanOrEqual(deficit - 1e-9);
+    const previous = convertRawToConv(
+      "부산대학교",
+      "2026",
+      null,
+      convertGpaTo100Scale(current + result.gpaNeeded! - 0.01, 4.5),
+    );
+    expect(previous.gpaConv! - before.gpaConv!).toBeLessThan(deficit);
+  });
+
+  it("crosses the flat GPA region at 1.0 before claiming a gain", () => {
+    const result = analyzeScoreDeficit("부산대학교", "2026", "4.5", 0.01, 0.5);
+
+    expect(result.gpaNeeded).toBe(0.51);
+  });
+
+  it("returns null when the GPA maximum cannot cover the deficit", () => {
+    const result = analyzeScoreDeficit("부산대학교", "2026", "4.5", 1, 4.49);
+
+    expect(result.gpaNeeded).toBeNull();
   });
 });

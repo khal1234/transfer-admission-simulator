@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { BookOpenCheck, ExternalLink, Search, X } from "lucide-react";
 import {
   getReviewKind,
@@ -31,7 +31,7 @@ function getShortUniversityName(university: string) {
   return university.replace("대학교", "대");
 }
 
-export default function TransferReviewLinks() {
+function TransferReviewLinks() {
   const [selectedFilter, setSelectedFilter] = useState(ALL_FILTER);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -109,13 +109,12 @@ export default function TransferReviewLinks() {
       </div>
 
       <div className="transfer-review-controls">
-        <div className="transfer-review-tabs" role="tablist" aria-label="후기 대학 필터">
+        <div className="transfer-review-tabs" role="group" aria-label="후기 대학 필터">
           {filterOptions.map((option) => (
             <button
               key={option.id}
               type="button"
-              role="tab"
-              aria-selected={selectedFilter === option.id}
+              aria-pressed={selectedFilter === option.id}
               className={`transfer-review-tab ${selectedFilter === option.id ? "active" : ""}`}
               onClick={() => setSelectedFilter(option.id)}
             >
@@ -207,3 +206,5 @@ export default function TransferReviewLinks() {
     </section>
   );
 }
+
+export default memo(TransferReviewLinks);

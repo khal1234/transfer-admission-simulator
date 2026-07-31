@@ -126,10 +126,11 @@ function DepartmentExplorer({
           )}
         </div>
 
-        <div className="univ-chips-grid">
+        <div className="univ-chips-grid" role="group" aria-label="대학 필터">
           <button
             type="button"
             className={`univ-chip ${selectedUnivs.length === 0 ? "active" : ""}`}
+            aria-pressed={selectedUnivs.length === 0}
             onClick={() => {
               setSelectedUnivs([]);
               setCurrentPage(1);
@@ -142,6 +143,7 @@ function DepartmentExplorer({
               type="button"
               key={university}
               className={`univ-chip ${selectedUnivSet.has(university) ? "active" : ""}`}
+              aria-pressed={selectedUnivSet.has(university)}
               onClick={() => toggleUniversity(university)}
             >
               <UniversityName university={university} logoSize="small" />

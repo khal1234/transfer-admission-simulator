@@ -8,7 +8,7 @@
   --card-bg: #ffffff;
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-muted: #64748b;
   
   --border-color: #e2e8f0;
   --chart-grid: #e2e8f0;
@@ -17,11 +17,11 @@
   --tooltip-text: #ffffff;
   
   /* Status Colors */
-  --status-safe: #10b981; /* Emerald */
+  --status-safe: #047857; /* Emerald — AA on status-safe-bg */
   --status-safe-bg: #ecfdf5;
-  --status-borderline: #f59e0b; /* Amber */
+  --status-borderline: #92400e; /* Amber — AA on status-borderline-bg */
   --status-borderline-bg: #fef3c7;
-  --status-risk: #ef4444; /* Rose */
+  --status-risk: #b91c1c; /* Rose — AA on status-risk-bg */
   --status-risk-bg: #fef2f2;
 }
 
