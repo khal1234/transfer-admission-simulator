@@ -46,6 +46,23 @@ COUNT_FIELDS = [("모집인원", "모집인원"), ("지원인원", "지원인원
 
 TOLERANCE = 0.02
 
+# 원본 표기와 results 표기가 다른 곳. 값이 다른 것이 아니라 이름만 다르다.
+# 확인한 것만 적는다 — 비슷해 보인다고 넣으면 서로 다른 학과를 묶게 된다.
+NAME_ALIASES = {
+    # 원본은 '5년제', results 는 '오년제'로 적었다.
+    ("강원대학교", "건축학과(5년제)"): "건축학과(오년제)",
+    # PDF에서 학과명이 셀 폭을 넘쳐 닫는 괄호가 잘렸다.
+    ("경북대학교", "농업토목ㆍ생물산업공학부(농업토목공학전공"):
+        "농업토목ㆍ생물산업공학부(농업토목공학전공)",
+}
+
+# 원본에는 있으나 추출기가 의심 행으로 격리해 대조에 오르지 않는 레코드.
+# 값은 원문을 직접 읽어 반영했다(tools/apply_fixes.py 의 KNU_2024_RESTORED).
+# 고아로 잡히면 매번 가짜 신호가 되므로 여기서 제외한다.
+KNOWN_UNEXTRACTED = {
+    ("경북대학교", "2024", "농업토목ㆍ생물산업공학부(생물산업기계공학전공)"),
+}
+
 
 def load(name):
     with io.open(RESULTS_DIR / name, encoding="utf-8-sig") as f:
@@ -136,8 +153,12 @@ def main():
 
     seen_keys = set()
     for row in extracted:
-        key = (row["대학명"], row["연도"], row["학과_정규화"])
+        alias = NAME_ALIASES.get((row["대학명"], row["학과_원본명"].strip()))
+        lookup_name = normalize_name(alias) if alias else row["학과_정규화"]
+
+        key = (row["대학명"], row["연도"], lookup_name)
         seen_keys.add(key)
+        seen_keys.add((row["대학명"], row["연도"], row["학과_정규화"]))
 
         if key in exception_keys:
             continue
@@ -178,8 +199,12 @@ def main():
 
     orphans = []
     for position, record in sorted(record_ids.items()):
-        if position not in matched_positions:
-            orphans.append((record["대학명"], record["연도"], record.get("학과")))
+        if position in matched_positions:
+            continue
+        known = (record["대학명"], record["연도"], record.get("학과"))
+        if known in KNOWN_UNEXTRACTED:
+            continue
+        orphans.append(known)
 
     def show(rows, limit=25):
         for line in rows[:None if show_all else limit]:
