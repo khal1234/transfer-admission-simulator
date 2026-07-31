@@ -22,15 +22,13 @@ import {
   isDerived,
 } from "../utils/scoreProvenance";
 import { getRecordKey } from "../utils/targets";
-import UniversityName from "./UniversityName";
 
 type ChartTarget = {
   univ: string;
   dept: string;
 };
 
-type ChartDataPoint = {
-  year: string;
+type MetricValues = {
   "영어 원점수 (TOEIC)": number | null;
   "영어 환산점수": number | null;
   "전적대 백분위 (GPA)": number | null;
@@ -38,45 +36,68 @@ type ChartDataPoint = {
   "실질 경쟁률": number | null;
 };
 
-type ChartDataKey = Exclude<keyof ChartDataPoint, "year">;
+type ChartDataKey = keyof MetricValues;
 type ChartAxisDomain = readonly [number, number] | readonly ["auto", "auto"];
+
+/** 한 해 한 줄. 지망마다 열이 하나씩 붙는다(계열명 → 값). */
+type ChartDataPoint = { year: string } & Record<string, number | null | string>;
 
 const CHART_METRIC_CONFIG = {
   toeic_orig: {
     label: "공인영어 원점수 (TOEIC)",
     dataKey: "영어 원점수 (TOEIC)",
-    color: "var(--primary-color)",
+    /** 대학이 달라도 같은 자에 놓고 견줄 수 있는 지표인가. */
+    comparableAcrossUniversities: true,
   },
   toeic_conv: {
     label: "공인영어 환산점수",
     dataKey: "영어 환산점수",
-    color: "var(--primary-color)",
+    comparableAcrossUniversities: false,
   },
   gpa_orig: {
     label: "전적대학 백분위 평균",
     dataKey: "전적대 백분위 (GPA)",
-    color: "var(--secondary-color)",
+    comparableAcrossUniversities: true,
   },
   gpa_conv: {
     label: "전적대학 환산점수",
     dataKey: "전적대 환산점수",
-    color: "var(--secondary-color)",
+    comparableAcrossUniversities: false,
   },
   competition: {
     label: "실질 경쟁률",
     dataKey: "실질 경쟁률",
-    color: "#ef4444",
+    comparableAcrossUniversities: true,
   },
 } as const satisfies Record<string, {
   label: string;
   dataKey: ChartDataKey;
-  color: string;
+  comparableAcrossUniversities: boolean;
 }>;
 
 export type ChartMetric = keyof typeof CHART_METRIC_CONFIG;
 
+/**
+ * 계열 색. 거점국립대가 9곳이라 9색이면 넉넉하다.
+ * 붙어 있는 색끼리 헷갈리지 않도록 색상환을 건너뛰며 골랐다.
+ */
+const SERIES_COLORS = [
+  "#6366f1",
+  "#ef4444",
+  "#10b981",
+  "#f59e0b",
+  "#8b5cf6",
+  "#06b6d4",
+  "#ec4899",
+  "#84cc16",
+  "#0ea5e9",
+];
+
 type TrendChartProps = {
-  target: ChartTarget;
+  /** 클릭해서 연 지망. 선을 굵게 그려 어느 것을 보러 왔는지 표시한다. */
+  focusedTarget: ChartTarget;
+  /** 장바구니 전체. 한 축에 겹쳐 그린다. */
+  targets: readonly ChartTarget[];
   recordsByDepartment: ReadonlyMap<string, DepartmentRecord[]>;
   metric: ChartMetric;
   onMetricChange: (metric: ChartMetric) => void;
@@ -99,15 +120,34 @@ function roundToTwoDecimals(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+/** 범례에 들어갈 짧은 이름. '부산대학교 기계공학부' → '부산대 기계공학부'. */
+function getSeriesName(target: ChartTarget): string {
+  return `${target.univ.replace(/대학교$/, "대")} ${target.dept}`;
+}
+
+function getMetricValues(record: DepartmentRecord): MetricValues {
+  const acceptedScore = calculateAcceptedScoreBreakdown(record);
+
+  return {
+    "영어 원점수 (TOEIC)": record.최종합격_토익원점수,
+    "영어 환산점수": acceptedScore.englishConv,
+    "전적대 백분위 (GPA)": record.최종합격_학점원점수_100점만점,
+    "전적대 환산점수": acceptedScore.gpaConv,
+    "실질 경쟁률": getCompetitionRatio(record),
+  };
+}
+
 function calculateChartDomain(
   data: ChartDataPoint[],
-  dataKey: ChartDataKey,
+  seriesNames: string[],
 ): ChartAxisDomain {
-  const values = data
-    .map((point) => point[dataKey])
-    .filter((value): value is number => (
-      typeof value === "number" && Number.isFinite(value)
-    ));
+  const values = data.flatMap((point) => (
+    seriesNames
+      .map((name) => point[name])
+      .filter((value): value is number => (
+        typeof value === "number" && Number.isFinite(value)
+      ))
+  ));
 
   if (values.length === 0) {
     return ["auto", "auto"];
@@ -125,40 +165,94 @@ function calculateChartDomain(
 }
 
 function TrendChart({
-  target,
+  focusedTarget,
+  targets,
   recordsByDepartment,
   metric,
   onMetricChange,
   onClose,
 }: TrendChartProps) {
   const selectedMetric = CHART_METRIC_CONFIG[metric];
-  const history = useMemo(() => {
-    const records = recordsByDepartment.get(
-      getRecordKey(target.univ, target.dept),
-    ) ?? [];
 
-    return [...records].sort((a, b) => getRecordYear(a) - getRecordYear(b));
-  }, [recordsByDepartment, target.dept, target.univ]);
+  /**
+   * 지망마다 연도별 기록을 뽑는다. 클릭해서 연 지망을 맨 앞에 둬서 색과
+   * 범례 순서가 그 지망 위주로 잡히게 한다.
+   */
+  const series = useMemo(() => {
+    const ordered = [
+      focusedTarget,
+      ...targets.filter((target) => (
+        getRecordKey(target.univ, target.dept)
+          !== getRecordKey(focusedTarget.univ, focusedTarget.dept)
+      )),
+    ];
+
+    return ordered.flatMap((target, index) => {
+      const records = recordsByDepartment.get(
+        getRecordKey(target.univ, target.dept),
+      ) ?? [];
+
+      if (records.length === 0) {
+        return [];
+      }
+
+      return [{
+        target,
+        name: getSeriesName(target),
+        color: SERIES_COLORS[index % SERIES_COLORS.length],
+        isFocused: index === 0,
+        records: [...records].sort((a, b) => getRecordYear(a) - getRecordYear(b)),
+      }];
+    });
+  }, [focusedTarget, recordsByDepartment, targets]);
 
   const chartData = useMemo<ChartDataPoint[]>(() => {
-    return history.map((record) => {
-        const acceptedScore = calculateAcceptedScoreBreakdown(record);
+    const years = [...new Set(
+      series.flatMap((entry) => entry.records.map((record) => record.연도)),
+    )].sort((a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10));
 
-        return {
-          year: `${record.연도}년도`,
-          "영어 원점수 (TOEIC)": record.최종합격_토익원점수,
-          "영어 환산점수": acceptedScore.englishConv,
-          "전적대 백분위 (GPA)": record.최종합격_학점원점수_100점만점,
-          "전적대 환산점수": acceptedScore.gpaConv,
-          "실질 경쟁률": getCompetitionRatio(record),
-        };
+    return years.map((year) => {
+      const point: ChartDataPoint = { year: `${year}년도` };
+
+      series.forEach((entry) => {
+        const record = entry.records.find((candidate) => candidate.연도 === year);
+        point[entry.name] = record === undefined
+          ? null
+          : getMetricValues(record)[selectedMetric.dataKey];
       });
-  }, [history]);
 
-  const yAxisDomain = useMemo(
-    () => calculateChartDomain(chartData, selectedMetric.dataKey),
-    [chartData, selectedMetric.dataKey],
+      return point;
+    });
+  }, [selectedMetric.dataKey, series]);
+
+  const seriesNames = useMemo(
+    () => series.map((entry) => entry.name),
+    [series],
   );
+  const yAxisDomain = useMemo(
+    () => calculateChartDomain(chartData, seriesNames),
+    [chartData, seriesNames],
+  );
+
+  /**
+   * 환산점수는 대학마다 배점이 달라(부산대 30점 만점, 전남대 400점 만점) 한 축에
+   * 놓으면 배점 큰 대학이 늘 위에 그려진다. 추세는 읽히지만 높낮이 비교는
+   * 뜻이 없으므로 그 사실을 밝힌다. 원점수·경쟁률은 그런 문제가 없다.
+   */
+  const scaleNotice = useMemo(() => {
+    if (selectedMetric.comparableAcrossUniversities) {
+      return null;
+    }
+
+    const universities = new Set(series.map((entry) => entry.target.univ));
+    if (universities.size <= 1) {
+      return null;
+    }
+
+    return "대학마다 이 지표의 배점이 달라 선의 높낮이로 대학끼리 비교할 수는 "
+      + "없습니다. 같은 선 안에서의 연도별 추세만 참고하세요.";
+  }, [selectedMetric.comparableAcrossUniversities, series]);
+
   // 원점수 지표를 볼 때, 그 원점수가 대학 발표값이 아니라 환산점수를 되짚은
   // 값이면 알린다. 차트의 선은 발표값과 똑같이 생겨서 구별할 수가 없다.
   const rawScoreNotice = useMemo(() => {
@@ -166,65 +260,74 @@ function TrendChart({
       return null;
     }
 
-    const note = metric === "toeic_orig"
-      ? getToeicDisclosure(target.univ)
-      : getGpaDisclosure(target.univ);
+    const derivedUniversities = [...new Set(
+      series
+        .map((entry) => entry.target.univ)
+        .filter((univ) => isDerived(
+          metric === "toeic_orig"
+            ? getToeicDisclosure(univ)
+            : getGpaDisclosure(univ),
+        )),
+    )];
 
-    return isDerived(note) ? note.description : null;
-  }, [metric, target.univ]);
+    if (derivedUniversities.length === 0) {
+      return null;
+    }
+
+    return `${derivedUniversities.join(", ")}의 원점수는 대학 발표값이 아니라 `
+      + "공개된 환산점수를 되짚어 구한 값입니다.";
+  }, [metric, series]);
 
   const formulaNotices = useMemo(() => {
     if (metric !== "toeic_conv" && metric !== "gpa_conv") {
       return [];
     }
 
-    const estimatedYears: string[] = [];
-    const lookupYears: string[] = [];
-    const assumedYears: string[] = [];
+    const estimated = new Set<string>();
+    const lookup = new Set<string>();
+    const assumed = new Set<string>();
 
-    history.forEach((record, index) => {
-      const plottedValue = chartData[index]?.[selectedMetric.dataKey];
+    series.forEach((entry) => {
+      entry.records.forEach((record) => {
+        if (getMetricValues(record)[selectedMetric.dataKey] === null) {
+          return;
+        }
 
-      if (plottedValue === null || plottedValue === undefined) {
-        return;
-      }
+        const formula = getConversionFormula(record.대학명, record.연도);
+        const label = `${record.대학명.replace(/대학교$/, "대")} ${record.연도}`;
 
-      const formula = getConversionFormula(
-        record.대학명,
-        record.연도,
-      );
+        if (formula?.provenance === "assumed-from-other-year") {
+          assumed.add(label);
+        }
 
-      if (formula?.provenance === "assumed-from-other-year") {
-        assumedYears.push(record.연도);
-      }
-
-      if (formula?.confidence === "estimated") {
-        estimatedYears.push(record.연도);
-      } else if (formula?.confidence === "lookup-approximation") {
-        lookupYears.push(record.연도);
-      }
+        if (formula?.confidence === "estimated") {
+          estimated.add(label);
+        } else if (formula?.confidence === "lookup-approximation") {
+          lookup.add(label);
+        }
+      });
     });
 
     const notices: string[] = [];
 
-    if (assumedYears.length > 0) {
+    if (assumed.size > 0) {
       notices.push(
-        `${assumedYears.join(", ")}년 값은 해당 연도 모집요강 미확보로 인접 연도 공식을 적용했습니다.`,
+        `${[...assumed].join(", ")}은 해당 연도 모집요강 미확보로 인접 연도 공식을 적용했습니다.`,
       );
     }
-    if (estimatedYears.length > 0) {
-      notices.push(`${estimatedYears.join(", ")}년 값에는 추정 환산식이 적용되었습니다.`);
+    if (estimated.size > 0) {
+      notices.push(`${[...estimated].join(", ")}에는 추정 환산식이 적용되었습니다.`);
     }
-    if (lookupYears.length > 0) {
+    if (lookup.size > 0) {
       notices.push(
-        `${lookupYears.join(", ")}년 값은 구간 환산표를 연속식으로 근사한 참고값입니다.`,
+        `${[...lookup].join(", ")}은 구간 환산표를 연속식으로 근사한 참고값입니다.`,
       );
     }
 
     return notices;
-  }, [chartData, history, metric, selectedMetric.dataKey]);
+  }, [metric, selectedMetric.dataKey, series]);
 
-  if (chartData.length === 0) {
+  if (chartData.length === 0 || series.length === 0) {
     return null;
   }
 
@@ -234,11 +337,11 @@ function TrendChart({
         <div>
           <h3 className="chart-title">
             <span aria-hidden="true">📈</span>
-            <UniversityName university={target.univ} logoSize="small" />
-            <span>{target.dept} 입결 대시보드</span>
+            <span>입결 추이 비교 · 지망 {series.length}곳</span>
           </h3>
           <p className="chart-subtitle">
-            현재 선택 지표: {selectedMetric.label}
+            현재 선택 지표: {selectedMetric.label} · 굵은 선은{" "}
+            {getSeriesName(focusedTarget)}
           </p>
         </div>
         <div className="chart-controls">
@@ -299,20 +402,28 @@ function TrendChart({
               labelStyle={{ color: "var(--tooltip-text)" }}
             />
             <Legend wrapperStyle={{ fontSize: "11px", fontWeight: "600" }} />
-            <Line
-              type="linear"
-              connectNulls
-              dataKey={selectedMetric.dataKey}
-              stroke={selectedMetric.color}
-              strokeWidth={3}
-              activeDot={{ r: 8 }}
-            />
+            {series.map((entry) => (
+              <Line
+                key={entry.name}
+                type="linear"
+                connectNulls
+                dataKey={entry.name}
+                stroke={entry.color}
+                strokeWidth={entry.isFocused ? 3.5 : 1.8}
+                strokeOpacity={entry.isFocused ? 1 : 0.75}
+                dot={{ r: entry.isFocused ? 4 : 2.5 }}
+                activeDot={{ r: 7 }}
+              />
+            ))}
           </LineChart>
         </ResponsiveContainer>
       </div>
       <p className="trend-disclaimer">
         * 성적 비공개(1인 등록 등) 또는 미모집인 연도는 지표가 공백으로 우회되어 표시됩니다 (라인 연속 연결 지원).
       </p>
+      {scaleNotice !== null && (
+        <p className="formula-notice">⚠️ {scaleNotice}</p>
+      )}
       {rawScoreNotice !== null && (
         <p className="formula-notice">⚠️ {rawScoreNotice}</p>
       )}
