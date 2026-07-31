@@ -26,6 +26,10 @@ import {
   isComparableRecord,
 } from "./utils/records";
 import { getDepartmentGroupKey } from "./utils/departmentSearch";
+import {
+  getComparisonYearNotice,
+  pickBasisRecord,
+} from "./utils/comparisonBasis";
 import { getConversionFormula } from "./utils/formulaRegistry";
 import {
   isGpaType,
@@ -146,63 +150,6 @@ function getSortedRecordYears(records: DepartmentRecord[]): string[] {
   return Array.from(new Set(records.map((record) => record.연도))).sort(
     (a, b) => Number.parseInt(b, 10) - Number.parseInt(a, 10)
   );
-}
-
-type YearComparison = {
-  year: string;
-  score: ReturnType<typeof calculateScore>;
-};
-
-/**
- * 판정을 어느 해에 걸 것인가.
- *
- * 최신 한 해로 고정하면 그 해가 유독 빡셌을 때 실제보다 비관적으로, 무른
- * 해였을 때 낙관적으로 읽힌다. 사용자가 물은 두 경우를 다 열어둔다 —
- * 합격선이 가장 낮았던 해로 보고 싶을 때와, 그래도 최신 기준으로만 보고
- * 싶을 때.
- *
- * 순위는 합격선 원값이 아니라 격차로 매긴다. 연도마다 배점이 달라(강원대
- * 2026은 영어 150점 만점, 2025는 100점+전적대) 합격선 숫자끼리 비교하면
- * 배점이 큰 해가 늘 '높은 해'로 잡힌다. 격차는 내 점수도 그 해 식으로
- * 환산한 뒤의 값이라 연도끼리 견줄 수 있다.
- *
- * 성적 입력 전에는 격차가 없으므로 순위를 못 매긴다. 그때는 최신으로 둔다.
- */
-function pickBasisRecord(
-  comparisons: YearComparison[],
-  historyByYear: ReadonlyMap<string, DepartmentRecord>,
-  basis: ComparisonBasis,
-): DepartmentRecord | undefined {
-  const comparable = comparisons.filter(
-    (comparison) => comparison.score.acceptedIndexSum !== null,
-  );
-
-  if (comparable.length === 0) {
-    return undefined;
-  }
-
-  const ranked = comparable.filter(
-    (comparison) => comparison.score.diff !== null,
-  );
-
-  // recentRecordYears 가 내림차순이라 첫 항목이 최신이다.
-  if (basis === "latest" || ranked.length === 0) {
-    return historyByYear.get(comparable[0].year);
-  }
-
-  const chosen = ranked.reduce((best, comparison) => {
-    const bestDiff = best.score.diff ?? 0;
-    const currentDiff = comparison.score.diff ?? 0;
-
-    if (basis === "lowest") {
-      // 격차가 가장 작은 해 = 그 해라면 가장 붙기 쉬웠다.
-      return currentDiff > bestDiff ? comparison : best;
-    }
-
-    return currentDiff < bestDiff ? comparison : best;
-  });
-
-  return historyByYear.get(chosen.year);
 }
 
 function getRenamedHistoryText(history: DepartmentRecord[]): string {
@@ -601,9 +548,11 @@ export default function App() {
         score,
         deficit,
         analysis,
-        comparisonYearNotice: comparableRecord && comparableRecord.연도 !== latestRecord.연도
-          ? `${latestRecord.연도}에는 비교 가능한 합격 평균이 없어 최신 유효 자료인 ${comparableRecord.연도} 평균을 사용합니다.`
-          : null,
+        comparisonYearNotice: getComparisonYearNotice(
+          comparisonBasis,
+          comparableRecord,
+          latestRecord,
+        ),
         formulaNotice: formulaNotices.length > 0
           ? formulaNotices.join(" ")
           : null,
