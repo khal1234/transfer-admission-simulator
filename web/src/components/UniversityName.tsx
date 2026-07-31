@@ -2,37 +2,34 @@ type UniversityLogoSize = "small" | "medium" | "large";
 
 type UniversityLogoConfig = {
   src: string;
-  darkSrc?: string;
-  darkPlate?: boolean;
-  markOnly?: boolean;
-  enlargeMark?: boolean;
+  themeTint?: boolean;
 };
 
 const UNIVERSITY_LOGOS: Readonly<Record<string, UniversityLogoConfig>> = {
   강원대학교: {
-    src: "/university-logos/kangwon.png",
+    src: "/university-logos/kangwon-cutout.png",
   },
   경북대학교: {
-    src: "/university-logos/kyungpook.png",
+    src: "/university-logos/kyungpook-cutout.png",
   },
   부경대학교: {
-    src: "/university-logos/pukyong.png",
+    src: "/university-logos/pukyong-cutout.png",
   },
   부산대학교: {
     src: "/university-logos/pusan.png",
-    darkPlate: true,
+    themeTint: true,
   },
   인천대학교: {
-    src: "/university-logos/incheon.png",
+    src: "/university-logos/incheon-cutout.png",
   },
   전남대학교: {
-    src: "/university-logos/chonnam.png",
+    src: "/university-logos/chonnam-cutout.png",
   },
   전북대학교: {
-    src: "/university-logos/jeonbuk.png",
+    src: "/university-logos/jeonbuk-cutout.png",
   },
   충남대학교: {
-    src: "/university-logos/chungnam.png",
+    src: "/university-logos/chungnam-cutout.png",
   },
   충북대학교: {
     src: "/university-logos/chungbuk.svg",
@@ -57,30 +54,18 @@ export function UniversityLogo({
   const classNames = [
     "university-logo",
     `university-logo--${size}`,
-    logo.darkSrc ? "university-logo--theme-variant" : "",
-    logo.darkPlate ? "university-logo--dark-plate" : "",
-    logo.markOnly ? "university-logo--mark-only" : "",
-    logo.enlargeMark ? "university-logo--enlarge-mark" : "",
+    logo.themeTint ? "university-logo--theme-tint" : "",
   ].filter(Boolean).join(" ");
 
   return (
     <span className={classNames} aria-hidden="true">
       <img
-        className={`university-logo-image ${logo.darkSrc ? "university-logo-image--light" : ""}`}
+        className="university-logo-image"
         src={logo.src}
         alt=""
         loading="lazy"
         decoding="async"
       />
-      {logo.darkSrc !== undefined && (
-        <img
-          className="university-logo-image university-logo-image--dark"
-          src={logo.darkSrc}
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
-      )}
     </span>
   );
 }
