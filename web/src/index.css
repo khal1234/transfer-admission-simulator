@@ -2862,11 +2862,15 @@ html[data-theme="dark"] .spec-panel-values {
   font-weight: 700;
 }
 
+.compare-my-label,
 .compare-accepted-label {
-  color: var(--text-muted);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.compare-accepted-label {
+  color: var(--text-muted);
 }
 
 .compare-summary .compare-help {

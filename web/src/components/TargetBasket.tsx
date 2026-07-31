@@ -364,6 +364,7 @@ function TargetBasket({
                             : scoreInputInvalid
                               ? "입력 확인 필요"
                               : "계산 불가"}
+                          <span className="compare-my-label">내 점수</span>
                         </span>
                         <span className="compare-versus">vs</span>
                         <span className="compare-score compare-score-secondary">
