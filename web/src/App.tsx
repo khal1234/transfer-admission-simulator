@@ -588,7 +588,7 @@ export default function App() {
       <header className="app-header">
         <div className="header-title-block">
           <h1>
-            Team27 거점국립대 편입 성적 시뮬레이터
+            지역거점국립대 다용도 편입 플랫폼
             <span className="badge-2026">3개년 통합</span>
           </h1>
           <p>
