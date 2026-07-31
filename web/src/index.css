@@ -3521,27 +3521,33 @@ html[data-theme="dark"] .compare-score-primary {
 @media (min-width: 900px) {
   .basket-grid {
     grid-template-columns: repeat(auto-fill, minmax(620px, 1fr));
-    align-items: start;
+    /* 같은 행에서는 안내문 길이가 달라도 카드 외곽과 하단 액션 기준선을
+       맞춘다. */
+    align-items: stretch;
   }
 
   .target-card {
     grid-template-columns: minmax(150px, 210px) minmax(220px, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas: none;
-    align-items: center;
+    align-items: start;
     column-gap: 14px;
     row-gap: 0;
+    height: 100%;
   }
 
   .target-card-header {
     grid-area: auto;
     grid-column: 1;
     grid-row: 1;
+    align-self: start;
   }
 
   .target-card-body > .compare-container {
     grid-area: auto;
     grid-column: 2 / -1;
     grid-row: 1;
+    align-self: start;
   }
 
   /* 둘째 줄에 근거 · 상세 · 차트를 나란히. 셋을 각각 제 줄에 두면 카드가
@@ -3552,6 +3558,7 @@ html[data-theme="dark"] .compare-score-primary {
     grid-row: 2;
     margin-top: 0;
     border: 0;
+    align-self: end;
   }
 
   .target-card .target-details {
@@ -3559,6 +3566,7 @@ html[data-theme="dark"] .compare-score-primary {
     grid-column: 2;
     grid-row: 2;
     justify-self: start;
+    align-self: end;
   }
 
   .target-card > .target-card-footer {
@@ -3566,7 +3574,10 @@ html[data-theme="dark"] .compare-score-primary {
     grid-column: 3;
     grid-row: 2;
     border-top: 0;
-    padding: 0;
+    align-self: end;
+    /* 마지막 버튼 테두리가 카드 외곽선과 겹쳐 보이지 않도록 오른쪽 안전
+       여백을 둔다. 왼쪽 간격은 grid column-gap이 이미 맡고 있다. */
+    padding: 0 14px 0 0;
   }
 
   /* 펼치면 카드 내부에서 제 줄을 차지한다. 장바구니의 2열 배치는 유지해
