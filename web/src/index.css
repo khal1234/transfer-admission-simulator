@@ -3099,6 +3099,12 @@ html[data-theme="dark"] .compare-score-primary {
     align-items: start;
   }
 
+  /* 펼친 패널을 반쪽 카드에 가두면 같은 행의 반대편 아래가 통째로 빈다.
+     상세 내용을 여는 동안에만 카드를 전체 폭으로 써서 흐름과 가독성을 지킨다. */
+  .basket-grid > .target-card:has(.score-basis[open], .target-details[open]) {
+    grid-column: 1 / -1;
+  }
+
   .target-card {
     grid-template-columns: minmax(150px, 210px) minmax(220px, 1fr) auto;
     grid-template-areas: none;
@@ -3151,6 +3157,10 @@ html[data-theme="dark"] .compare-score-primary {
     grid-row: auto;
     border: 1px solid var(--border-color);
     margin-top: 8px;
+  }
+
+  .target-card .target-details[open] {
+    justify-self: stretch;
   }
 
   .target-card .score-basis:not([open]) .score-basis-summary,
