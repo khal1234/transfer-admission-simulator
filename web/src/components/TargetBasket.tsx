@@ -70,6 +70,40 @@ function formatCompetitionRatio(record: DepartmentRecord): string {
   return ratio === null ? "-" : `${Math.round(ratio * 10) / 10}:1`;
 }
 
+/**
+ * 부족한 점수를 메우는 경로를 한 줄로 적는다.
+ *
+ * 필요량만 그대로 적으면 'GPA +20.95' 같은 말이 나온다. 4.5 만점에서 도달할 수
+ * 없는 값인데 마치 방법이 있는 것처럼 읽힌다. 만점을 넘는 경로는 빼고, 둘 다
+ * 넘으면 단독으로는 안 된다고 밝힌다. 상세 분석 패널도 같은 기준을 쓴다.
+ */
+function buildImprovementText(
+  analysis: NonNullable<TargetSummary["analysis"]>,
+  toeic: number | null,
+  gpaRaw: number | null,
+  gpaType: GpaType,
+): string {
+  const paths: string[] = [];
+
+  if (analysis.toeicNeeded !== null && toeic !== null) {
+    if (toeic + analysis.toeicNeeded <= 990) {
+      paths.push(`TOEIC +${analysis.toeicNeeded}`);
+    }
+  }
+
+  if (analysis.gpaNeeded !== null && gpaRaw !== null) {
+    if (gpaRaw + analysis.gpaNeeded <= getGpaMax(gpaType)) {
+      paths.push(`전적대 +${analysis.gpaNeeded}`);
+    }
+  }
+
+  if (paths.length > 0) {
+    return `${paths.join(" 또는 ")} 필요`;
+  }
+
+  return "한 요소만으로는 도달 불가";
+}
+
 function getAnalysisPanelState(
   comparisonUnavailable: boolean,
   needsImprovement: boolean,
@@ -223,6 +257,28 @@ function TargetBasket({
                       {score.diff !== null && (
                         <span className={`score-diff ${score.diff >= 0 ? "positive" : "negative"}`}>
                           {score.diff >= 0 ? `+${score.diff}` : score.diff}점
+                        </span>
+                      )}
+
+                      {/* 사용자가 실제로 하는 판단은 '뭘 얼마나 올려야 하나'다.
+                          그게 상세 분석 안에 접혀 있고, 참고용인 과거 평균이
+                          앞자리를 차지하고 있었다. 접힌 상태에서도 보이게 올린다. */}
+                      {analysis !== null && (
+                        <span className="compare-action">
+                          {needsImprovement
+                            ? analysis.isLookupBased
+                              ? "구간 환산표라 필요 점수 산출 불가"
+                              : buildImprovementText(
+                                analysis,
+                                toeic,
+                                gpaRaw,
+                                gpaType,
+                              )
+                            : analysis.recommendedMetric === "toeic"
+                              ? `TOEIC이 유리 (+10 → +${analysis.toeicEfficiency}점)`
+                              : analysis.recommendedMetric === "gpa"
+                                ? `전적대가 유리 (+0.1 → +${analysis.gpaEfficiency}점)`
+                                : ""}
                         </span>
                       )}
                     </div>

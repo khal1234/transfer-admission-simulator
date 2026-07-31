@@ -2865,3 +2865,32 @@ html[data-theme="dark"] .compare-score-primary {
     margin-top: 0;
   }
 }
+
+/* ── 요약 줄의 행동 지표 (compare-action) ──────────────────── */
+
+/* '뭘 얼마나 올려야 하나'는 사용자가 실제로 하는 판단이다. 차이 옆 빈자리에
+   둔다. 미달이면 필요 점수, 상회면 어느 쪽이 효율적인지. */
+.compare-action {
+  flex-basis: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.compare-action::before {
+  content: "⚡ ";
+  color: var(--status-borderline);
+}
+
+@media (min-width: 900px) {
+  /* 넓은 화면에서는 차이 옆에 같은 줄로 붙인다. */
+  .compare-action {
+    flex-basis: auto;
+    margin-left: 12px;
+  }
+}
+
+html[data-theme="dark"] .compare-action {
+  color: #cbd5e1;
+}
