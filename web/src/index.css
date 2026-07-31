@@ -2940,7 +2940,9 @@ html[data-theme="dark"] .spec-panel-values {
 }
 
 .compare-year-diff {
-  margin-left: auto;
+  margin-left: 0;
+  min-width: 48px;
+  text-align: right;
   font-weight: 800;
   white-space: nowrap;
 }
