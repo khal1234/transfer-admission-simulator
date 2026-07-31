@@ -12,7 +12,12 @@ import {
   buildDepartmentSearchIndex,
   filterDepartmentSearchIndex,
 } from "../utils/departmentSearch";
+import {
+  getGpaDisclosure,
+  getToeicDisclosure,
+} from "../utils/scoreProvenance";
 import { getRecordKey } from "../utils/targets";
+import RawScoreValue from "./RawScoreValue";
 import UniversityName from "./UniversityName";
 
 const ITEMS_PER_PAGE = 10;
@@ -193,14 +198,16 @@ function DepartmentExplorer({
                       {record.모집인원 !== null ? `${record.모집인원}명` : "-"}
                     </td>
                     <td className="table-cell-center table-cell-bold">
-                      {record.최종합격_토익원점수 !== null
-                        ? `${record.최종합격_토익원점수}점`
-                        : "비공개"}
+                      <RawScoreValue
+                        value={record.최종합격_토익원점수}
+                        note={getToeicDisclosure(record.대학명)}
+                      />
                     </td>
                     <td className="table-cell-center table-cell-bold">
-                      {record.최종합격_학점원점수_100점만점 !== null
-                        ? `${record.최종합격_학점원점수_100점만점}점`
-                        : "비공개"}
+                      <RawScoreValue
+                        value={record.최종합격_학점원점수_100점만점}
+                        note={getGpaDisclosure(record.대학명)}
+                      />
                     </td>
                     <td className="table-cell-center">
                       <button
@@ -252,17 +259,19 @@ function DepartmentExplorer({
                   <div>
                     <dt>TOEIC 합격 평균</dt>
                     <dd>
-                      {record.최종합격_토익원점수 !== null
-                        ? `${record.최종합격_토익원점수}점`
-                        : "비공개"}
+                      <RawScoreValue
+                        value={record.최종합격_토익원점수}
+                        note={getToeicDisclosure(record.대학명)}
+                      />
                     </dd>
                   </div>
                   <div>
                     <dt>GPA 합격 평균</dt>
                     <dd>
-                      {record.최종합격_학점원점수_100점만점 !== null
-                        ? `${record.최종합격_학점원점수_100점만점}점`
-                        : "비공개"}
+                      <RawScoreValue
+                        value={record.최종합격_학점원점수_100점만점}
+                        note={getGpaDisclosure(record.대학명)}
+                      />
                     </dd>
                   </div>
                 </dl>

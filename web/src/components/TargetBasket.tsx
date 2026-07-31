@@ -18,7 +18,12 @@ import {
   explainMyScore,
   getFormulaBasis,
 } from "../utils/scoreExplanation";
+import {
+  getGpaDisclosure,
+  getToeicDisclosure,
+} from "../utils/scoreProvenance";
 import type { Target } from "../utils/targets";
+import RawScoreValue from "./RawScoreValue";
 import ScoreBasis from "./ScoreBasis";
 import UniversityName from "./UniversityName";
 
@@ -422,9 +427,19 @@ function TargetBasket({
                                   <td>{record.모집인원 ?? "-"}</td>
                                   <td>{record.지원인원 ?? "-"}</td>
                                   <td>{formatCompetitionRatio(record)}</td>
-                                  <td>{record.최종합격_토익원점수 ?? "비공개"}</td>
                                   <td>
-                                    {record.최종합격_학점원점수_100점만점 ?? "비공개"}
+                                    <RawScoreValue
+                                      value={record.최종합격_토익원점수}
+                                      note={getToeicDisclosure(record.대학명)}
+                                      suffix=""
+                                    />
+                                  </td>
+                                  <td>
+                                    <RawScoreValue
+                                      value={record.최종합격_학점원점수_100점만점}
+                                      note={getGpaDisclosure(record.대학명)}
+                                      suffix=""
+                                    />
                                   </td>
                                 </tr>
                               );

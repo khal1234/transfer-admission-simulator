@@ -2373,3 +2373,22 @@ html[data-theme="dark"] .explorer-filters {
   color: var(--text-muted);
   word-break: keep-all;
 }
+
+/* ── 되짚은 원점수 표시 (RawScoreValue) ────────────────────── */
+
+/* 대학이 발표한 값과 우리가 환산에서 되짚은 값을 화면에서 가른다.
+   비례식이라 정확한 경우는 *, 구간표라 근사인 경우는 ≈ 로 구별한다. */
+.score-derived-mark {
+  margin-left: 2px;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: help;
+  vertical-align: super;
+  line-height: 1;
+}
+
+.score-derived-mark.approximate {
+  color: var(--status-borderline);
+  vertical-align: baseline;
+}

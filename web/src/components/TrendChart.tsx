@@ -16,6 +16,11 @@ import {
 } from "../utils/converter";
 import { getConversionFormula } from "../utils/formulaRegistry";
 import { getRecordYear } from "../utils/records";
+import {
+  getGpaDisclosure,
+  getToeicDisclosure,
+  isDerived,
+} from "../utils/scoreProvenance";
 import { getRecordKey } from "../utils/targets";
 import UniversityName from "./UniversityName";
 
@@ -154,6 +159,20 @@ function TrendChart({
     () => calculateChartDomain(chartData, selectedMetric.dataKey),
     [chartData, selectedMetric.dataKey],
   );
+  // 원점수 지표를 볼 때, 그 원점수가 대학 발표값이 아니라 환산점수를 되짚은
+  // 값이면 알린다. 차트의 선은 발표값과 똑같이 생겨서 구별할 수가 없다.
+  const rawScoreNotice = useMemo(() => {
+    if (metric !== "toeic_orig" && metric !== "gpa_orig") {
+      return null;
+    }
+
+    const note = metric === "toeic_orig"
+      ? getToeicDisclosure(target.univ)
+      : getGpaDisclosure(target.univ);
+
+    return isDerived(note) ? note.description : null;
+  }, [metric, target.univ]);
+
   const formulaNotices = useMemo(() => {
     if (metric !== "toeic_conv" && metric !== "gpa_conv") {
       return [];
@@ -294,6 +313,9 @@ function TrendChart({
       <p className="trend-disclaimer">
         * 성적 비공개(1인 등록 등) 또는 미모집인 연도는 지표가 공백으로 우회되어 표시됩니다 (라인 연속 연결 지원).
       </p>
+      {rawScoreNotice !== null && (
+        <p className="formula-notice">⚠️ {rawScoreNotice}</p>
+      )}
       {formulaNotices.map((notice) => (
         <p className="formula-notice" key={notice}>⚠️ {notice}</p>
       ))}
