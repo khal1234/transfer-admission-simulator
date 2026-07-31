@@ -136,6 +136,7 @@ SPECS = {
         "type_labels": [],
         "type_keep": None,
         "header_depth": 3,
+        "anchor_by_track": True,
         "labels": {
             "unit": ["모집단위"],
             "recruit": ["모집인원"],
@@ -286,6 +287,51 @@ def resolve_columns(table, spec):
     return None, None
 
 
+TRACK_VALUES = ("인문", "자연", "예체능", "예능", "체능")
+
+
+def parse_anchored_row(row):
+    """계열(인문/자연) 칸을 기준점 삼아 행을 읽는다.
+
+    인천대 표는 행마다 열 위치가 다르다. 전공 계층이 있으면 한 칸씩 밀린다.
+
+        법학부          [0]법학부 [1]      [2]인문 [3]10 [4]41 ...
+        건설환경공학전공  [0]도시과학대학 [1]도시환경공학부 [2]건설환경공학전공 [3]자연 [4]9 ...
+
+    고정 열 번호로 읽으면 학부 이름을 모집단위로 잡는다(실측: 인천대 8건이
+    그렇게 어긋났다). 계열 칸은 어느 행에서나 모집단위 바로 뒤에 오므로,
+    그것을 찾아 앞뒤로 읽으면 두 모양을 한꺼번에 처리할 수 있다.
+
+    돌려주는 값: (모집단위, 모집인원, 지원인원, 토익평균) — 못 읽으면 None.
+    """
+    track_index = None
+    for j, cell_value in enumerate(row):
+        if squash(cell_value) in TRACK_VALUES:
+            track_index = j
+            break
+
+    if track_index is None or track_index == 0:
+        return None
+
+    # 모집단위는 계열 바로 앞의, 비어 있지 않은 글자 칸이다.
+    unit = None
+    for j in range(track_index - 1, -1, -1):
+        text = str(row[j]).strip() if row[j] else ""
+        if text:
+            unit = text
+            break
+
+    if not unit:
+        return None
+
+    def at(offset):
+        j = track_index + offset
+        return row[j] if j < len(row) else None
+
+    # 계열 다음은 모집인원, 지원인원, 경쟁률, 토익 평균 순이다.
+    return unit, to_count(at(1)), to_count(at(2)), to_number(at(4))
+
+
 def looks_shifted(row, cols):
     """셀 넘침으로 행이 밀렸는지 본다.
 
@@ -323,6 +369,27 @@ def extract_one(univ, year, spec):
             continue
 
         for row in table[header_row + 1:]:
+            # 인천대는 행마다 열이 밀려서 고정 번호로 못 읽는다. 계열 칸 기준.
+            # 계열 칸이 없는 해도 있다(인천대 2024). 그때는 아래 일반 경로로
+            # 떨어뜨린다 — 기준점이 없으면 열이 밀릴 일도 없기 때문이다.
+            parsed = parse_anchored_row(row) if spec.get("anchor_by_track") else None
+            if parsed is not None:
+                unit_text, recruit, applied, english_raw = parsed
+                if squash(unit_text).startswith("모집단위"):
+                    continue
+                records.append(make_record(
+                    univ, year, unit_text,
+                    모집인원=recruit,
+                    지원인원=applied,
+                    합격인원=None,
+                    최종합격_토익원점수=english_raw,
+                    최종합격_토익환산점수=None,
+                    최종합격_학점원점수_100점만점=None,
+                    최종합격_학점환산점수=None,
+                    캠퍼스=None,
+                ))
+                continue
+
             if cols["unit"] >= len(row):
                 continue
 
