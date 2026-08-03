@@ -84,6 +84,21 @@ describe("explainMyScore", () => {
     expect(result?.total).toBeNull();
   });
 
+  it("marks English as not reflected for Pusan's 2025 contract department", () => {
+    const result = explainMyScore(
+      "부산대학교",
+      "2025",
+      null,
+      "100",
+      100,
+      "발전공학과",
+    );
+
+    expect(componentAt(result, 0).source).toBe("not-reflected");
+    expect(componentAt(result, 1).value).toBe(30);
+    expect(result?.total).toBe(30);
+  });
+
   it("returns null for an unsupported university or year", () => {
     expect(explainMyScore("없는대학교", "2026", 850, "100", 90)).toBeNull();
     expect(explainMyScore("경북대학교", "2023", 850, "100", 90)).toBeNull();
@@ -157,9 +172,75 @@ describe("getFormulaBasis", () => {
     expect(basis?.confidence).toBe("verified");
   });
 
-  it("surfaces a formula assumed from another year", () => {
-    expect(getFormulaBasis("부산대학교", "2024")?.provenance)
-      .toBe("assumed-from-other-year");
+  it("surfaces the verified Pusan 2024 formula", () => {
+    const basis = getFormulaBasis("부산대학교", "2024", "기계공학부");
+
+    expect(basis?.provenance).toBe("documented-for-year");
+    expect(basis?.gpaFormulaText).toContain("× 20");
+    expect(basis?.admissionProfileText).toContain("지필고사 50점");
+  });
+
+  it("shows KNU's selected arts weights and 30-point GPA base", () => {
+    const basis = getFormulaBasis("경북대학교", "2026", "디자인학과");
+
+    expect(basis?.englishFormulaText).toContain("50 × TOEIC");
+    expect(basis?.gpaFormulaText).toContain("30 + 20");
+    expect(basis?.admissionProfileText).toContain("실기 100점");
+  });
+
+  it("shows Chungnam's year-and-department-specific weights", () => {
+    const computer2024 = getFormulaBasis("충남대학교", "2024", "컴퓨터융합학부");
+    const math2026 = getFormulaBasis("충남대학교", "2026", "수학교육과");
+    const arts2026 = getFormulaBasis("충남대학교", "2026", "음악과(성악)");
+
+    expect(computer2024?.admissionProfileText).toContain("공인영어 20점");
+    expect(computer2024?.admissionProfileText).toContain("전적대성적 20점");
+    expect(computer2024?.admissionProfileText).toContain("실기 20점");
+    expect(math2026?.admissionProfileText).toContain("지필고사 60점");
+    expect(math2026?.gpaFormulaText).toBeNull();
+    expect(arts2026?.englishFormulaText).toBeNull();
+    expect(arts2026?.admissionProfileText).toContain("실기 60점");
+  });
+
+  it("shows Incheon's selected standard, movement, and interview-only weights", () => {
+    const design = getFormulaBasis("인천대학교", "2026", "디자인학부");
+    const movement = getFormulaBasis("인천대학교", "2026", "운동건강학부");
+    const painting = getFormulaBasis("인천대학교", "2026", "한국화전공");
+
+    expect(design?.englishFormulaText).toContain("기본점수 60");
+    expect(design?.admissionProfileText).toContain("공인영어 120점");
+    expect(movement?.englishFormulaText).toContain("기본점수 없음");
+    expect(movement?.admissionProfileText).toContain("실기 60점");
+    expect(painting?.englishFormulaText).toBeNull();
+    expect(painting?.admissionProfileText).toContain("면접 200점");
+  });
+
+  it("shows Chungbuk's written and practical profile weights", () => {
+    const written2025 = getFormulaBasis("충북대학교", "2025", "간호학과");
+    const practical2026 = getFormulaBasis("충북대학교", "2026", "건축학과");
+
+    expect(written2025?.admissionProfileText).toContain("전공필기형");
+    expect(written2025?.admissionProfileText).toContain("지필고사 20점");
+    expect(written2025?.gpaFormulaText).toContain("10 + 백분율");
+    expect(practical2026?.admissionProfileText).toContain("실기 30점");
+    expect(practical2026?.admissionProfileText).toContain("면접 10점");
+    expect(practical2026?.gpaFormulaText).toBeNull();
+  });
+
+  it("shows Jeonbuk's selected special-profile weights", () => {
+    const arts2025 = getFormulaBasis("전북대학교", "2025", "산업디자인학과");
+    const sports2026 = getFormulaBasis("전북대학교", "2026", "스포츠과학과");
+    const dental2026 = getFormulaBasis("전북대학교", "2026", "치의학과");
+    const hanok2026 = getFormulaBasis("전북대학교", "2026", "한옥학과");
+
+    expect(arts2025?.englishFormulaText).toBeNull();
+    expect(arts2025?.gpaFormulaText).toContain("× 1.2");
+    expect(arts2025?.admissionProfileText).toContain("실기 60점");
+    expect(sports2026?.admissionProfileText).toContain("공인영어 50점");
+    expect(sports2026?.admissionProfileText).toContain("실기 50점");
+    expect(dental2026?.admissionProfileText).toContain("지필고사 80점");
+    expect(dental2026?.englishFormulaText).toContain("× 0.6");
+    expect(hanok2026?.admissionProfileText).toContain("전적대성적 100점");
   });
 
   it("returns null for an unsupported university or year", () => {

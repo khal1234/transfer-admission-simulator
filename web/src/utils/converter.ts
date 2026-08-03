@@ -69,7 +69,8 @@ export function convertRawToConv(
   univ: string,
   year: string,
   toeic: number | null,
-  gpa100: number | null
+  gpa100: number | null,
+  department?: string,
 ): { englishConv: number | null; gpaConv: number | null; indexSum: number | null } {
   let englishConv: number | null = null;
   let gpaConv: number | null = null;
@@ -77,9 +78,9 @@ export function convertRawToConv(
   const t = toeic !== null ? Math.max(100, Math.min(990, toeic)) : null;
   const g = gpa100 !== null ? Math.max(0, Math.min(100, gpa100)) : null;
 
-  const formula = getConversionFormula(univ, year);
+  const formula = getConversionFormula(univ, year, department);
   if (formula !== null) {
-    if (t !== null) {
+    if (t !== null && formula.convertEnglish !== null) {
       englishConv = formula.convertEnglish(t);
     }
     if (g !== null && formula.convertGpa !== null) {
@@ -92,11 +93,13 @@ export function convertRawToConv(
   if (gpaConv !== null) gpaConv = Math.round(gpaConv * 100) / 100;
 
   let indexSum: number | null = null;
-  if (englishConv !== null) {
-    if (formula?.convertGpa === null) {
-      indexSum = englishConv;
-    } else if (gpaConv !== null) {
-      indexSum = englishConv + gpaConv;
+  if (formula !== null) {
+    const hasConvertibleComponent =
+      formula.convertEnglish !== null || formula.convertGpa !== null;
+    const englishReady = formula.convertEnglish === null || englishConv !== null;
+    const gpaReady = formula.convertGpa === null || gpaConv !== null;
+    if (hasConvertibleComponent && englishReady && gpaReady) {
+      indexSum = (englishConv ?? 0) + (gpaConv ?? 0);
     }
   }
 
@@ -113,22 +116,23 @@ function roundScore(score: number | null): number | null {
   return Math.round(score * 100) / 100;
 }
 
-function usesEnglishOnly(univ: string, year: string): boolean {
-  return getConversionFormula(univ, year)?.convertGpa === null;
+function usesEnglishOnly(univ: string, year: string, department: string): boolean {
+  const formula = getConversionFormula(univ, year, department);
+  return formula?.convertEnglish !== null && formula?.convertGpa === null;
 }
 
 export function calculateAcceptedScoreBreakdown(
   acceptedRecord: DepartmentRecord
 ): AcceptedScoreBreakdown {
-  const { 대학명: univ, 연도: year } = acceptedRecord;
+  const { 대학명: univ, 연도: year, 학과: department } = acceptedRecord;
   const convEng = acceptedRecord.최종합격_토익환산점수;
   const convGpa = acceptedRecord.최종합격_학점환산점수;
   const rawEng = acceptedRecord.최종합격_토익원점수;
   const rawGpa = acceptedRecord.최종합격_학점원점수_100점만점;
 
-  if (usesEnglishOnly(univ, year)) {
+  if (usesEnglishOnly(univ, year, department)) {
     const englishConv =
-      convEng ?? convertRawToConv(univ, year, rawEng, null).englishConv;
+      convEng ?? convertRawToConv(univ, year, rawEng, null, department).englishConv;
 
     return {
       englishConv: roundScore(englishConv),
@@ -137,13 +141,30 @@ export function calculateAcceptedScoreBreakdown(
     };
   }
 
-  const convertedFromRaw = convertRawToConv(univ, year, rawEng, rawGpa);
-  const englishConv = convEng ?? convertedFromRaw.englishConv;
-  const gpaConv = convGpa ?? convertedFromRaw.gpaConv;
+  const formula = getConversionFormula(univ, year, department);
+  const convertedFromRaw = convertRawToConv(
+    univ,
+    year,
+    rawEng,
+    rawGpa,
+    department,
+  );
+  const englishConv = formula?.convertEnglish === null
+    ? null
+    : (convEng ?? convertedFromRaw.englishConv);
+  const gpaConv = formula?.convertGpa === null
+    ? null
+    : (convGpa ?? convertedFromRaw.gpaConv);
 
   let indexSum: number | null = null;
-  if (englishConv !== null && gpaConv !== null) {
-    indexSum = englishConv + gpaConv;
+  if (formula !== null) {
+    const hasConvertibleComponent =
+      formula.convertEnglish !== null || formula.convertGpa !== null;
+    const englishReady = formula.convertEnglish === null || englishConv !== null;
+    const gpaReady = formula.convertGpa === null || gpaConv !== null;
+    if (hasConvertibleComponent && englishReady && gpaReady) {
+      indexSum = (englishConv ?? 0) + (gpaConv ?? 0);
+    }
   }
 
   return {
@@ -162,10 +183,18 @@ export function calculateScore(
   year: string,
   toeic: number | null,
   gpa100: number | null,
-  acceptedRecord: DepartmentRecord | null
+  acceptedRecord: DepartmentRecord | null,
+  department?: string,
 ): ConversionResult {
   // 1. Calculate My Conversion Score
-  const myRes = convertRawToConv(univ, year, toeic, gpa100);
+  const effectiveDepartment = department ?? acceptedRecord?.학과;
+  const myRes = convertRawToConv(
+    univ,
+    year,
+    toeic,
+    gpa100,
+    effectiveDepartment,
+  );
 
   // 2. Compute Accepted Candidate's Index Sum from database
   const acceptedIndexSum = acceptedRecord === null
@@ -315,7 +344,8 @@ export function analyzeScoreDeficit(
   gpaScaleType: "100" | "4.5" | "4.3",
   deficit: number,
   currentGpa: number | null,
-  currentToeic: number | null = null
+  currentToeic: number | null = null,
+  department?: string,
 ): {
   isLookupBased: boolean;
   toeicNeeded: number | null;
@@ -324,7 +354,7 @@ export function analyzeScoreDeficit(
   gpaEfficiency: number;   // conversion points per 0.1 raw GPA points
   recommendedMetric: "toeic" | "gpa" | "none";
 } {
-  const formula = getConversionFormula(univ, year);
+  const formula = getConversionFormula(univ, year, department);
   const isLookupBased = formula?.reverseCalculationMode === "lookup";
   const toeicSlope = formula?.englishSlope ?? 0;
   const gpaSlope100 = formula?.gpaSlope100 ?? 0;
@@ -357,7 +387,11 @@ export function analyzeScoreDeficit(
   let gpaNeeded: number | null = null;
 
   if (deficit > 0) {
-    if (currentToeic !== null && formula !== null) {
+    if (
+      currentToeic !== null
+      && formula !== null
+      && formula.convertEnglish !== null
+    ) {
       // 현재 점수를 알면 환산식을 직접 되짚는다. 상·하한 구간까지 반영된다.
       const clamped = Math.max(100, Math.min(990, currentToeic));
       toeicNeeded = findMinimumIncrease(

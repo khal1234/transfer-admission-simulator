@@ -279,11 +279,13 @@ function TargetBasket({
               toeic,
               gpaType,
               gpaRaw,
+              target.dept,
             );
             const acceptedScoreBasis = explainAcceptedScore(referenceRecord);
             const formulaBasis = getFormulaBasis(
               target.univ,
               referenceRecord.연도,
+              target.dept,
             );
 
             return (

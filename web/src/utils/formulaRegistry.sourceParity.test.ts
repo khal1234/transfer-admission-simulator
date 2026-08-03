@@ -78,13 +78,13 @@ function collectMismatches(): Mismatch[] {
 
     const englishMax = record.공인영어_환산공식.배점;
     if (englishMax !== null) {
-      const actual = formula.convertEnglish(MAX_TOEIC);
-      if (Math.abs(actual - englishMax) > 0.01) {
+      const actual = formula.convertEnglish?.(MAX_TOEIC) ?? null;
+      if (actual === null || Math.abs(actual - englishMax) > 0.01) {
         mismatches.push({
           key,
           field: "englishMaxScore",
           expected: englishMax,
-          actual: Number(actual.toFixed(2)),
+          actual: actual === null ? null : Number(actual.toFixed(2)),
         });
       }
     }

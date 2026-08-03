@@ -69,6 +69,11 @@ function FormulaBasisNote({ basis }: { basis: FormulaBasis }) {
           전적대성적 · {basis.gpaFormulaText}
         </p>
       )}
+      {basis.admissionProfileText !== null && (
+        <p className="score-basis-formula-text">
+          전형요소 · {basis.admissionProfileText}
+        </p>
+      )}
 
       {/* 이상이 없을 때는 아무 말도 하지 않는다. '확인했습니다' 한 줄은
           정보를 더하지 않으면서 세로만 먹는다. 경고가 없다는 것 자체가 신호다. */}

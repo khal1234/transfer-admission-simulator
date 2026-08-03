@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>강원대 2024-2026 편입 반영비율·환산식 검증</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Pretendard, "Noto Sans KR", Arial, sans-serif;
+        color: #172033;
+        background: #f3f6fb;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 80px; }
+      h1 { margin: 0 0 12px; font-size: clamp(28px, 5vw, 44px); letter-spacing: -.04em; }
+      h2 { margin: 0; font-size: 28px; }
+      h3 { margin: 28px 0 12px; font-size: 18px; }
+      p, li { line-height: 1.7; }
+      .lead { max-width: 900px; margin: 0 0 28px; color: #526078; }
+      .summary, .year-card { background: #fff; border: 1px solid #dce4f0; border-radius: 18px; box-shadow: 0 10px 30px rgba(34, 52, 84, .07); }
+      .summary { padding: 24px; margin-bottom: 28px; }
+      .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .summary-item { padding: 18px; border-radius: 14px; background: #f7f9fd; }
+      .summary-item strong { display: block; margin-bottom: 8px; font-size: 20px; }
+      .ok { color: #087a55; }
+      .bad { color: #b9382f; }
+      .year-card { overflow: hidden; margin-top: 26px; }
+      .year-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 24px; border-bottom: 1px solid #e3e9f2; }
+      .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+      .badge { padding: 6px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+      .badge-ok { color: #087a55; background: #e8f7f1; }
+      .badge-bad { color: #a32f29; background: #fff0ee; }
+      .pdf-wrap { padding: 20px; background: #e8edf5; }
+      .pdf-wrap object { width: 100%; height: min(78vh, 900px); min-height: 620px; border: 0; border-radius: 10px; background: #fff; }
+      .pdf-fallback { padding: 24px; background: #fff; border-radius: 10px; }
+      .findings { padding: 24px; }
+      .finding { padding: 18px 20px; margin: 12px 0; border-left: 5px solid #cf4338; border-radius: 10px; background: #fff4f2; }
+      .finding strong { display: block; margin-bottom: 6px; }
+      .correct { padding: 18px 20px; border-left: 5px solid #18966d; border-radius: 10px; background: #eefaf5; }
+      code { padding: 2px 6px; border-radius: 5px; background: #edf1f7; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; }
+      table { width: 100%; border-collapse: collapse; margin: 12px 0 0; font-size: 14px; }
+      th, td { padding: 11px 12px; border: 1px solid #dce4f0; text-align: left; vertical-align: top; }
+      th { background: #f3f6fb; }
+      .source-note { padding: 14px 18px; border: 1px dashed #9cacbf; border-radius: 10px; background: #fff; }
+      a { color: #1b5fc1; }
+      footer { margin-top: 30px; color: #65738a; font-size: 13px; }
+      @media (max-width: 760px) {
+        main { width: min(100% - 20px, 1180px); padding-top: 24px; }
+        .summary-grid { grid-template-columns: 1fr; }
+        .year-head { align-items: flex-start; flex-direction: column; }
+        .pdf-wrap object { min-height: 500px; }
+        .findings, .year-head { padding: 18px; }
+        table { display: block; overflow-x: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>강원대 2024-2026 편입 반영비율·환산식 검증</h1>
+      <p class="lead">
+        강원대 춘천캠퍼스 최종 모집요강과 시뮬레이터의 환산식 JSON, 입결 JSON,
+        예외학과 JSON, 실제 계산 코드를 대조한 결과입니다. 각 PDF 바로 아래에 현재 저장값과
+        다른 내용만 구체적으로 적었습니다. 2026-08-01에 별도 2차 검증을 완료했습니다.
+      </p>
+
+      <section class="summary" aria-labelledby="summary-title">
+        <h2 id="summary-title">요약</h2>
+        <div class="summary-grid">
+          <div class="summary-item"><strong>2024</strong><span class="ok">일반식 일치</span><br /><span class="bad">예외 누락 1개</span></div>
+          <div class="summary-item"><strong>2025</strong><span class="ok">일반식 일치</span><br /><span class="bad">예외 누락 2개</span></div>
+          <div class="summary-item"><strong>2026</strong><span class="ok">일반식 일치</span><br /><span class="bad">예외 누락 3개 + 비고 77건 노후화</span></div>
+        </div>
+        <p>
+          <code>results</code>과 <code>web/src/data</code> 안의 성적·예외·환산식 JSON은 각각
+          바이트 단위로 일치했습니다. 따라서 하나만 틀린 것이 아니라, 원본과 배포본에
+          같은 오류가 복제된 상태입니다.
+        </p>
+        <p class="source-note">
+          <strong>2차 검증 판정: 1차 결론 유지(정정 0건·추가 누락 0건).</strong><br />
+          2025·2026 PDF 표와 수식 페이지를 새로 렌더링해 행·열을 육안 재확인하고, 2024 공식 PDF
+          57쪽의 검색 색인 전문도 다시 대조했습니다. JSON 3쌍 SHA-256 일치, 공개 점수쌍 재계산,
+          실제 계산 코드의 학과 선택 경로까지 독립적으로 재검증했습니다.
+        </p>
+      </section>
+
+      <section class="year-card" id="year-2024">
+        <div class="year-head">
+          <h2>2024학년도</h2>
+          <div class="badges"><span class="badge badge-ok">일반 환산식 일치</span><span class="badge badge-bad">예외 누락 1</span></div>
+        </div>
+        <div class="pdf-wrap">
+          <div class="pdf-fallback">
+            <strong>2024 공식 PDF</strong>
+            <p>
+              강원대 입학처 개편으로 과거 파일의 현재 다운로드가 404를 반환해 로컬 사본을
+              복구하지 못했습니다. 검증은 검색 엔진에 보존된 공식 PDF 57쪽 전문과 표 페이지 내용을
+              기준으로 했습니다.
+            </p>
+            <p><a href="https://admission.kangwon.ac.kr/DATA/download/admission/cts_2189_down_2024.pdf" target="_blank" rel="noreferrer">2024 강원대 춘천 편입학 모집요강 공식 원문 주소</a></p>
+            <p>확인 위치: PDF 13쪽(인쇄면 11쪽) 배점표, PDF 18~19쪽(인쇄면 17~18쪽) 세부 환산 방법.</p>
+          </div>
+        </div>
+        <div class="findings">
+          <div class="correct">
+            <strong>일치하는 내용</strong>
+            일반·학사 일반 모집단위는 공인영어 100점(40%) + 전적대 75점(30%) + 면접 75점(30%)입니다.
+            공인영어는 <code>TOEIC / 990 × 100</code>, 전적대는 백분율에 75점 배점을 적용한
+            <code>백분율 × 0.75</code>로 보면 저장값과 일치합니다. 표준 입결 77건의 공개된
+            원점수/환산점수 124쌍을 재계산한 결과 불일치는 0건입니다.
+          </div>
+          <div class="finding">
+            <strong>틀린 내용: 음악학과가 표준 입결에 남아 있음</strong>
+            원문은 음악학과를 실기 150점(60%) + 면접 100점(40%)으로 선발하며 공인영어·전적대를
+            반영하지 않습니다. 현재 <code>편입_성적_통합.json</code>에는 음악학과가 표준 대상으로
+            남아 있고 <code>편입_예외학과_통합.json</code>에는 없습니다. 따라서 사용자가 음악학과를
+            담으면 잘못된 일반식(토익 100 + GPA 75)으로 '내 스펙 지표합'이 계산됩니다.
+          </div>
+        </div>
+      </section>
+
+      <section class="year-card" id="year-2025">
+        <div class="year-head">
+          <h2>2025학년도</h2>
+          <div class="badges"><span class="badge badge-ok">일반 환산식 일치</span><span class="badge badge-bad">예외 누락 2</span></div>
+        </div>
+        <div class="pdf-wrap">
+          <object data="25_강원대_모집요강_춘천.pdf" type="application/pdf">
+            <div class="pdf-fallback"><a href="25_강원대_모집요강_춘천.pdf">새 창에서 2025 PDF 열기</a></div>
+          </object>
+        </div>
+        <div class="findings">
+          <p class="source-note">
+            공식 PDF 확인 위치: PDF 13쪽(인쇄면 11쪽) 배점표, PDF 14쪽(인쇄면 12쪽) 공인영어·전적대 산식.
+            파일은 강원대 사회학과 공지에 보관된 '최종 2025 춘천 모집요강' 첨부본입니다.
+          </p>
+          <div class="correct">
+            <strong>일치하는 내용</strong>
+            일반 모집단위의 100/75/75 배점과 <code>TOEIC / 990 × 100</code>, <code>GPA 백분율 × 0.75</code>는
+            저장 JSON과 계산 코드에 일치합니다. 표준 입결 79건의 공개된 원점수/환산점수 112쌍을
+            재계산한 결과 불일치는 0건입니다.
+          </div>
+          <div class="finding">
+            <strong>틀린 내용: 음악학과 예외 누락</strong>
+            원문은 실기 150점(60%) + 면접 100점(40%), 공인영어·전적대 미반영입니다. 현재는
+            표준 데이터에 남아 일반식이 적용됩니다.
+          </div>
+          <div class="finding">
+            <strong>틀린 내용: 스마트팜농산업학과 예외 누락</strong>
+            원문은 전적대 150점(60%) + 면접 100점(40%)이며 공인영어를 반영하지 않습니다.
+            현재는 표준 데이터에 남아 <code>TOEIC / 990 × 100 + GPA × 0.75</code>로 잘못 계산됩니다.
+          </div>
+        </div>
+      </section>
+
+      <section class="year-card" id="year-2026">
+        <div class="year-head">
+          <h2>2026학년도</h2>
+          <div class="badges"><span class="badge badge-ok">일반 환산식 일치</span><span class="badge badge-bad">예외 누락 3</span><span class="badge badge-bad">노후 비고 77</span></div>
+        </div>
+        <div class="pdf-wrap">
+          <object data="26_강원대_모집요강_춘천.pdf" type="application/pdf">
+            <div class="pdf-fallback"><a href="26_강원대_모집요강_춘천.pdf">새 창에서 2026 PDF 열기</a></div>
+          </object>
+        </div>
+        <div class="findings">
+          <p class="source-note">공식 PDF 확인 위치: PDF 13쪽(인쇄면 10쪽) 배점표, PDF 14쪽(인쇄면 11쪽) 공인영어 계산식, PDF 15쪽(인쇄면 12쪽) 전적대 반영 방법.</p>
+          <div class="correct">
+            <strong>일치하는 내용</strong>
+            일반 모집단위의 공인영어 150점(60%) + 면접 100점(40%), 전적대 미반영과
+            <code>TOEIC / 990 × 150</code>은 환산식 JSON과 <code>formulaRegistry.ts</code>에 일치합니다.
+          </div>
+          <div class="finding">
+            <strong>틀린 내용: 음악학과 예외 누락</strong>
+            원문은 실기 150점(60%) + 면접 100점(40%), 공인영어·전적대 미반영입니다. 현재는
+            표준 데이터에 남아 토익 150점식이 적용됩니다.
+          </div>
+          <div class="finding">
+            <strong>틀린 내용: 스마트팜농산업학과 예외 누락</strong>
+            원문은 전적대 150점(60%) + 면접 100점(40%), 공인영어 미반영입니다. 현재 레코드의
+            비고는 '전적대 미반영, 공인영어 150점'으로 적혀 있어 원문과 정반대이며, 토익 150점식으로
+            잘못 계산됩니다.
+          </div>
+          <div class="finding">
+            <strong>틀린 내용: 생태조경디자인학과 예외 누락</strong>
+            원문은 공인영어 100점(40%) + 전적대 50점(20%) + 면접 100점(40%)이며 산식은
+            <code>TOEIC / 990 × 100</code>, <code>GPA 백분율 × 0.5</code>입니다. 현재는 토익 150점,
+            GPA 미반영으로 계산됩니다.
+          </div>
+          <div class="finding">
+            <strong>틀린 내용: 표준 레코드 77건의 '추정식' 비고</strong>
+            <code>편입_성적_통합.json</code>의 2026 강원대 표준 레코드 77건은 '정확한 배율 공식은
+            이미지 형태라 확인 불가 - 비례식으로 추정'이라고 적혔습니다. 하지만 현재 공식 PDF 14쪽에
+            <code>TOEIC / 990 × 150</code>이 수식으로 명시되어 있고, 계산 코드도 이미 <code>verified</code>로
+            바뀐 상태입니다. 비고만 이전 상태로 남아 있습니다.
+          </div>
+        </div>
+      </section>
+
+      <section class="summary" aria-labelledby="file-audit-title">
+        <h2 id="file-audit-title">파일별 판정</h2>
+        <table>
+          <thead><tr><th>파일</th><th>판정</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td><code>results/편입_환산공식_통합.json</code><br /><code>web/src/data/편입_환산공식_통합.json</code></td><td>부분 일치</td><td>연도별 '일반학과' 핵심식은 맞지만 2026 비고의 '전체 모집단위' 표현은 예외를 반영하지 못한 과도한 범위입니다.</td></tr>
+            <tr><td><code>web/src/utils/formulaRegistry.ts</code></td><td>일반식 일치·범위 오류</td><td>2024·2025는 100/990 + GPA×0.75, 2026은 150/990 + GPA 미반영으로 JSON과 일치합니다. 다만 2026 주석의 '일반/학사 전체 모집단위'는 원문의 '전체 모집단위(일부 제외)'보다 넓고, 함수가 대학명·연도만으로 공식을 고르므로 예외 누락 학과에 표준식이 실제 적용됩니다.</td></tr>
+            <tr><td><code>results/편입_성적_통합.json</code><br /><code>web/src/data/편입_성적_통합.json</code></td><td>불일치 있음</td><td>음악학과(24~26), 스마트팜농산업학과(25~26), 생태조경디자인학과(26)가 표준 데이터에 잘못 남아 있습니다. 2026 비고 77건도 노후화됐습니다.</td></tr>
+            <tr><td><code>results/편입_예외학과_통합.json</code><br /><code>web/src/data/편입_예외학과_통합.json</code></td><td>누락 있음</td><td>위 6개 연도-학과 조합이 예외 목록에 없습니다. 기존 간호·수의·약학·예체능 예외는 분리되어 있고, 환산값이 공개된 2024~2025 예외 레코드 11쌍은 각 특별 배점으로 재계산했을 때 불일치 0건입니다.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <footer>
+        1·2차 검증일: 2026-08-01. 2차 결과는 정정 0건·추가 누락 0건입니다. 대조 범위는 강원대 춘천캠퍼스 일반·학사 편입 배점과 시뮬레이터가 사용하는 공인영어·전적대 지표합입니다.
+      </footer>
+    </main>
+  </body>
+</html>

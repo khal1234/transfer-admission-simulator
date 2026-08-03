@@ -292,7 +292,11 @@ function TrendChart({
           return;
         }
 
-        const formula = getConversionFormula(record.대학명, record.연도);
+        const formula = getConversionFormula(
+          record.대학명,
+          record.연도,
+          record.학과,
+        );
         const label = `${record.대학명.replace(/대학교$/, "대")} ${record.연도}`;
 
         if (formula?.provenance === "assumed-from-other-year") {

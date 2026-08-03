@@ -55,8 +55,8 @@ const midpointScoreCases = [
 const lookupLowerBoundaryCases = [
   ["충남대학교", "2024", 20, 0, 20],
   ["충남대학교", "2025", 24, null, 24],
-  ["충북대학교", "2024", 10, 10, 20],
-  ["충북대학교", "2026", 40, null, 40],
+  ["충북대학교", "2024", 14.5, 10, 24.5],
+  ["충북대학교", "2026", 44.5, null, 44.5],
 ] as const;
 
 describe("convertRawToConv university-year characteristics", () => {
@@ -250,13 +250,28 @@ describe("analyzeScoreDeficit characteristics", () => {
     expect(result.toeicNeeded).toBeNull();
   });
 
-  it("preserves the current 2026 Chungbuk linear estimate", () => {
+  it("flags Chungbuk as lookup-based when no current TOEIC is available", () => {
     const result = analyzeScoreDeficit("충북대학교", "2026", "100", 3, 90);
 
-    expect(result.isLookupBased).toBe(false);
+    expect(result.isLookupBased).toBe(true);
     expect(result.toeicNeeded).toBe(120);
     expect(result.gpaNeeded).toBeNull();
     expect(result.recommendedMetric).toBe("toeic");
+  });
+
+  it("uses Chungbuk's real TOEIC band boundaries for reverse calculation", () => {
+    const result = analyzeScoreDeficit(
+      "충북대학교",
+      "2026",
+      "100",
+      0.5,
+      90,
+      975,
+    );
+
+    expect(result.isLookupBased).toBe(true);
+    expect(result.toeicNeeded).toBe(5);
+    expect(result.gpaNeeded).toBeNull();
   });
 
   it("never returns +0 for a positive Busan GPA deficit on the 4.5 scale", () => {
