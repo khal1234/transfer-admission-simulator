@@ -1,3 +1,22 @@
+import {
+  getPusanAdmissionProfile,
+} from "./pusanFormulaProfiles";
+import type { AdmissionProfile } from "./admissionProfile";
+import { getKyungbukAdmissionProfile } from "./kyungbukFormulaProfiles";
+import {
+  getChungnamAdmissionProfile,
+  getChungnamToeicTableScore,
+} from "./chungnamFormulaProfiles";
+import { getIncheonAdmissionProfile } from "./incheonFormulaProfiles";
+import {
+  getChungbukAdmissionProfile,
+  getChungbukEnglishScore,
+} from "./chungbukFormulaProfiles";
+import {
+  getJeonbukAdmissionProfile,
+  getJeonbukToeicTableScore,
+} from "./jeonbukFormulaProfiles";
+
 export type FormulaConfidence =
   | "verified"
   | "estimated"
@@ -15,8 +34,9 @@ export type ConversionFormula = {
   reverseCalculationMode: ReverseCalculationMode;
   englishSlope: number;
   gpaSlope100: number;
-  convertEnglish: (toeic: number) => number;
+  convertEnglish: ((toeic: number) => number) | null;
   convertGpa: ((gpa100: number) => number) | null;
+  admissionProfile?: AdmissionProfile;
 };
 
 const GANGWON_STANDARD: ConversionFormula = {
@@ -42,15 +62,27 @@ const GANGWON_2026: ConversionFormula = {
   convertGpa: null,
 };
 
-const KYUNGBUK: ConversionFormula = {
-  confidence: "verified",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "linear",
-  englishSlope: 100 / 990,
-  gpaSlope100: 0.2,
-  convertEnglish: (toeic) => (toeic / 990) * 100,
-  convertGpa: (gpa100) => 30 + (gpa100 / 100) * 20,
-};
+function getKyungbukFormula(
+  year: string,
+  department?: string,
+): ConversionFormula {
+  const profile = getKyungbukAdmissionProfile(year, department);
+  if (profile === null) {
+    throw new Error(`지원하지 않는 경북대 연도: ${year}`);
+  }
+
+  const englishWeight = profile.weights.english;
+  return {
+    confidence: "verified",
+    provenance: "documented-for-year",
+    reverseCalculationMode: "linear",
+    englishSlope: englishWeight / 990,
+    gpaSlope100: 0.2,
+    convertEnglish: (toeic) => (toeic / 990) * englishWeight,
+    convertGpa: (gpa100) => 30 + (gpa100 / 100) * 20,
+    admissionProfile: profile,
+  };
+}
 
 const PUKYONG: ConversionFormula = {
   confidence: "verified",
@@ -62,25 +94,53 @@ const PUKYONG: ConversionFormula = {
   convertGpa: (gpa100) => gpa100,
 };
 
-const PUSAN: ConversionFormula = {
-  confidence: "verified",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "linear",
-  englishSlope: 30 / 990,
-  gpaSlope100: 0.3,
-  convertEnglish: (toeic) => (toeic / 990) * 30,
-  convertGpa: (gpa100) => gpa100 * 0.3,
-};
+function getPusanFormula(year: string, department?: string): ConversionFormula {
+  const profile = getPusanAdmissionProfile(year, department);
+  if (profile === null) {
+    throw new Error(`지원하지 않는 부산대 연도: ${year}`);
+  }
 
-const INCHEON: ConversionFormula = {
-  confidence: "estimated",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "linear",
-  englishSlope: 60 / 990,
-  gpaSlope100: 0,
-  convertEnglish: (toeic) => (toeic / 990) * 60 + 60,
-  convertGpa: null,
-};
+  const { english, gpa } = profile.weights;
+  return {
+    confidence: "verified",
+    provenance: "documented-for-year",
+    reverseCalculationMode: "linear",
+    englishSlope: english / 990,
+    gpaSlope100: gpa / 100,
+    convertEnglish: english === 0
+      ? null
+      : (toeic) => (toeic / 990) * english,
+    convertGpa: gpa === 0
+      ? null
+      : (gpa100) => (gpa100 / 100) * gpa,
+    admissionProfile: profile,
+  };
+}
+
+function getIncheonFormula(
+  year: string,
+  department?: string,
+): ConversionFormula {
+  const profile = getIncheonAdmissionProfile(year, department);
+  if (profile === null) {
+    throw new Error(`지원하지 않는 인천대 연도: ${year}`);
+  }
+
+  const englishWeight = profile.weights.english;
+  const hasEnglishBaseScore = profile.id === "standard";
+  return {
+    confidence: "verified",
+    provenance: "documented-for-year",
+    reverseCalculationMode: "linear",
+    englishSlope: englishWeight === 0 ? 0 : 60 / 990,
+    gpaSlope100: 0,
+    convertEnglish: englishWeight === 0
+      ? null
+      : (toeic) => (toeic / 990) * 60 + (hasEnglishBaseScore ? 60 : 0),
+    convertGpa: null,
+    admissionProfile: profile,
+  };
+}
 
 const CHONNAM: ConversionFormula = {
   confidence: "verified",
@@ -92,107 +152,103 @@ const CHONNAM: ConversionFormula = {
   convertGpa: (gpa100) => (gpa100 / 100) * 200,
 };
 
-const JEONBUK: ConversionFormula = {
-  confidence: "lookup-approximation",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "lookup",
-  englishSlope: 0.0808,
-  gpaSlope100: 0.6,
-  convertEnglish: (toeic) => {
-    const english100 = Math.max(
-      0,
-      Math.min(100, 100 - 0.101 * (990 - toeic))
-    );
-    return english100 * 0.8;
-  },
-  convertGpa: (gpa100) => gpa100 * 0.6,
-};
+function getJeonbukFormula(
+  year: string,
+  department?: string,
+): ConversionFormula {
+  const profile = getJeonbukAdmissionProfile(year, department);
+  if (profile === null) {
+    throw new Error(`지원하지 않는 전북대 연도: ${year}`);
+  }
 
-const CHUNGNAM_2024: ConversionFormula = {
-  confidence: "lookup-approximation",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "lookup",
-  englishSlope: 1 / 20,
-  gpaSlope100: 0.1,
-  convertEnglish: (toeic) => {
-    const interpolated = 20 + (toeic - 385) / 20;
-    return Math.max(20, Math.min(50, interpolated));
-  },
-  convertGpa: (gpa100) => gpa100 * 0.1,
-};
+  const { english, gpa } = profile.weights;
+  return {
+    confidence: "verified",
+    provenance: "documented-for-year",
+    reverseCalculationMode: "lookup",
+    englishSlope: english === 0 ? 0 : 0.101 * english / 100,
+    gpaSlope100: gpa / 100,
+    convertEnglish: english === 0
+      ? null
+      : (toeic) => getJeonbukToeicTableScore(toeic) * english / 100,
+    convertGpa: (gpa100) => gpa100 * gpa / 100,
+    admissionProfile: profile,
+  };
+}
 
-const CHUNGNAM_RECENT: ConversionFormula = {
-  confidence: "lookup-approximation",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "lookup",
-  englishSlope: 1 / 8.33333333,
-  gpaSlope100: 0,
-  convertEnglish: (toeic) => {
-    const interpolated = 60 - (990 - toeic) / 8.33333333;
-    return Math.max(24, Math.min(60, interpolated));
-  },
-  convertGpa: null,
-};
+function getChungnamFormula(
+  year: string,
+  department?: string,
+): ConversionFormula {
+  const profile = getChungnamAdmissionProfile(year, department);
+  if (profile === null) {
+    throw new Error(`지원하지 않는 충남대 연도: ${year}`);
+  }
 
-const CHUNGBUK_STANDARD: ConversionFormula = {
-  confidence: "lookup-approximation",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "lookup",
-  englishSlope: 0.025,
-  gpaSlope100: 0.2,
-  convertEnglish: (toeic) => {
-    const english100 = 50 + (toeic - 587.5) / 8;
-    const interpolated = 10 + Math.max(0, Math.min(100, english100)) * 0.2;
-    return Math.max(10, Math.min(30, interpolated));
-  },
-  convertGpa: (gpa100) => 10 + gpa100 * 0.2,
-};
+  const { english, gpa } = profile.weights;
+  return {
+    confidence: "verified",
+    provenance: "documented-for-year",
+    reverseCalculationMode: "lookup",
+    englishSlope: year === "2024" ? english / 1000 : english / 500,
+    gpaSlope100: gpa / 100,
+    convertEnglish: english === 0
+      ? null
+      : (toeic) => getChungnamToeicTableScore(year, toeic) * english / 100,
+    convertGpa: gpa === 0
+      ? null
+      : (gpa100) => gpa100 * gpa / 100,
+    admissionProfile: profile,
+  };
+}
 
-const CHUNGBUK_2026: ConversionFormula = {
-  confidence: "estimated",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "linear",
-  englishSlope: 0.025,
-  gpaSlope100: 0,
-  convertEnglish: (toeic) => {
-    const english100 = 50 + (toeic - 587.5) / 8;
-    const interpolated = 40 + Math.max(0, Math.min(100, english100)) * 0.2;
-    return Math.max(40, Math.min(60, interpolated));
-  },
-  convertGpa: null,
-};
+function getChungbukFormula(
+  year: string,
+  department?: string,
+): ConversionFormula {
+  const profile = getChungbukAdmissionProfile(year, department);
+  if (profile === null) {
+    throw new Error(`지원하지 않는 충북대 연도: ${year}`);
+  }
 
-type FormulaResolver = (year: string) => ConversionFormula;
+  const gpaWeight = profile.weights.gpa;
+  return {
+    confidence: "verified",
+    provenance: "documented-for-year",
+    reverseCalculationMode: "lookup",
+    englishSlope: 0.025,
+    gpaSlope100: gpaWeight === 0 ? 0 : 0.2,
+    convertEnglish: (toeic) => getChungbukEnglishScore(year, toeic),
+    convertGpa: gpaWeight === 0
+      ? null
+      : (gpa100) => 10 + gpa100 * 0.2,
+    admissionProfile: profile,
+  };
+}
+
+type FormulaResolver = (year: string, department?: string) => ConversionFormula;
 
 const SUPPORTED_YEARS = new Set(["2024", "2025", "2026"]);
-const PUSAN_2024: ConversionFormula = {
-  ...PUSAN,
-  provenance: "assumed-from-other-year",
-};
-const JEONBUK_ASSUMED: ConversionFormula = {
-  ...JEONBUK,
-  provenance: "assumed-from-other-year",
-};
-
 const FORMULA_RESOLVERS: Record<string, FormulaResolver> = {
   강원대학교: (year) => year === "2026" ? GANGWON_2026 : GANGWON_STANDARD,
-  경북대학교: () => KYUNGBUK,
+  경북대학교: getKyungbukFormula,
   부경대학교: () => PUKYONG,
-  부산대학교: (year) => year === "2024" ? PUSAN_2024 : PUSAN,
-  인천대학교: () => INCHEON,
+  부산대학교: getPusanFormula,
+  인천대학교: getIncheonFormula,
   전남대학교: () => CHONNAM,
-  전북대학교: (year) => year === "2026" ? JEONBUK : JEONBUK_ASSUMED,
-  충남대학교: (year) => year === "2024" ? CHUNGNAM_2024 : CHUNGNAM_RECENT,
-  충북대학교: (year) => year === "2026" ? CHUNGBUK_2026 : CHUNGBUK_STANDARD,
+  전북대학교: getJeonbukFormula,
+  충남대학교: getChungnamFormula,
+  충북대학교: getChungbukFormula,
 };
 
 export function getConversionFormula(
   university: string,
-  year: string
+  year: string,
+  department?: string,
 ): ConversionFormula | null {
   if (!SUPPORTED_YEARS.has(year)) {
     return null;
   }
 
-  return FORMULA_RESOLVERS[university]?.(year) ?? null;
+  return FORMULA_RESOLVERS[university]?.(year, department) ?? null;
 }

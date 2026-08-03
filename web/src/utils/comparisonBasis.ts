@@ -55,10 +55,10 @@ export function pickBasisRecord(
     const record = historyByYear.get(comparison.year);
     const formula = record === undefined
       ? null
-      : getConversionFormula(record.대학명, record.연도);
+      : getConversionFormula(record.대학명, record.연도, record.학과);
     const maxIndexSum = formula === null
       ? 0
-      : formula.convertEnglish(990) + (formula.convertGpa?.(100) ?? 0);
+      : (formula.convertEnglish?.(990) ?? 0) + (formula.convertGpa?.(100) ?? 0);
 
     return maxIndexSum > 0 ? diff / maxIndexSum : diff;
   };

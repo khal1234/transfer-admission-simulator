@@ -9,6 +9,8 @@ import {
 } from "react";
 import DepartmentExplorer from "./components/DepartmentExplorer";
 import ChartErrorBoundary from "./components/ChartErrorBoundary";
+import ChungnamGuidelineAudit from "./components/ChungnamGuidelineAudit";
+import JeonbukGuidelineAudit from "./components/JeonbukGuidelineAudit";
 import SpecInputPanel from "./components/SpecInputPanel";
 import TargetBasket, { type TargetSummary } from "./components/TargetBasket";
 import TransferReviewLinks from "./components/TransferReviewLinks";
@@ -80,7 +82,10 @@ import {
 
 // Static database imports validated before use
 import rawStandardData from "./data/편입_성적_통합.json";
-import { TRANSFER_ADMISSION_LINKS } from "./data/admissionLinks";
+import {
+  CHUNGBUK_GUIDELINE_AUDITS,
+  TRANSFER_ADMISSION_LINKS,
+} from "./data/admissionLinks";
 
 const TrendChart = lazy(() => import("./components/TrendChart"));
 
@@ -513,6 +518,7 @@ export default function App() {
             toeic,
             gpa100,
             comparableYearRecord,
+            target.dept,
           ),
         };
       });
@@ -528,7 +534,8 @@ export default function App() {
         referenceRecord.연도,
         toeic,
         gpa100,
-        comparableRecord ?? null
+        comparableRecord ?? null,
+        target.dept,
       );
       const deficit = calculateScoreDeficit(score.diff);
       const analysis = deficit === null
@@ -540,10 +547,12 @@ export default function App() {
           deficit,
           gpaRaw,
           toeic,
+          target.dept,
         );
       const formula = getConversionFormula(
         target.univ,
-        referenceRecord.연도
+        referenceRecord.연도,
+        target.dept,
       );
       const formulaNotices = [
         formula?.provenance === "assumed-from-other-year"
@@ -660,6 +669,44 @@ export default function App() {
                 </a>
               ))}
             </div>
+            <section
+              className="chungbuk-guideline-audit"
+              aria-labelledby="chungbuk-guideline-audit-title"
+            >
+              <div className="chungbuk-guideline-audit-heading">
+                <h2 id="chungbuk-guideline-audit-title">
+                  충북대학교 3개년 모집요강 2차 대조
+                </h2>
+                <span>2026. 8. 1. 2차 원문 확인</span>
+              </div>
+              <div className="chungbuk-guideline-audit-grid">
+                {CHUNGBUK_GUIDELINE_AUDITS.map((audit) => (
+                  <article key={audit.year} className="chungbuk-guideline-audit-card">
+                    <a
+                      href={audit.pdfUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`충북대학교 ${audit.year}학년도 편입학 모집요강 PDF 새 탭에서 열기`}
+                    >
+                      <strong>{audit.year}학년도 PDF</strong>
+                      <span>근거 {audit.sourcePages}</span>
+                      <ExternalLink size={14} aria-hidden="true" />
+                    </a>
+                    <p className="chungbuk-guideline-official">
+                      {audit.officialSummary}
+                    </p>
+                    <p className="chungbuk-guideline-correction-title">
+                      수정된 불일치
+                    </p>
+                    <ul>
+                      {audit.corrections.map((correction) => (
+                        <li key={correction}>{correction}</li>
+                      ))}
+                    </ul>
+                  </article>
+                ))}
+              </div>
+            </section>
           </details>
         </div>
         <div className="header-actions">
@@ -683,6 +730,9 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      <JeonbukGuidelineAudit />
+      <ChungnamGuidelineAudit />
 
       {standardDataIssueCount > 0 && (
         <div className="data-quality-warning" role="status">

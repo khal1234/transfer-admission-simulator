@@ -244,7 +244,7 @@ def extract_chungnam(year):
     """충남대: '일반편입학' 시트. 환산점수만 싣는다(원점수 열 없음).
 
     2024는 전적대학 성적 열이 있고, 2025부터는 그 열 자체가 사라진다
-    (전형에서 빠졌다 — formulaRegistry 의 CHUNGNAM_RECENT 와 일치).
+    (전형에서 빠졌다 — formulaRegistry 의 학과별 충남대 프로필과 일치).
     대학 열은 병합셀이라 이어받는다. 인원 정보는 이 시트에 없다.
     """
     path = DATA_DIR / f"{year[2:]}_충남대_성적.xlsx"

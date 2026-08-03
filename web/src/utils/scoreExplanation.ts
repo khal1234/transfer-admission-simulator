@@ -20,6 +20,7 @@ import {
   type FormulaConfidence,
   type FormulaProvenance,
 } from "./formulaRegistry";
+import { formatAdmissionWeights } from "./admissionProfile";
 import { getGpa100ForInput, getGpaMax, type GpaType } from "./scoreInput";
 
 export type ComponentSource =
@@ -62,6 +63,8 @@ export type FormulaBasis = {
    */
   englishFormulaText: string | null;
   gpaFormulaText: string | null;
+  /** 선택 학과에 실제 적용되는 전체 전형요소별 배점. */
+  admissionProfileText: string | null;
   /** 원문 표기를 확인하지 못했다(대조 실패 또는 원본 없음). */
   documentedFormulaUnverified: boolean;
 };
@@ -96,9 +99,13 @@ function formatScore(value: number | null): string {
  * 판정 기준은 formulaRegistry.sourceParity.test.ts 와 같다 — 만점(990)일 때
  * 나오는 환산점수가 문서의 배점과 같아야 한다. 구간식이든 비례식이든 성립한다.
  */
-function documentedFormulaMatches(univ: string, year: string): boolean {
+function documentedFormulaMatches(
+  univ: string,
+  year: string,
+  department?: string,
+): boolean {
   const doc = documentedFormulas.get(`${univ}|${year}`);
-  const formula = getConversionFormula(univ, year);
+  const formula = getConversionFormula(univ, year, department);
 
   if (doc === undefined || formula === null) {
     return false;
@@ -114,20 +121,33 @@ function documentedFormulaMatches(univ: string, year: string): boolean {
     return false;
   }
 
-  return Math.abs(formula.convertEnglish(MAX_TOEIC) - documentedMax) <= 0.01;
+  return formula.convertEnglish !== null
+    && Math.abs(formula.convertEnglish(MAX_TOEIC) - documentedMax) <= 0.01;
 }
 
 export function getFormulaBasis(
   univ: string,
   year: string,
+  department?: string,
 ): FormulaBasis | null {
-  const formula = getConversionFormula(univ, year);
+  const formula = getConversionFormula(univ, year, department);
   if (formula === null) {
     return null;
   }
 
+  if (formula.admissionProfile !== undefined) {
+    return {
+      confidence: formula.confidence,
+      provenance: formula.provenance,
+      englishFormulaText: formula.admissionProfile.englishFormulaText,
+      gpaFormulaText: formula.admissionProfile.gpaFormulaText,
+      admissionProfileText: `${formatAdmissionWeights(formula.admissionProfile)} · ${formula.admissionProfile.sourcePage}`,
+      documentedFormulaUnverified: false,
+    };
+  }
+
   const doc = documentedFormulas.get(`${univ}|${year}`);
-  const matches = documentedFormulaMatches(univ, year);
+  const matches = documentedFormulaMatches(univ, year, department);
 
   return {
     confidence: formula.confidence,
@@ -137,6 +157,7 @@ export function getFormulaBasis(
       matches && doc && doc.전적대성적_환산공식.공식유형 !== null
         ? doc.전적대성적_환산공식.수식원문
         : null,
+    admissionProfileText: null,
     documentedFormulaUnverified: !matches,
   };
 }
@@ -147,16 +168,24 @@ export function explainMyScore(
   toeic: number | null,
   gpaType: GpaType,
   gpaRaw: number | null,
+  department?: string,
 ): ScoreExplanation | null {
-  const formula = getConversionFormula(univ, year);
+  const formula = getConversionFormula(univ, year, department);
   if (formula === null) {
     return null;
   }
 
   const gpa100 = gpaRaw === null ? null : getGpa100ForInput(gpaType, gpaRaw);
-  const converted = convertRawToConv(univ, year, toeic, gpa100);
+  const converted = convertRawToConv(univ, year, toeic, gpa100, department);
 
-  const english: ScoreComponent = toeic === null
+  const english: ScoreComponent = formula.convertEnglish === null
+    ? {
+      label: "공인영어",
+      value: null,
+      source: "not-reflected",
+      detail: `${year}학년도 ${department ?? "선택 전형"}에서는 공인영어를 반영하지 않습니다`,
+    }
+    : toeic === null
     ? {
       label: "공인영어",
       value: null,
@@ -204,8 +233,8 @@ export function explainMyScore(
 export function explainAcceptedScore(
   record: DepartmentRecord,
 ): AcceptedScoreExplanation | null {
-  const { 대학명: univ, 연도: year } = record;
-  const formula = getConversionFormula(univ, year);
+  const { 대학명: univ, 연도: year, 학과: department } = record;
+  const formula = getConversionFormula(univ, year, department);
   if (formula === null) {
     return null;
   }
@@ -217,7 +246,14 @@ export function explainAcceptedScore(
   const rawEnglish = record.최종합격_토익원점수;
 
   let english: ScoreComponent;
-  if (publishedEnglish !== null) {
+  if (formula.convertEnglish === null) {
+    english = {
+      label: "공인영어",
+      value: null,
+      source: "not-reflected",
+      detail: `${year}학년도 ${department} 전형에서는 공인영어를 반영하지 않습니다`,
+    };
+  } else if (publishedEnglish !== null) {
     english = {
       label: "공인영어",
       value: breakdown.englishConv,
