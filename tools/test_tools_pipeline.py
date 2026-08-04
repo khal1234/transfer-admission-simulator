@@ -13,6 +13,7 @@ sys.path.insert(0, str(TOOLS_DIR))
 
 import apply_fixes  # noqa: E402
 import derive_formulas  # noqa: E402
+import extract_spreadsheets  # noqa: E402
 from data_artifacts import (  # noqa: E402
     EXCEPTION,
     FORMULA,
@@ -43,6 +44,20 @@ def sample_record(university="테스트대학교", year="2026", department="기�
 
 
 class ExtractionFailureTests(unittest.TestCase):
+    def test_pukyong_gpa_column_is_published_converted_score(self):
+        rows = [
+            ["대학명", "모집단위", "모집인원", "지원인원", "등록인원"],
+            ["인문사회과학대학", "국어국문학과", 3, 14, 3, 0, 97.71, 135.33,
+             753.33, 152.19],
+        ]
+        with mock.patch.object(extract_spreadsheets, "read_xlsx_rows", return_value=rows):
+            record = extract_spreadsheets.extract_pukyong("2024")[0]
+
+        self.assertEqual(record["최종합격_학점환산점수"], 97.71)
+        self.assertIsNone(record["최종합격_학점원점수_100점만점"])
+        self.assertEqual(record["최종합격_토익원점수"], 753.33)
+        self.assertEqual(record["최종합격_토익환산점수"], 152.19)
+
     def test_records_and_failures_are_separate_and_only_success_is_covered(self):
         good = lambda year: [make_record("성공대학교", year, "기계공학과")]
 

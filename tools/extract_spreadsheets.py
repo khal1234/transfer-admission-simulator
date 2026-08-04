@@ -137,8 +137,9 @@ def make_record(univ, year, unit, **fields):
 def extract_pukyong(year):
     """부경대: '일반편입 평균성적 현황' 시트.
 
-    원본이 원점수(공인영어성적, TOEIC 해당자)와 환산점수(영어변환성적점수)를
-    모두 싣는 유일한 대학이다. 그래서 두 값의 대조가 순환이 아니다.
+    영어는 원점수(공인영어성적, TOEIC 해당자)와 환산점수
+    (영어변환성적점수)를 모두 싣는다. GPA는 원 백분위가 아니라 모집요강의
+    100점 배점 환산식이 적용된 '전적대학성적점수'만 싣는다.
     """
     path = DATA_DIR / f"{year[2:]}_부경대_성적.xlsx"
     rows = read_xlsx_rows(path, "일반편입 평균성적 현황")
@@ -156,7 +157,7 @@ def extract_pukyong(year):
             모집인원=to_count(cell(row, 2)),
             지원인원=to_count(cell(row, 3)),
             합격인원=to_count(cell(row, 4)),
-            최종합격_학점원점수_100점만점=to_number(cell(row, 6)),
+            최종합격_학점환산점수=to_number(cell(row, 6)),
             최종합격_토익원점수=to_number(cell(row, 8)),
             최종합격_토익환산점수=to_number(cell(row, 9)),
         ))
@@ -326,7 +327,7 @@ EXTRACTORS = [
 
 # 원본이 원점수를 싣는가 — audit_circularity.py 와 같은 사실을 쓴다.
 SOURCE_PUBLISHES = {
-    "부경대학교": {"토익원": True, "토익환산": True, "학점원": True, "학점환산": False},
+    "부경대학교": {"토익원": True, "토익환산": True, "학점원": False, "학점환산": True},
     "경북대학교": {"토익원": False, "토익환산": True, "학점원": False, "학점환산": True},
     "충남대학교": {"토익원": False, "토익환산": True, "학점원": False, "학점환산": None},
     "전북대학교": {"토익원": True, "토익환산": False, "학점원": True, "학점환산": False},

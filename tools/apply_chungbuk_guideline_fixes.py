@@ -1,13 +1,19 @@
-"""충북대 2024~2026 편입학 모집요강 2차 대조 결과를 반영한다.
+"""충북대 2024~2026 편입학 모집요강·공식 결과를 반영한다.
 
 근거 문서(충북대학교 입학정보 공식 첨부 PDF):
   - 2024: PDF 31쪽 배점·영어 환산표, PDF 33쪽 전적대 성적 산식
   - 2025: PDF 27쪽 배점·영어 환산표, PDF 28쪽 전적대 성적 산식
   - 2026: PDF 26쪽 배점·영어 환산표, PDF 31쪽 동점자·전적대 산식
 
-입결 평균값은 바꾸지 않는다. 학과별 공식이 계산 코드에서 지원되므로 기존
-예외 행을 지원 데이터로 복원하고, 산식 설명을 보완한 뒤 results/와
-web/src/data/를 동시에 저장해 JSON/CSV parity를 검증한다.
+근거 문서(충북대학교 입학정보 공식 편입학 결과 PDF):
+  - 2024: 최초합격자 평균성적·선발현황, 게시물 20157
+  - 2025: 최초합격자 평균성적·선발현황, 게시물 21556
+  - 2026: 최초합격자 평균성적·선발현황, 게시물 23570
+
+공식 결과의 150개 공개 성적과 일반편입 선발현황을 전수 대조한다. 학과별 공식이
+계산 코드에서 지원되므로 기존 예외 행을 지원 데이터로 복원하고, 산식 설명과
+확정된 선발현황 누락을 보완한 뒤 results/와 web/src/data/를 동시에 저장해
+JSON/CSV parity를 검증한다.
 """
 
 from __future__ import annotations
@@ -21,6 +27,33 @@ from data_artifacts import EXCEPTION, FORMULA, STANDARD, save_artifact_generatio
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT / "results"
 WEB_DATA_DIR = ROOT / "web" / "src" / "data"
+
+EXPECTED_ROWS_BY_YEAR = {"2024": 57, "2025": 45, "2026": 48}
+EXPECTED_PUBLIC_ENGLISH_BY_YEAR = {"2024": 57, "2025": 45, "2026": 48}
+EXPECTED_PUBLIC_GPA_BY_YEAR = {"2024": 57, "2025": 45, "2026": 0}
+EXPECTED_COUNT_COMPLETENESS = {
+    "모집인원": {"2024": 57, "2025": 45, "2026": 48},
+    "지원인원": {"2024": 57, "2025": 45, "2026": 48},
+    "합격인원": {"2024": 57, "2025": 45, "2026": 47},
+}
+
+# 2025 선발현황은 네 전공을 학부(전공) 형태로 표기하지만 성적표와 저장 데이터는
+# 전공명만 사용한다. 이 이름 차이 때문에 과거 병합에서 인원값이 누락됐다.
+EXPECTED_RESULT_CORRECTIONS = {
+    ("2025", "전자공학전공"): {
+        "모집인원": 7, "지원인원": 52, "합격인원": 7,
+    },
+    ("2025", "반도체공학전공"): {
+        "모집인원": 9, "지원인원": 46, "합격인원": 8,
+    },
+    ("2025", "인공지능전공"): {
+        "모집인원": 7, "지원인원": 34, "합격인원": 7,
+    },
+    ("2025", "소프트웨어전공"): {
+        "모집인원": 7, "지원인원": 48, "합격인원": 7,
+    },
+}
+
 
 def load(name: str) -> list[dict]:
     with (RESULTS_DIR / name).open(encoding="utf-8-sig") as stream:
@@ -112,19 +145,70 @@ def restore_supported_departments(
         standard[insertion_index:insertion_index] = rows
 
 
+def fix_official_result_records(standard: list[dict], changes: list[str]) -> None:
+    for record in standard:
+        if not is_chungbuk(record):
+            continue
+
+        key = (record["연도"], record["학과"])
+        for field, expected in EXPECTED_RESULT_CORRECTIONS.get(key, {}).items():
+            current = record.get(field)
+            if current != expected:
+                record[field] = expected
+                changes.append(
+                    f"{record['연도']} {record['학과']} {field} "
+                    f"{current} → {expected}"
+                )
+
+
 def validate_classification(standard: list[dict], exceptions: list[dict]) -> None:
+    chungbuk = [record for record in standard if is_chungbuk(record)]
     by_year = {
-        year: sum(
-            is_chungbuk(record) and record["연도"] == year
-            for record in standard
-        )
-        for year in ("2024", "2025", "2026")
+        year: [record for record in chungbuk if record["연도"] == year]
+        for year in EXPECTED_ROWS_BY_YEAR
     }
-    if by_year != {"2024": 57, "2025": 45, "2026": 48}:
-        raise RuntimeError(f"충북대 지원 데이터 연도별 건수 불일치: {by_year}")
+    row_counts = {year: len(rows) for year, rows in by_year.items()}
+    if row_counts != EXPECTED_ROWS_BY_YEAR:
+        raise RuntimeError(f"충북대 지원 데이터 연도별 건수 불일치: {row_counts}")
     remaining = [record for record in exceptions if is_chungbuk(record)]
     if remaining:
         raise RuntimeError(f"공식 지원이 끝난 충북대 예외 행이 남음: {len(remaining)}")
+
+    if any(record.get("합격자기준") != "최초" for record in chungbuk):
+        raise RuntimeError("충북대 공개 평균성적의 합격자기준은 모두 최초여야 함")
+
+    public_english = {
+        year: sum(record.get("최종합격_토익환산점수") is not None for record in rows)
+        for year, rows in by_year.items()
+    }
+    if public_english != EXPECTED_PUBLIC_ENGLISH_BY_YEAR:
+        raise RuntimeError(f"충북대 공개 공인영어 평균 행 수 불일치: {public_english}")
+
+    public_gpa = {
+        year: sum(record.get("최종합격_학점환산점수") is not None for record in rows)
+        for year, rows in by_year.items()
+    }
+    if public_gpa != EXPECTED_PUBLIC_GPA_BY_YEAR:
+        raise RuntimeError(f"충북대 공개 전적대 평균 행 수 불일치: {public_gpa}")
+
+    for field, expected in EXPECTED_COUNT_COMPLETENESS.items():
+        actual = {
+            year: sum(record.get(field) is not None for record in rows)
+            for year, rows in by_year.items()
+        }
+        if actual != expected:
+            raise RuntimeError(f"충북대 {field} 공개 행 수 불일치: {actual}")
+
+    by_key = {(record["연도"], record["학과"]): record for record in chungbuk}
+    for key, expected_fields in EXPECTED_RESULT_CORRECTIONS.items():
+        record = by_key.get(key, {})
+        for field, expected in expected_fields.items():
+            actual = record.get(field)
+            if actual != expected:
+                raise RuntimeError(
+                    f"충북대 공식 입시결과 정정값 검증 실패: "
+                    f"{key} {field} {actual} != {expected}"
+                )
 
 
 def main() -> int:
@@ -135,9 +219,10 @@ def main() -> int:
 
     fix_formula_records(formulas, changes)
     restore_supported_departments(standard, exceptions, changes)
+    fix_official_result_records(standard, changes)
     validate_classification(standard, exceptions)
 
-    print(f"=== 충북대 모집요강 2차 수정 {len(changes)}건 ===")
+    print(f"=== 충북대 모집요강·공식 결과 수정 {len(changes)}건 ===")
     for change in changes:
         print(" -", change)
 

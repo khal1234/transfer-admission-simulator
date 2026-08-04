@@ -1,4 +1,4 @@
-"""강원대 2024~2026 모집요강·입시결과 3차 검증 결과를 반영한다.
+"""강원대 2024~2026 모집요강·입시결과 4차 검증 결과를 반영한다.
 
 근거 문서(강원대학교 입학처 공식 첨부, 춘천캠퍼스):
   - 2024 모집요강 PDF 13·18·19쪽, 입시결과 PDF 1~2쪽
@@ -8,7 +8,8 @@
 학과별 프로필을 계산 코드에서 지원하므로 기존 예외 22행을 복원한다. 3차에서
 새로 확인된 2026 면접·실기 점수의 GPA 필드 오배치 7개, 건축학과 원문명 3개,
 2026의 노후화된 추정식 비고도 함께 정정한다. 복수 전적대 계산은 이번 범위에서
-지원하지 않는다.
+지원하지 않는다. 4차에서 공식 입시결과 256행을 다시 전수 대조했으며 저장값
+불일치는 없었다. 연도별 행 수와 공개 필드 수를 검증해 이후 회귀를 차단한다.
 """
 
 from __future__ import annotations
@@ -27,6 +28,36 @@ SOURCE_PAGES = {
     "2024": "13·18·19",
     "2025": "13·14",
     "2026": "13·14·15",
+}
+
+EXPECTED_PUBLIC_COUNTS = {
+    "2024": {
+        "모집인원": 85,
+        "지원인원": 85,
+        "합격인원": 85,
+        "최종합격_토익환산점수": 65,
+        "최종합격_토익원점수": 65,
+        "최종합격_학점환산점수": 65,
+        "최종합격_학점원점수_100점만점": 65,
+    },
+    "2025": {
+        "모집인원": 86,
+        "지원인원": 84,
+        "합격인원": 74,
+        "최종합격_토익환산점수": 59,
+        "최종합격_토익원점수": 59,
+        "최종합격_학점환산점수": 58,
+        "최종합격_학점원점수_100점만점": 58,
+    },
+    "2026": {
+        "모집인원": 85,
+        "지원인원": 85,
+        "합격인원": 85,
+        "최종합격_토익환산점수": 0,
+        "최종합격_토익원점수": 64,
+        "최종합격_학점환산점수": 0,
+        "최종합격_학점원점수_100점만점": 2,
+    },
 }
 
 MISPLACED_2026 = {
@@ -234,6 +265,19 @@ def validate(standard: list[dict], exceptions: list[dict]) -> None:
         if is_gangwon(record)
     ):
         raise RuntimeError("강원대 확인 완료된 추정식 비고가 남음")
+    gangwon = [record for record in standard if is_gangwon(record)]
+    if any(record.get("합격자기준") != "최초" for record in gangwon):
+        raise RuntimeError("강원대 공개 평균은 모두 최초합격자 기준이어야 함")
+    for year, expected in EXPECTED_PUBLIC_COUNTS.items():
+        rows = [record for record in gangwon if record["연도"] == year]
+        actual = {
+            field: sum(record.get(field) is not None for record in rows)
+            for field in expected
+        }
+        if actual != expected:
+            raise RuntimeError(
+                f"강원대 {year} 공식 공개 필드 수 불일치: {actual}"
+            )
 
 
 def main() -> int:

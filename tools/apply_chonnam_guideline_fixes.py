@@ -6,9 +6,10 @@
   - 2026 모집요강 PDF 12·13·38쪽, 결과 PDF 1~6쪽
 
 학과별 전형 프로필을 계산 코드에서 지원하므로 전남대 예외 행을 지원 데이터로
-복원한다. 3차 원본 대조에서 새로 확인한 2024 공개 점수 11필드와 비공개
-등록자수 11필드도 공식 결과표에 맞춘다. results/와 web/src/data/를 동시에
-저장하고 JSON/CSV parity를 검증한다.
+복원한다. 3차 원본 대조에서 확인한 2024 공개 점수 11필드와 결과표의 빈
+등록자수 10필드를 유지하고, 2024·2025에서 누락된 등록자수 1건씩을 복원한다.
+세 결과 PDF가 모두 등록자 기준임을 명시하므로 합격자기준은 최종으로 통일한다.
+results/와 web/src/data/를 동시에 저장하고 JSON/CSV parity를 검증한다.
 """
 
 from __future__ import annotations
@@ -41,18 +42,22 @@ OFFICIAL_2024_SCORE_CORRECTIONS: dict[str, dict[str, float]] = {
     "해양경찰학과": {"최종합격_학점원점수_100점만점": 83.1},
 }
 
-OFFICIAL_2024_UNDISCLOSED_ACCEPTED = {
+OFFICIAL_2024_BLANK_REGISTERED = {
     "냉동공조공학과",
     "문화관광경영학과",
     "석유화학소재공학과",
     "양식생물학과",
-    "역사교육과",
     "의공학과",
     "전기및반도체공학전공",
     "지질환경전공",
     "컴퓨터공학전공",
     "헬스케어메디컬공학부",
     "화공안전전공",
+}
+
+OFFICIAL_REGISTERED_CORRECTIONS = {
+    ("2024", "역사교육과"): 1,
+    ("2025", "한국화전공"): 1,
 }
 
 
@@ -123,24 +128,38 @@ def fix_formula_records(formulas: list[dict], changes: list[str]) -> None:
             changes.append(f"환산공식 {year} 전적대 처리 규칙 추가")
 
 
-def fix_2024_official_results(
+def fix_official_results(
     standard: list[dict], exceptions: list[dict], changes: list[str]
 ) -> None:
     records = [
         record
         for record in [*standard, *exceptions]
-        if is_chonnam(record) and record["연도"] == "2024"
+        if is_chonnam(record)
     ]
-    by_department = {record["학과"]: record for record in records}
+    by_key = {(record["연도"], record["학과"]): record for record in records}
+    by_2024_department = {
+        department: record
+        for (year, department), record in by_key.items()
+        if year == "2024"
+    }
 
     required = set(OFFICIAL_2024_SCORE_CORRECTIONS)
-    required.update(OFFICIAL_2024_UNDISCLOSED_ACCEPTED)
-    missing = sorted(required - set(by_department))
+    required.update(OFFICIAL_2024_BLANK_REGISTERED)
+    missing = sorted(required - set(by_2024_department))
     if missing:
         raise RuntimeError(f"전남대 2024 공식 결과 정정 대상 누락: {missing}")
+    missing_keys = sorted(set(OFFICIAL_REGISTERED_CORRECTIONS) - set(by_key))
+    if missing_keys:
+        raise RuntimeError(f"전남대 공식 등록자수 정정 대상 누락: {missing_keys}")
+
+    for record in records:
+        if record.get("합격자기준") == "최종":
+            continue
+        record["합격자기준"] = "최종"
+        changes.append(f"{record['연도']} {record['학과']} 합격자기준 → 최종")
 
     for department, corrections in OFFICIAL_2024_SCORE_CORRECTIONS.items():
-        record = by_department[department]
+        record = by_2024_department[department]
         for field, expected in corrections.items():
             if record.get(field) == expected:
                 continue
@@ -148,13 +167,23 @@ def fix_2024_official_results(
             record[field] = expected
             changes.append(f"2024 {department} {field} {previous} → {expected}")
 
-    for department in sorted(OFFICIAL_2024_UNDISCLOSED_ACCEPTED):
-        record = by_department[department]
+    for department in sorted(OFFICIAL_2024_BLANK_REGISTERED):
+        record = by_2024_department[department]
         if record.get("합격인원") is None:
             continue
         previous = record.get("합격인원")
         record["합격인원"] = None
-        changes.append(f"2024 {department} 비공개 합격인원 {previous} → null")
+        changes.append(f"2024 {department} 빈 등록자수 {previous} → null")
+
+    for key, expected in OFFICIAL_REGISTERED_CORRECTIONS.items():
+        record = by_key[key]
+        if record.get("합격인원") == expected:
+            continue
+        previous = record.get("합격인원")
+        record["합격인원"] = expected
+        changes.append(
+            f"{key[0]} {key[1]} 등록자수 {previous} → {expected}"
+        )
 
 
 def restore_supported_departments(
@@ -202,6 +231,20 @@ def validate(standard: list[dict], exceptions: list[dict]) -> None:
     remaining = [record for record in exceptions if is_chonnam(record)]
     if remaining:
         raise RuntimeError(f"공식 지원이 끝난 전남대 예외 행이 남음: {len(remaining)}")
+    chonnam = [record for record in standard if is_chonnam(record)]
+    if any(record.get("합격자기준") != "최종" for record in chonnam):
+        raise RuntimeError("전남대 등록자 평균의 합격자기준은 모두 최종이어야 함")
+    for key, expected in OFFICIAL_REGISTERED_CORRECTIONS.items():
+        record = next(
+            record
+            for record in chonnam
+            if (record["연도"], record["학과"]) == key
+        )
+        if record.get("합격인원") != expected:
+            raise RuntimeError(
+                f"전남대 {key[0]} {key[1]} 등록자수 불일치: "
+                f"{record.get('합격인원')}"
+            )
 
 
 def main() -> int:
@@ -211,7 +254,7 @@ def main() -> int:
     changes: list[str] = []
 
     fix_formula_records(formulas, changes)
-    fix_2024_official_results(standard, exceptions, changes)
+    fix_official_results(standard, exceptions, changes)
     restore_supported_departments(standard, exceptions, changes)
     validate(standard, exceptions)
 

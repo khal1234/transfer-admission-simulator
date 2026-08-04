@@ -1,4 +1,4 @@
-"""경북대 2024~2026 편입학 학과별 배점과 TOEIC 역산 오류를 반영한다.
+"""경북대 2024~2026 편입학 공식 입시결과와 학과별 배점을 반영한다.
 
 근거 문서(경북대학교 입학처 공식 일반편입 모집요강):
   - 2024: PDF 16~17쪽(책자 15~16쪽)
@@ -9,7 +9,8 @@
 영어50+전적대50+면접50+실기100, 체능계는
 영어50+전적대50+면접100+실기50이다. 학과별 공식이 코드에서 지원되므로
 기존 예외 행을 지원 데이터로 복원하고, 50점 배점을 100점으로 잘못 역산한
-TOEIC 원점수 8건을 정정한다.
+TOEIC 원점수 8건을 정정한다. 공식 입학자 평균성적 원문과의 전수 대조 결과에
+따라 누락 원점수 6건, 표시값 오류 2건, 입학자 기준 254건도 함께 정정한다.
 """
 
 from __future__ import annotations
@@ -49,6 +50,29 @@ EXPECTED_TOEIC_CORRECTIONS = {
     ("2026", "체육교육과"): 792.59,
     ("2026", "체육학부(건강운동관리전공)"): 432.63,
     ("2026", "디자인학과"): 811.80,
+}
+
+# 공식 입학자 평균성적 첨부 원문:
+# 2024: file_no=4602(XLSX), file_no=4603(PDF)
+# 2025: file_no=4854(XLSX, 파일명에 "최종" 명시)
+# 2026: file_no=4989(XLSX, 합격자와 최종등록자를 별도 표기)
+EXPECTED_RESULT_CORRECTIONS = {
+    ("2024", "농업토목ㆍ생물산업공학부(농업토목공학전공)"): {
+        "최종합격_토익원점수": 714.98,
+        "최종합격_학점원점수_100점만점": 85.05,
+    },
+    ("2024", "농업토목ㆍ생물산업공학부(생물산업기계공학전공)"): {
+        "최종합격_토익원점수": 518.36,
+        "최종합격_학점원점수_100점만점": 88.0,
+    },
+    ("2025", "생물학과"): {
+        "최종합격_토익원점수": 876.64,
+        "최종합격_학점원점수_100점만점": 93.1,
+    },
+    ("2025", "생물교육과"): {
+        "최종합격_토익환산점수": 97.48,
+        "최종합격_토익원점수": 965.05,
+    },
 }
 
 
@@ -149,6 +173,24 @@ def fix_toeic_reverse_calculations(
             changes.append(f"{record['연도']} {record['학과']} TOEIC {current} → {expected}")
 
 
+def fix_official_result_records(standard: list[dict], changes: list[str]) -> None:
+    for record in standard:
+        if not is_kyungbuk(record):
+            continue
+
+        key = (record["연도"], record["학과"])
+        for field, expected in EXPECTED_RESULT_CORRECTIONS.get(key, {}).items():
+            current = record.get(field)
+            if current != expected:
+                record[field] = expected
+                changes.append(f"{record['연도']} {record['학과']} {field} {current} → {expected}")
+
+        # 2024·2025는 입학인원, 2026은 최종등록자를 기준으로 평균성적을 공개했다.
+        if record.get("합격자기준") != "최종":
+            record["합격자기준"] = "최종"
+            changes.append(f"{record['연도']} {record['학과']} 합격자기준 → 최종")
+
+
 def fix_formula_records(formulas: list[dict], changes: list[str]) -> None:
     gpa_description = (
         "전적대 1곳은 100점 만점 평균점수를 사용. 전적대 2곳 이상은 "
@@ -183,11 +225,28 @@ def validate(standard: list[dict], exceptions: list[dict]) -> None:
     if kyungbuk_exceptions:
         raise RuntimeError(f"공식 지원이 끝난 경북대 예외 행이 남음: {len(kyungbuk_exceptions)}")
 
+    counts_by_year = {
+        year: sum(record["연도"] == year for record in kyungbuk_standard)
+        for year in ("2024", "2025", "2026")
+    }
+    if counts_by_year != {"2024": 76, "2025": 73, "2026": 105}:
+        raise RuntimeError(f"경북대 연도별 결과 행 수 불일치: {counts_by_year}")
+    if any(record.get("합격자기준") != "최종" for record in kyungbuk_standard):
+        raise RuntimeError("경북대 입학자 평균성적의 합격자기준은 모두 최종이어야 함")
+
     by_key = {(record["연도"], record["학과"]): record for record in kyungbuk_standard}
     for key, expected in EXPECTED_TOEIC_CORRECTIONS.items():
         actual = by_key.get(key, {}).get("최종합격_토익원점수")
         if actual != expected:
             raise RuntimeError(f"경북대 TOEIC 정정값 검증 실패: {key} {actual} != {expected}")
+    for key, expected_fields in EXPECTED_RESULT_CORRECTIONS.items():
+        record = by_key.get(key, {})
+        for field, expected in expected_fields.items():
+            actual = record.get(field)
+            if actual != expected:
+                raise RuntimeError(
+                    f"경북대 공식 입시결과 정정값 검증 실패: {key} {field} {actual} != {expected}"
+                )
 
 
 def main() -> int:
@@ -198,6 +257,7 @@ def main() -> int:
 
     restore_supported_departments(standard, exceptions, changes)
     fix_toeic_reverse_calculations(standard, changes)
+    fix_official_result_records(standard, changes)
     fix_formula_records(formulas, changes)
     validate(standard, exceptions)
 
