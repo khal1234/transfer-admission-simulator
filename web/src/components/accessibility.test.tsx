@@ -4,6 +4,11 @@ import DepartmentExplorer from "./DepartmentExplorer";
 import SpecInputPanel from "./SpecInputPanel";
 import TransferReviewLinks from "./TransferReviewLinks";
 import TrendChart from "./TrendChart";
+import UpdateNotice from "./UpdateNotice";
+import {
+  UPDATE_ITEMS,
+  UPDATE_NOTICE_DATE,
+} from "./updateNoticeContent";
 import { focusElement } from "../utils/focusManagement";
 import type { DepartmentRecord } from "../utils/converter";
 import { getDepartmentGroupKey } from "../utils/departmentSearch";
@@ -85,6 +90,18 @@ describe("component accessibility contracts", () => {
 
     expect(chart).toContain('data-chart-initial-focus="true"');
     expect(chart).toContain('aria-label="차트 지표 선택"');
+  });
+
+  it("publishes the latest simulator fixes in the update notice", () => {
+    const notice = renderToStaticMarkup(<UpdateNotice />);
+
+    expect(notice).toContain("업데이트 알림");
+    expect(notice).toContain('aria-haspopup="dialog"');
+    expect(UPDATE_NOTICE_DATE.iso).toBe("2026-08-04");
+    expect(UPDATE_ITEMS[0]).toContain("업데이트 알림");
+    expect(UPDATE_ITEMS[1]).toContain("지망 목록");
+    expect(UPDATE_ITEMS[2]).toContain("제외 기록");
+    expect(UPDATE_ITEMS[3]).toContain("로딩 부담");
   });
 });
 
