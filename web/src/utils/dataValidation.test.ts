@@ -70,6 +70,13 @@ describe("department data validation", () => {
     expect(exceptions.affectedRecordCount).toBe(0);
   });
 
+  it("reuses valid records instead of cloning every row during startup", () => {
+    const prepared = prepareDepartmentRecords([preparableRecord]);
+
+    expect(prepared.records[0]).toBe(preparableRecord);
+    expect(prepared.issues).toEqual([]);
+  });
+
   it("keeps Chungbuk special units selectable after profile support", () => {
     const standardKeys = new Set(
       rawStandardData.map((record) => `${record.대학명}|${record.연도}|${record.학과}`),

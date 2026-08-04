@@ -265,7 +265,10 @@ export function filterDepartmentSearchIndex(
 ): DepartmentRecord[] {
   const normalizedQuery = normalizeSearchText(searchQuery);
   const isChosungOnly = /^[ㄱ-ㅎ\s]+$/.test(searchQuery);
-  const aliasTargets = isChosungOnly ? [] : resolveDepartmentAliases(normalizedQuery);
+  const queryJamo = decomposeToJamo(normalizedQuery);
+  const aliasTargets = normalizedQuery === "" || isChosungOnly
+    ? []
+    : resolveDepartmentAliases(normalizedQuery);
 
   const matched = searchableRecords.flatMap((searchable) => {
     if (
@@ -281,8 +284,6 @@ export function filterDepartmentSearchIndex(
 
     // 자모로 편 비교는 글자 단위 비교를 포함한다('기계'가 걸리면 'ㄱㅣㄱㅖ'도
     // 걸린다). 그래서 글자 비교는 따로 두지 않고 자모 비교로 대신한다.
-    const queryJamo = decomposeToJamo(normalizedQuery);
-
     const matches = isChosungOnly
       ? searchable.departmentChosung.includes(normalizedQuery)
         || searchable.originalDepartmentChosung.includes(normalizedQuery)
@@ -306,7 +307,6 @@ export function filterDepartmentSearchIndex(
         return [];
       }
 
-      const queryJamo = decomposeToJamo(normalizedQuery);
       return fuzzyJamoIncludes(searchable.departmentJamo, queryJamo)
         || fuzzyJamoIncludes(searchable.originalDepartmentJamo, queryJamo)
         ? [searchable.record]
