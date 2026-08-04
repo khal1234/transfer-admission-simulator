@@ -196,8 +196,10 @@ class FormulaAuditTests(unittest.TestCase):
             max_res,
         )
 
-        self.assertAlmostEqual(r2, 0.9873, places=4)
-        self.assertAlmostEqual(max_res, 12.771, places=3)
+        # 실기형(영어 100점)까지 지원 데이터로 복원했으므로 대표 200점식에
+        # 전체 학과를 한꺼번에 맞추면 혼합 프로필이 더 분명하게 드러난다.
+        self.assertAlmostEqual(r2, 0.7736, places=4)
+        self.assertAlmostEqual(max_res, 66.069, places=3)
         self.assertTrue(conflict)
         self.assertIn("비선형/혼합 의심", verdict)
         self.assertNotIn("일치", verdict)

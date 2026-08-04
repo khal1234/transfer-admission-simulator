@@ -49,19 +49,24 @@ describe("department data validation", () => {
   // 인천대는 표준·실기·운동건강·면접전용 프로필을 지원해 예외 16건을
   // 복원하고, 2026 스포츠과학부·체육교육과에도 공인영어 미반영식을 적용했다.
   // 충북대는 표준·전공필기·실기 프로필을 지원해 예외 11건을 복원했다.
+  // 전남대는 표준·수의·약학·예체능·여수·간호·디자인 프로필을 지원해
+  // 예외 136건을 복원하고, 2024 공식 결과와 다른 22필드를 정정했다.
+  // 부경대는 면접·비면접·실기·미래융합 프로필을 지원해 예외 20건을 복원하고,
+  // 2024 미래융합 4개 행을 추가했으며 공개 환산점수에서 GPA 백분위를 역산했다.
+  // 강원대는 일반·간호·수의·약학·예체능·농업·생태조경 프로필을 지원해
+  // 남아 있던 예외 22건을 모두 계산 대상으로 복원했다.
   it("accepts the current generated datasets", () => {
-    // 충북대 11행과 전북대 23행은 학과별 공식 지원 후 계산 대상으로 복원했다.
-    expect(validateDepartmentRecords(rawStandardData)).toHaveLength(2012);
-    expect(validateExceptionDepartmentRecords(rawExceptionData)).toHaveLength(178);
+    expect(validateDepartmentRecords(rawStandardData)).toHaveLength(2194);
+    expect(validateExceptionDepartmentRecords(rawExceptionData)).toHaveLength(0);
   });
 
   it("quarantines or normalizes semantic anomalies in current datasets", () => {
     const standard = prepareDepartmentRecords(rawStandardData);
     const exceptions = prepareExceptionDepartmentRecords(rawExceptionData);
 
-    expect(standard.records).toHaveLength(2012);
+    expect(standard.records).toHaveLength(2194);
     expect(standard.affectedRecordCount).toBe(0);
-    expect(exceptions.records).toHaveLength(178);
+    expect(exceptions.records).toHaveLength(0);
     expect(exceptions.affectedRecordCount).toBe(0);
   });
 
@@ -70,7 +75,8 @@ describe("department data validation", () => {
       rawStandardData.map((record) => `${record.대학명}|${record.연도}|${record.학과}`),
     );
     const exceptionKeys = new Set(
-      rawExceptionData.map((record) => `${record.대학명}|${record.연도}|${record.학과}`),
+      (rawExceptionData as Array<{ 대학명: string; 연도: string; 학과: string }>)
+        .map((record) => `${record.대학명}|${record.연도}|${record.학과}`),
     );
 
     expect(standardKeys).toContain("충북대학교|2026|약학과");

@@ -40,10 +40,11 @@ const TOEIC_DISCLOSURE: Record<string, RawScoreDisclosure> = {
 
 /**
  * 원본이 전적대 백분위를 싣지 않는 대학.
- * 학점 환산식은 세 곳 모두 비례식이라 되짚기가 정확하다.
+ * 학점 환산식은 모두 선형식이라 되짚기가 정확하다.
  */
 const GPA_DISCLOSURE: Record<string, RawScoreDisclosure> = {
   경북대학교: "derived-exact",
+  부경대학교: "derived-exact",
   충남대학교: "derived-exact",
   충북대학교: "derived-exact",
 };
@@ -62,7 +63,7 @@ const NOTES: Record<RawScoreDisclosure, Omit<DisclosureNote, "disclosure">> = {
     marker: "환산 역산",
     description:
       "이 대학은 환산점수만 공개합니다. 표시된 원점수는 환산식을 되짚어 계산한 "
-      + "값이며, 환산식이 비례식이라 값 자체는 정확합니다.",
+      + "값이며, 역산 가능한 선형식이라 값 자체는 정확합니다.",
   },
   "derived-approximate": {
     marker: "환산 역산(근사)",

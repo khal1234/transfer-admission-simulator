@@ -1,4 +1,7 @@
-import { getConversionFormula } from "./formulaRegistry";
+import {
+  getConversionFormula,
+  type ConversionFormula,
+} from "./formulaRegistry";
 
 export interface DepartmentRecord {
   대학명: string;
@@ -61,6 +64,22 @@ export function calculateScoreDeficit(diff: number | null): number | null {
   return diff === null ? null : Math.max(0, -diff);
 }
 
+function normalizeScore(
+  score: number | null,
+  formula: ConversionFormula | null,
+): number | null {
+  if (score === null) return null;
+  const precision = formula?.scorePrecision ?? {
+    mode: "round" as const,
+    decimalPlaces: 2,
+  };
+  const factor = 10 ** precision.decimalPlaces;
+  if (precision.mode === "truncate") {
+    return Math.trunc((score + Number.EPSILON * factor) * factor) / factor;
+  }
+  return Math.round(score * factor) / factor;
+}
+
 /**
  * FLAT HELPER FUNCTION (ZERO RECURSION)
  * Converts raw TOEIC and GPA into university-specific converted scores.
@@ -88,9 +107,8 @@ export function convertRawToConv(
     }
   }
 
-  // Round converted results to 2 decimal places
-  if (englishConv !== null) englishConv = Math.round(englishConv * 100) / 100;
-  if (gpaConv !== null) gpaConv = Math.round(gpaConv * 100) / 100;
+  englishConv = normalizeScore(englishConv, formula);
+  gpaConv = normalizeScore(gpaConv, formula);
 
   let indexSum: number | null = null;
   if (formula !== null) {
@@ -103,17 +121,9 @@ export function convertRawToConv(
     }
   }
 
-  if (indexSum !== null) indexSum = Math.round(indexSum * 100) / 100;
+  indexSum = normalizeScore(indexSum, formula);
 
   return { englishConv, gpaConv, indexSum };
-}
-
-function roundScore(score: number | null): number | null {
-  if (score === null) {
-    return null;
-  }
-
-  return Math.round(score * 100) / 100;
 }
 
 function usesEnglishOnly(univ: string, year: string, department: string): boolean {
@@ -131,13 +141,14 @@ export function calculateAcceptedScoreBreakdown(
   const rawGpa = acceptedRecord.최종합격_학점원점수_100점만점;
 
   if (usesEnglishOnly(univ, year, department)) {
+    const formula = getConversionFormula(univ, year, department);
     const englishConv =
       convEng ?? convertRawToConv(univ, year, rawEng, null, department).englishConv;
 
     return {
-      englishConv: roundScore(englishConv),
+      englishConv: normalizeScore(englishConv, formula),
       gpaConv: null,
-      indexSum: roundScore(englishConv),
+      indexSum: normalizeScore(englishConv, formula),
     };
   }
 
@@ -168,9 +179,9 @@ export function calculateAcceptedScoreBreakdown(
   }
 
   return {
-    englishConv: roundScore(englishConv),
-    gpaConv: roundScore(gpaConv),
-    indexSum: roundScore(indexSum),
+    englishConv: normalizeScore(englishConv, formula),
+    gpaConv: normalizeScore(gpaConv, formula),
+    indexSum: normalizeScore(indexSum, formula),
   };
 }
 

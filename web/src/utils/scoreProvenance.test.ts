@@ -41,8 +41,13 @@ describe("getToeicDisclosure", () => {
 });
 
 describe("getGpaDisclosure", () => {
-  it("marks derived GPA as exact because every such formula is proportional", () => {
-    for (const university of ["경북대학교", "충남대학교", "충북대학교"]) {
+  it("marks derived GPA as exact because every such formula is reversible", () => {
+    for (const university of [
+      "경북대학교",
+      "부경대학교",
+      "충남대학교",
+      "충북대학교",
+    ]) {
       expect(getGpaDisclosure(university).disclosure).toBe("derived-exact");
     }
   });

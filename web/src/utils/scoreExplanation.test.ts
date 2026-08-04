@@ -243,6 +243,23 @@ describe("getFormulaBasis", () => {
     expect(hanok2026?.admissionProfileText).toContain("전적대성적 100점");
   });
 
+  it("shows Chonnam's year-and-department-specific weights", () => {
+    const veterinary2024 = getFormulaBasis("전남대학교", "2024", "수의학과");
+    const veterinary2026 = getFormulaBasis("전남대학교", "2026", "수의학과");
+    const nursing2026 = getFormulaBasis("전남대학교", "2026", "간호학과");
+    const theory2025 = getFormulaBasis("전남대학교", "2025", "이론전공");
+    const yeosu2026 = getFormulaBasis("전남대학교", "2026", "건축디자인학과");
+
+    expect(veterinary2024?.admissionProfileText).toContain("1단계 4배수");
+    expect(veterinary2024?.admissionProfileText).toContain("공인영어 400점");
+    expect(veterinary2026?.admissionProfileText).toContain("공인영어 300점");
+    expect(veterinary2026?.admissionProfileText).toContain("지필고사 300점");
+    expect(nursing2026?.admissionProfileText).toContain("지필고사 400점");
+    expect(theory2025?.admissionProfileText).toContain("광주캠퍼스 표준형");
+    expect(yeosu2026?.englishFormulaText).toBeNull();
+    expect(yeosu2026?.admissionProfileText).toContain("전적대성적 600점");
+  });
+
   it("returns null for an unsupported university or year", () => {
     expect(getFormulaBasis("없는대학교", "2026")).toBeNull();
     expect(getFormulaBasis("경북대학교", "2023")).toBeNull();

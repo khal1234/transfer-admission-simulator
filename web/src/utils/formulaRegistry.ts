@@ -16,6 +16,9 @@ import {
   getJeonbukAdmissionProfile,
   getJeonbukToeicTableScore,
 } from "./jeonbukFormulaProfiles";
+import { getChonnamAdmissionProfile } from "./chonnamFormulaProfiles";
+import { getPukyongAdmissionProfile } from "./pukyongFormulaProfiles";
+import { getGangwonAdmissionProfile } from "./gangwonFormulaProfiles";
 
 export type FormulaConfidence =
   | "verified"
@@ -28,6 +31,11 @@ export type FormulaProvenance =
 
 export type ReverseCalculationMode = "linear" | "lookup";
 
+export type ScorePrecision = {
+  mode: "round" | "truncate";
+  decimalPlaces: number;
+};
+
 export type ConversionFormula = {
   confidence: FormulaConfidence;
   provenance: FormulaProvenance;
@@ -37,30 +45,34 @@ export type ConversionFormula = {
   convertEnglish: ((toeic: number) => number) | null;
   convertGpa: ((gpa100: number) => number) | null;
   admissionProfile?: AdmissionProfile;
+  scorePrecision?: ScorePrecision;
 };
 
-const GANGWON_STANDARD: ConversionFormula = {
-  confidence: "verified",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "linear",
-  englishSlope: 100 / 990,
-  gpaSlope100: 0.75,
-  convertEnglish: (toeic) => (toeic / 990) * 100,
-  convertGpa: (gpa100) => gpa100 * 0.75,
-};
+function getGangwonFormula(
+  year: string,
+  department?: string,
+): ConversionFormula {
+  const profile = getGangwonAdmissionProfile(year, department);
+  if (profile === null) {
+    throw new Error(`지원하지 않는 강원대 연도: ${year}`);
+  }
 
-// 26_강원대_모집요강.pdf 13쪽 전형요소별 배점표로 확인했다.
-// 일반/학사 전체 모집단위: 공인영어 150점(60%) + 면접 100점(40%) = 250점,
-// 전적대학성적 미반영. 추정으로 두었던 배율이 원문과 일치했다.
-const GANGWON_2026: ConversionFormula = {
-  confidence: "verified",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "linear",
-  englishSlope: 150 / 990,
-  gpaSlope100: 0,
-  convertEnglish: (toeic) => (toeic / 990) * 150,
-  convertGpa: null,
-};
+  const { english, gpa } = profile.weights;
+  return {
+    confidence: "verified",
+    provenance: "documented-for-year",
+    reverseCalculationMode: "linear",
+    englishSlope: english / 990,
+    gpaSlope100: gpa / 100,
+    convertEnglish: english === 0
+      ? null
+      : (toeic) => (toeic / 990) * english,
+    convertGpa: gpa === 0
+      ? null
+      : (gpa100) => (gpa100 / 100) * gpa,
+    admissionProfile: profile,
+  };
+}
 
 function getKyungbukFormula(
   year: string,
@@ -84,15 +96,30 @@ function getKyungbukFormula(
   };
 }
 
-const PUKYONG: ConversionFormula = {
-  confidence: "verified",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "linear",
-  englishSlope: 200 / 990,
-  gpaSlope100: 1,
-  convertEnglish: (toeic) => (toeic / 990) * 200,
-  convertGpa: (gpa100) => gpa100,
-};
+function getPukyongFormula(
+  year: string,
+  department?: string,
+): ConversionFormula {
+  const profile = getPukyongAdmissionProfile(year, department);
+  if (profile === null) {
+    throw new Error(`지원하지 않는 부경대 연도: ${year}`);
+  }
+
+  const englishWeight = profile.weights.english;
+  return {
+    confidence: "verified",
+    provenance: "documented-for-year",
+    reverseCalculationMode: "linear",
+    englishSlope: englishWeight / 990,
+    gpaSlope100: 0.4,
+    convertEnglish: englishWeight === 0
+      ? null
+      : (toeic) => (toeic / 990) * englishWeight,
+    convertGpa: (gpa100) => 60 + 0.4 * gpa100,
+    admissionProfile: profile,
+    scorePrecision: { mode: "truncate", decimalPlaces: 4 },
+  };
+}
 
 function getPusanFormula(year: string, department?: string): ConversionFormula {
   const profile = getPusanAdmissionProfile(year, department);
@@ -142,15 +169,29 @@ function getIncheonFormula(
   };
 }
 
-const CHONNAM: ConversionFormula = {
-  confidence: "verified",
-  provenance: "documented-for-year",
-  reverseCalculationMode: "linear",
-  englishSlope: 400 / 990,
-  gpaSlope100: 2,
-  convertEnglish: (toeic) => (toeic / 990) * 400,
-  convertGpa: (gpa100) => (gpa100 / 100) * 200,
-};
+function getChonnamFormula(
+  year: string,
+  department?: string,
+): ConversionFormula {
+  const profile = getChonnamAdmissionProfile(year, department);
+  if (profile === null) {
+    throw new Error(`지원하지 않는 전남대 연도: ${year}`);
+  }
+
+  const { english, gpa } = profile.weights;
+  return {
+    confidence: "verified",
+    provenance: "documented-for-year",
+    reverseCalculationMode: "linear",
+    englishSlope: english / 990,
+    gpaSlope100: gpa / 100,
+    convertEnglish: english === 0
+      ? null
+      : (toeic) => (toeic / 990) * english,
+    convertGpa: (gpa100) => (gpa100 / 100) * gpa,
+    admissionProfile: profile,
+  };
+}
 
 function getJeonbukFormula(
   year: string,
@@ -230,12 +271,12 @@ type FormulaResolver = (year: string, department?: string) => ConversionFormula;
 
 const SUPPORTED_YEARS = new Set(["2024", "2025", "2026"]);
 const FORMULA_RESOLVERS: Record<string, FormulaResolver> = {
-  강원대학교: (year) => year === "2026" ? GANGWON_2026 : GANGWON_STANDARD,
+  강원대학교: getGangwonFormula,
   경북대학교: getKyungbukFormula,
-  부경대학교: () => PUKYONG,
+  부경대학교: getPukyongFormula,
   부산대학교: getPusanFormula,
   인천대학교: getIncheonFormula,
-  전남대학교: () => CHONNAM,
+  전남대학교: getChonnamFormula,
   전북대학교: getJeonbukFormula,
   충남대학교: getChungnamFormula,
   충북대학교: getChungbukFormula,
