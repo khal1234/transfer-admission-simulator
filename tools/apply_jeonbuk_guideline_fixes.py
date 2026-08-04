@@ -1,14 +1,20 @@
-"""전북대 2024~2026 편입학 모집요강 대조 결과를 데이터 산출물에 반영한다.
+"""전북대 2024~2026 편입학 모집요강·입시결과 대조를 반영한다.
 
 근거 문서(전북대학교 공식 모집요강 PDF):
   - 2024: PDF 24쪽(책자 22쪽) 배점표, PDF 25쪽 산식, PDF 43~46쪽 환산표
   - 2025: PDF 28쪽(책자 26쪽) 배점표, PDF 29쪽 산식, PDF 54~57쪽 환산표
   - 2026: PDF 25쪽(책자 23쪽) 배점표, PDF 26쪽 산식, PDF 50~53쪽 환산표
 
+근거 문서(전북대학교 입학처 전년도 입시결과):
+  - 2024: 게시물 31566, 첨부 「2024학년도 편입학 입시결과.pdf」 1~4쪽
+  - 2025: 게시물 38557, 첨부 「2025학년도 대학 편입학 전형 입시결과.xls」
+  - 2026: 게시물 43496, 첨부 「2026학년도 대학 편입학 전형 입시결과.xls」
+
 세 연도의 표준전형은 전적대성적 60점+공인영어 80점+면접 60점이며,
 TOEIC 환산표도 동일하다. 학과별 공식이 계산 코드에서 지원되므로 기존 예외
-행을 지원 데이터로 복원한다. 입결 평균값은 바꾸지 않고 results/와
-web/src/data/를 동시에 저장해 JSON/CSV parity를 검증한다.
+행을 지원 데이터로 복원한다. 입결 원문 전수 대조에서 확인한 2026 아동학과
+전적대 백분위 평균을 바로잡고 results/와 web/src/data/를 동시에 저장해
+JSON/CSV parity를 검증한다.
 """
 
 from __future__ import annotations
@@ -27,6 +33,12 @@ PAGE_EVIDENCE = {
     "2024": (24, 22, 25, "43~46", "41~44"),
     "2025": (28, 26, 29, "54~57", "52~55"),
     "2026": (25, 23, 26, "50~53", "48~51"),
+}
+
+OFFICIAL_RESULT_CORRECTIONS = {
+    ("2026", "아동학과"): {
+        "최종합격_학점원점수_100점만점": 88.92,
+    },
 }
 
 
@@ -83,6 +95,31 @@ def fix_formula_records(formulas: list[dict], changes: list[str]) -> None:
             changes.append(f"환산공식 {year} 공식 PDF 페이지 근거 추가")
 
 
+def fix_official_results(
+    standard: list[dict], exceptions: list[dict], changes: list[str]
+) -> None:
+    records = [
+        record
+        for record in [*standard, *exceptions]
+        if is_jeonbuk(record)
+    ]
+    by_key = {(record["연도"], record["학과"]): record for record in records}
+    missing = sorted(set(OFFICIAL_RESULT_CORRECTIONS) - set(by_key))
+    if missing:
+        raise RuntimeError(f"전북대 공식 결과 정정 대상 누락: {missing}")
+
+    for key, corrections in OFFICIAL_RESULT_CORRECTIONS.items():
+        record = by_key[key]
+        for field, expected in corrections.items():
+            if record.get(field) == expected:
+                continue
+            previous = record.get(field)
+            record[field] = expected
+            changes.append(
+                f"{key[0]} {key[1]} {field} {previous} → {expected}"
+            )
+
+
 def restore_supported_departments(
     standard: list[dict], exceptions: list[dict], changes: list[str]
 ) -> None:
@@ -128,6 +165,21 @@ def validate_classification(standard: list[dict], exceptions: list[dict]) -> Non
     remaining = [record for record in exceptions if is_jeonbuk(record)]
     if remaining:
         raise RuntimeError(f"공식 지원이 끝난 전북대 예외 행이 남음: {len(remaining)}")
+    jeonbuk = [record for record in standard if is_jeonbuk(record)]
+    if any(record.get("합격자기준") != "최종" for record in jeonbuk):
+        raise RuntimeError("전북대 최종 입학자 평균은 모두 최종 기준이어야 함")
+    for key, corrections in OFFICIAL_RESULT_CORRECTIONS.items():
+        record = next(
+            record
+            for record in jeonbuk
+            if (record["연도"], record["학과"]) == key
+        )
+        for field, expected in corrections.items():
+            if record.get(field) != expected:
+                raise RuntimeError(
+                    f"전북대 {key[0]} {key[1]} {field} 불일치: "
+                    f"{record.get(field)}"
+                )
 
 
 def main() -> int:
@@ -137,6 +189,7 @@ def main() -> int:
     changes: list[str] = []
 
     fix_formula_records(formulas, changes)
+    fix_official_results(standard, exceptions, changes)
     restore_supported_departments(standard, exceptions, changes)
     validate_classification(standard, exceptions)
 

@@ -1,12 +1,18 @@
-"""부산대 2024~2026 편입학 모집요강의 학과별 배점을 반영한다.
+"""부산대 2024~2026 편입학 모집요강·공식 결과를 반영한다.
 
 근거 문서(부산대학교 입학처 공식 모집요강):
   - 2024: 10쪽 전형요소별 배점, 11쪽 환산식
   - 2025: 14쪽 일반·학사 배점/환산식, 15쪽 계약학과 배점
   - 2026: 12쪽 전형요소별 배점/환산식, 13쪽 평가방법
 
+근거 문서(부산대학교 입학처 공식 편입학 결과):
+  - 2024: 최종합격생 현황 및 평균성적(공고용), file_no=3710
+  - 2025: 최종합격생 현황 및 평균성적(공고용), file_no=3811
+  - 2026: 일반편입학(일반전형) 합격 현황 및 평균성적, file_no=4245
+
 학과별 공식이 코드에서 지원되므로, 기존에 배점 차이만으로 격리했던 부산대
-레코드는 모두 표준 데이터로 복원한다. 입결 원값은 바꾸지 않는다.
+레코드는 모두 표준 데이터로 복원한다. 2026 공식 결과의 ``-`` 합격인원은
+합격자 없음(0명)으로 저장하고, 공개 성적의 기준은 최종합격자로 확정한다.
 """
 
 from __future__ import annotations
@@ -23,6 +29,35 @@ WEB_DATA_DIR = ROOT / "web" / "src" / "data"
 
 TYPO_DEPARTMENT = "디자인학과(디자인앤테크놀리저전공)"
 OFFICIAL_DEPARTMENT = "디자인학과(디자인앤테크놀로지전공)"
+
+EXPECTED_ROWS_BY_YEAR = {"2024": 89, "2025": 59, "2026": 88}
+EXPECTED_PUBLIC_SCORES_BY_YEAR = {"2024": 62, "2025": 59, "2026": 41}
+
+PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS = frozenset({
+    "불어불문학과",
+    "노어노문학과",
+    "특수교육과",
+    "수학교육과",
+    "물리교육과",
+    "무역학부",
+    "공공정책학부",
+    "식품영양학과",
+    "한국음악학과 현악.성악전공",
+    "한국음악학과 관악.타악전공",
+    "한국음악학과 이론.작곡전공",
+    "간호학과",
+    "식물생명과학과",
+    "식품공학과",
+    "바이오산업기계공학과",
+    "바이오환경에너지학과",
+    "조경학과",
+    "무용학과 한국무용전공",
+})
+
+PUSAN_2026_ZERO_APPLICATION_DEPARTMENTS = frozenset({
+    "한국음악학과 관악.타악전공",
+    "한국음악학과 이론.작곡전공",
+})
 
 FORMULA_NOTES = {
     "2024": (
@@ -123,6 +158,48 @@ def fix_formula_notes(formulas: list[dict], changes: list[str]) -> None:
             changes.append(f"{year} 학과별 배점·공식 근거 보완")
 
 
+def fix_result_metadata(standard: list[dict], changes: list[str]) -> None:
+    corrected_criteria = 0
+    corrected_application_counts = 0
+    corrected_admission_counts = 0
+
+    for record in standard:
+        if not is_pusan(record) or record.get("연도") != "2026":
+            continue
+
+        if record.get("합격자기준") != "최종":
+            record["합격자기준"] = "최종"
+            corrected_criteria += 1
+
+        if record.get("학과") in PUSAN_2026_ZERO_APPLICATION_DEPARTMENTS:
+            applied = record.get("지원인원")
+            if applied not in (None, 0):
+                raise RuntimeError(
+                    f"2026 {record['학과']} 공식 미지원 행에 양수 지원인원이 있음: {applied}"
+                )
+            if applied is None:
+                record["지원인원"] = 0
+                corrected_application_counts += 1
+
+        if record.get("학과") not in PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS:
+            continue
+        admitted = record.get("합격인원")
+        if admitted not in (None, 0):
+            raise RuntimeError(
+                f"2026 {record['학과']} 공식 무합격 행에 양수 합격인원이 있음: {admitted}"
+            )
+        if admitted is None:
+            record["합격인원"] = 0
+            corrected_admission_counts += 1
+
+    if corrected_criteria:
+        changes.append(f"2026 최종합격자 평균 기준 {corrected_criteria}행 확정")
+    if corrected_application_counts:
+        changes.append(f"2026 공식 '-' 지원인원 {corrected_application_counts}행을 0명으로 확정")
+    if corrected_admission_counts:
+        changes.append(f"2026 공식 '-' 합격인원 {corrected_admission_counts}행을 0명으로 확정")
+
+
 def validate(standard: list[dict], exceptions: list[dict]) -> None:
     pusan_standard = [record for record in standard if is_pusan(record)]
     pusan_exceptions = [record for record in exceptions if is_pusan(record)]
@@ -130,6 +207,69 @@ def validate(standard: list[dict], exceptions: list[dict]) -> None:
         raise RuntimeError(f"부산대 지원 데이터는 236행이어야 함: {len(pusan_standard)}")
     if pusan_exceptions:
         raise RuntimeError(f"공식 지원이 끝난 부산대 예외 행이 남음: {len(pusan_exceptions)}")
+
+    rows_by_year = {
+        year: [record for record in pusan_standard if record["연도"] == year]
+        for year in EXPECTED_ROWS_BY_YEAR
+    }
+    actual_rows_by_year = {year: len(rows) for year, rows in rows_by_year.items()}
+    if actual_rows_by_year != EXPECTED_ROWS_BY_YEAR:
+        raise RuntimeError(f"부산대 연도별 행 수 불일치: {actual_rows_by_year}")
+
+    non_final = [
+        record_key(record)
+        for record in pusan_standard
+        if record.get("합격자기준") != "최종"
+    ]
+    if non_final:
+        raise RuntimeError(f"부산대 최종합격자 기준 미확정 행: {non_final[:5]}")
+
+    zero_departments = {
+        record["학과"]
+        for record in rows_by_year["2026"]
+        if record.get("합격인원") == 0
+    }
+    if zero_departments != PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS:
+        raise RuntimeError(
+            "부산대 2026 무합격 모집단위 불일치: "
+            f"누락={sorted(PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS - zero_departments)}, "
+            f"초과={sorted(zero_departments - PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS)}"
+        )
+
+    zero_application_departments = {
+        record["학과"]
+        for record in rows_by_year["2026"]
+        if record.get("지원인원") == 0
+    }
+    if zero_application_departments != PUSAN_2026_ZERO_APPLICATION_DEPARTMENTS:
+        raise RuntimeError(
+            "부산대 2026 미지원 모집단위 불일치: "
+            f"누락={sorted(PUSAN_2026_ZERO_APPLICATION_DEPARTMENTS - zero_application_departments)}, "
+            f"초과={sorted(zero_application_departments - PUSAN_2026_ZERO_APPLICATION_DEPARTMENTS)}"
+        )
+
+    score_fields = (
+        "최종합격_토익환산점수",
+        "최종합격_토익원점수",
+        "최종합격_학점환산점수",
+        "최종합격_학점원점수_100점만점",
+    )
+    for record in rows_by_year["2026"]:
+        if record["학과"] not in PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS:
+            continue
+        if any(record.get(field) is not None for field in score_fields):
+            raise RuntimeError(f"2026 무합격 행에 평균성적이 있음: {record_key(record)}")
+
+    public_scores_by_year = {
+        year: sum(
+            record.get("최종합격_토익원점수") is not None
+            and record.get("최종합격_학점원점수_100점만점") is not None
+            for record in rows
+        )
+        for year, rows in rows_by_year.items()
+    }
+    if public_scores_by_year != EXPECTED_PUBLIC_SCORES_BY_YEAR:
+        raise RuntimeError(f"부산대 공개 평균성적 행 수 불일치: {public_scores_by_year}")
 
     keys = {record_key(record) for record in pusan_standard}
     required = {
@@ -152,6 +292,7 @@ def main() -> int:
 
     restore_supported_departments(standard, exceptions, changes)
     fix_formula_notes(formulas, changes)
+    fix_result_metadata(standard, changes)
     validate(standard, exceptions)
 
     print(f"=== 부산대 모집요강 학과별 공식 반영 {len(changes)}건 ===")
