@@ -1298,31 +1298,70 @@ html[data-theme="dark"] .acceptance-basis-final {
   margin-top: 24px;
 }
 
-.transfer-reviews-heading {
+.transfer-reviews-summary {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  list-style: none;
 }
 
-.transfer-reviews-heading .card-title {
+.transfer-reviews-summary::-webkit-details-marker {
+  display: none;
+}
+
+.transfer-reviews-summary:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 5px;
+}
+
+.transfer-reviews-heading-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.transfer-reviews-heading-copy .card-title {
   margin-bottom: 8px;
 }
 
-.transfer-reviews-heading p {
+.transfer-reviews-description {
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
 
-.transfer-reviews-total {
+.transfer-reviews-summary-meta {
+  display: flex;
   flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.transfer-reviews-total {
   border-radius: 99px;
   padding: 7px 12px;
   background-color: #ecfdf5;
   color: #047857;
   font-size: 12px;
+}
+
+.transfer-reviews-chevron {
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.transfer-reviews-disclosure[open] .transfer-reviews-chevron {
+  transform: rotate(180deg);
+}
+
+.transfer-reviews-content {
+  margin-top: 20px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 20px;
 }
 
 .transfer-review-controls {
@@ -1612,13 +1651,14 @@ html[data-theme="dark"] .transfer-review-comparison {
     margin-top: 16px;
   }
 
-  .transfer-reviews-heading {
+  .transfer-reviews-summary {
     flex-direction: column;
     gap: 10px;
   }
 
-  .transfer-reviews-total {
-    align-self: flex-start;
+  .transfer-reviews-summary-meta {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .transfer-review-tabs {

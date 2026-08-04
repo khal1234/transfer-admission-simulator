@@ -56,6 +56,8 @@ describe("component accessibility contracts", () => {
     expect(spec).toContain('aria-pressed="true"');
     expect(explorer).toContain('role="group" aria-label="대학 필터"');
     expect(explorer).toContain('aria-pressed="true"');
+    expect(reviews).toContain('<details class="transfer-reviews-disclosure">');
+    expect(reviews).toContain('<summary class="transfer-reviews-summary">');
     expect(reviews).toContain('role="group" aria-label="후기 대학 필터"');
   });
 
