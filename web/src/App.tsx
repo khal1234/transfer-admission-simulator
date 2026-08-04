@@ -317,6 +317,7 @@ export default function App() {
   // Selected major for chart visualization
   const [chartTarget, setChartTarget] = useState<ChartTarget | null>(null);
   const [chartMetric, setChartMetric] = useState<ChartMetric>("toeic_orig");
+  const [isTargetBasketVisible, setIsTargetBasketVisible] = useState(true);
   const chartRegionRef = useRef<HTMLDivElement | null>(null);
   const chartTriggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -437,6 +438,22 @@ export default function App() {
 
     return () => window.cancelAnimationFrame(frameId);
   }, [chartTarget]);
+
+  useEffect(() => {
+    const targetBasket = document.getElementById("target-basket");
+
+    if (targetBasket === null || typeof window.IntersectionObserver === "undefined") {
+      setIsTargetBasketVisible(false);
+      return;
+    }
+
+    const observer = new window.IntersectionObserver(([entry]) => {
+      setIsTargetBasketVisible(entry?.isIntersecting ?? false);
+    }, { threshold: 0.01 });
+
+    observer.observe(targetBasket);
+    return () => observer.disconnect();
+  }, []);
 
   const handleToeicInputChange = useCallback((value: string) => {
     setToeicInput(limitToeicInput(value));
@@ -742,7 +759,13 @@ export default function App() {
           onToggleTarget={toggleTarget}
         />
 
-        <a className="mobile-target-dock" href="#target-basket">
+        <a
+          className={`mobile-target-dock ${isTargetBasketVisible ? "mobile-target-dock--hidden" : ""}`}
+          href="#target-basket"
+          aria-hidden={isTargetBasketVisible}
+          aria-label={`지망 대학 장바구니 보기, 현재 ${targets.length}개`}
+          tabIndex={isTargetBasketVisible ? -1 : undefined}
+        >
           <Star size={18} fill="currentColor" aria-hidden="true" />
           <span>지망 보기</span>
           <strong>{targets.length}</strong>
