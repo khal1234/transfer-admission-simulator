@@ -42,4 +42,15 @@ describe("parseSavedTargets", () => {
       )
     ).toEqual(defaults);
   });
+
+  it("sanitizes defaults when the bundled dataset no longer contains them", () => {
+    const staleDefaults: Target[] = [
+      ...defaults,
+      { univ: "없는대학교", dept: "없는학과" },
+      { ...defaults[0]! },
+    ];
+
+    expect(parseSavedTargets(null, validKeys, staleDefaults)).toEqual(defaults);
+    expect(parseSavedTargets("{", validKeys, staleDefaults)).toEqual(defaults);
+  });
 });

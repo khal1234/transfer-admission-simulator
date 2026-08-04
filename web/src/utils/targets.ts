@@ -38,29 +38,34 @@ export function parseSavedTargets(
   validTargetKeys: ReadonlySet<string>,
   defaultTargets: readonly Target[]
 ): Target[] {
+  const sanitizeTargets = (targets: readonly Target[]): Target[] => {
+    const seen = new Set<string>();
+
+    return targets.filter((target) => {
+      const key = getTargetKey(target);
+      if (!validTargetKeys.has(key) || seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+  };
+
   if (!saved) {
-    return [...defaultTargets];
+    return sanitizeTargets(defaultTargets);
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(saved);
   } catch {
-    return [...defaultTargets];
+    return sanitizeTargets(defaultTargets);
   }
 
   if (!Array.isArray(parsed) || !parsed.every(isTarget)) {
-    return [...defaultTargets];
+    return sanitizeTargets(defaultTargets);
   }
 
-  const seen = new Set<string>();
-  return parsed.filter((target) => {
-    const key = getTargetKey(target);
-    if (!validTargetKeys.has(key) || seen.has(key)) {
-      return false;
-    }
-
-    seen.add(key);
-    return true;
-  });
+  return sanitizeTargets(parsed);
 }

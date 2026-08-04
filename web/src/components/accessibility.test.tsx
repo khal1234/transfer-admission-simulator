@@ -124,4 +124,17 @@ describe("TargetBasket recent history states", () => {
     expect(getRecentHistoryStatus({ ...base, exceptionLookupStatus: "error" }).kind).toBe("error");
     expect(getRecentHistoryStatus(base).label).toBe("모집 여부 또는 자료 확인 불가");
   });
+
+  it("prefers an exact exclusion record over a similarly named sibling", () => {
+    const status = getRecentHistoryStatus({
+      year: "2025",
+      record: null,
+      exclusionReason: "실기 중심 별도 전형",
+      exceptionLookupStatus: "ready",
+      siblingDepartments: ["체육학부(스포츠과학전공)"],
+    });
+
+    expect(status.kind).toBe("excluded");
+    expect(status.title).toBe("실기 중심 별도 전형");
+  });
 });

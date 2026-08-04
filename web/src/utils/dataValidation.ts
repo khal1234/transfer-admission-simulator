@@ -198,6 +198,11 @@ function prepareValidatedRecords<T extends DepartmentRecord>(
       issues.push({ key, reason: "invalid-converted-score" });
     }
 
+    if (!hasInvalidRawScore && !hasInvalidConvertedScore) {
+      preparedRecords.push(record);
+      return;
+    }
+
     preparedRecords.push({
       ...record,
       최종합격_토익환산점수: isValidConvertedScore(
