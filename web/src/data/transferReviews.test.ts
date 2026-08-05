@@ -6,10 +6,10 @@ import {
 } from "./transferReviews";
 
 describe("TRANSFER_REVIEWS", () => {
-  it("contains the 98 uniquely verified source posts", () => {
-    expect(TRANSFER_REVIEWS).toHaveLength(98);
-    expect(new Set(TRANSFER_REVIEWS.map(({ id }) => id)).size).toBe(98);
-    expect(new Set(TRANSFER_REVIEWS.map(({ url }) => url)).size).toBe(98);
+  it("contains the 99 uniquely verified source posts", () => {
+    expect(TRANSFER_REVIEWS).toHaveLength(99);
+    expect(new Set(TRANSFER_REVIEWS.map(({ id }) => id)).size).toBe(99);
+    expect(new Set(TRANSFER_REVIEWS.map(({ url }) => url)).size).toBe(99);
   });
 
   it("keeps every source link usable and excludes the removed question post", () => {
@@ -31,7 +31,7 @@ describe("TRANSFER_REVIEWS", () => {
     const comparisonReviews = TRANSFER_REVIEWS.filter(({ comparison }) => comparison);
 
     expect(comparisonReviews).toHaveLength(29);
-    expect(TRANSFER_REVIEWS.filter(({ comparison }) => !comparison)).toHaveLength(69);
+    expect(TRANSFER_REVIEWS.filter(({ comparison }) => !comparison)).toHaveLength(70);
     expect(
       comparisonReviews.find(({ id }) => id === 614)?.universities,
     ).toEqual(["부산대학교", "경북대학교"]);
