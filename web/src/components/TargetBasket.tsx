@@ -31,7 +31,11 @@ import RawScoreValue from "./RawScoreValue";
 import ScoreBasis from "./ScoreBasis";
 import UniversityName from "./UniversityName";
 import DataConfidenceBadge from "./DataConfidenceBadge";
-import { getDataConfidence } from "../utils/decisionSupport";
+import {
+  countDecisionCategories,
+  getDataConfidence,
+  type DecisionCategory,
+} from "../utils/decisionSupport";
 
 type YearlyComparison = {
   year: string;
@@ -191,6 +195,53 @@ function getAnalysisPanelState(
   return needsImprovement ? "risk" : "safe";
 }
 
+const STRATEGY_LABELS: Record<DecisionCategory, string> = {
+  safe: "평균 상회",
+  borderline: "평균 근접",
+  risk: "도전",
+  unknown: "비교 불가",
+};
+
+function TargetStrategyBoard({ summaries }: { summaries: TargetSummary[] }) {
+  const counts = countDecisionCategories(summaries);
+  const knownCount = summaries.length - counts.unknown;
+  const dominantEntry = (Object.entries(counts) as [DecisionCategory, number][])
+    .filter(([status]) => status !== "unknown")
+    .sort((left, right) => right[1] - left[1])[0];
+  const isConcentrated = knownCount >= 3
+    && dominantEntry !== undefined
+    && dominantEntry[1] / knownCount >= 0.75;
+  let guidance = `판정 가능한 지망 ${knownCount}개를 과거 합격 평균과 비교했습니다.`;
+
+  if (knownCount === 0) {
+    guidance = "현재는 비교 가능한 합격 평균이 있는 지망이 없습니다.";
+  } else if (isConcentrated && dominantEntry !== undefined) {
+    guidance = `지망의 75% 이상이 ‘${STRATEGY_LABELS[dominantEntry[0]]}’ 구간에 몰려 있습니다.`;
+  } else if (counts.safe === 0) {
+    guidance = "평균 상회 지망이 없습니다. 모집단위 탐색에서 선택지를 넓혀 보세요.";
+  } else if (counts.borderline === 0) {
+    guidance = "평균 근접 지망이 없습니다. 상회와 도전 사이의 선택지를 보완해 보세요.";
+  }
+
+  return (
+    <section className="basket-strategy-board" aria-labelledby="basket-strategy-title">
+      <div className="basket-strategy-heading">
+        <strong id="basket-strategy-title">지망 전략 분포</strong>
+        <span>합격 확률이 아닌 참고 분류</span>
+      </div>
+      <div className="basket-strategy-counts">
+        {(Object.keys(STRATEGY_LABELS) as DecisionCategory[]).map((status) => (
+          <div className={`basket-strategy-count strategy-count-${status}`} key={status}>
+            <span>{STRATEGY_LABELS[status]}</span>
+            <strong>{counts[status]}</strong>
+          </div>
+        ))}
+      </div>
+      <p>{guidance}</p>
+    </section>
+  );
+}
+
 function TargetBasket({
   summaries,
   targetCount,
@@ -238,6 +289,8 @@ function TargetBasket({
           </div>
         )}
       </div>
+
+      {targetCount > 0 && <TargetStrategyBoard summaries={summaries} />}
 
       {targetCount === 0 ? (
         <div className="basket-empty">

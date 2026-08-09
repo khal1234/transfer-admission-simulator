@@ -774,7 +774,7 @@ body {
   flex: 1;
 }
 
-/* Decision support: recommendations, portfolio mix, what-if scores and comparison */
+/* Target analysis: score scenarios and selected-target comparison */
 .decision-support-card {
   padding-bottom: 20px;
 }
@@ -809,7 +809,7 @@ body {
 
 .decision-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 12px;
@@ -854,117 +854,6 @@ body {
   padding-top: 18px;
 }
 
-.recommendation-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px 190px;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.recommendation-category {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.recommendation-category button,
-.recommendation-controls select {
-  min-height: 40px;
-  border: 1px solid var(--border-color);
-  border-radius: 9px;
-  padding: 7px 11px;
-  background: #fff;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.recommendation-category button {
-  cursor: pointer;
-}
-
-.recommendation-category button:hover,
-.recommendation-category button.active {
-  border-color: var(--primary-color);
-  background: var(--primary-color);
-  color: #fff;
-}
-
-.recommendation-result-count {
-  margin-bottom: 10px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.recommendation-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.recommendation-item {
-  min-width: 0;
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 13px;
-  background: #fafbfc;
-}
-
-.recommendation-item-heading,
-.recommendation-item-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.recommendation-item-heading .university-name-with-logo {
-  min-width: 0;
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.recommendation-item h3 {
-  min-height: 42px;
-  margin: 9px 0 10px;
-  color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.recommendation-item dl {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 5px;
-  margin-bottom: 11px;
-}
-
-.recommendation-item dl > div {
-  min-width: 0;
-  border-radius: 7px;
-  padding: 7px 5px;
-  background: #fff;
-  text-align: center;
-}
-
-.recommendation-item dt {
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 9px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.recommendation-item dd {
-  margin-top: 2px;
-  color: var(--text-primary);
-  font-size: 11px;
-  font-weight: 800;
-}
-
 .decision-status {
   display: inline-flex;
   flex-shrink: 0;
@@ -997,20 +886,6 @@ body {
   color: var(--text-secondary);
 }
 
-.decision-more-button {
-  display: block;
-  min-height: 42px;
-  margin: 14px auto 0;
-  border: 1px solid var(--primary-color);
-  border-radius: 9px;
-  padding: 8px 18px;
-  background: #fff;
-  color: var(--primary-color);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
 .decision-empty {
   border: 1px dashed var(--border-color);
   border-radius: 11px;
@@ -1020,14 +895,12 @@ body {
   text-align: center;
 }
 
-.strategy-count-grid,
 .scenario-impact {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
-.strategy-count,
 .scenario-impact > div {
   display: flex;
   align-items: center;
@@ -1038,14 +911,12 @@ body {
   background: #fafbfc;
 }
 
-.strategy-count span,
 .scenario-impact span {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
 
-.strategy-count strong,
 .scenario-impact strong {
   color: var(--text-primary);
   font-size: 20px;
@@ -1066,24 +937,65 @@ body {
   background: var(--status-risk-bg);
 }
 
-.strategy-guidance {
-  margin-top: 14px;
-  border-radius: 11px;
-  padding: 15px 16px;
+.basket-strategy-board {
+  margin-bottom: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 13px;
   background: #f8fafc;
 }
 
-.strategy-guidance h3 {
-  margin-bottom: 7px;
+.basket-strategy-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.basket-strategy-heading strong {
   color: var(--text-primary);
   font-size: 13px;
 }
 
-.strategy-guidance ul {
-  padding-left: 18px;
+.basket-strategy-heading span {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.basket-strategy-counts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.basket-strategy-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.basket-strategy-count span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.basket-strategy-count strong {
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.basket-strategy-board > p {
+  margin-top: 9px;
   color: var(--text-secondary);
   font-size: 12px;
-  line-height: 1.7;
 }
 
 .scenario-controls {
@@ -1142,7 +1054,6 @@ body {
 }
 
 .scenario-impact {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-bottom: 14px;
 }
 
@@ -1295,11 +1206,7 @@ body {
 }
 
 html[data-theme="dark"] .decision-support-disclaimer,
-html[data-theme="dark"] .decision-tabs button,
-html[data-theme="dark"] .recommendation-category button,
-html[data-theme="dark"] .recommendation-controls select,
-html[data-theme="dark"] .recommendation-item dl > div,
-html[data-theme="dark"] .decision-more-button {
+html[data-theme="dark"] .decision-tabs button {
   background: #0f172a;
   color: var(--text-secondary);
 }
@@ -1310,16 +1217,9 @@ html[data-theme="dark"] .decision-tabs button.active {
   color: #c7d2fe;
 }
 
-html[data-theme="dark"] .recommendation-category button:hover,
-html[data-theme="dark"] .recommendation-category button.active {
-  background: #4f46e5;
-  color: #fff;
-}
-
-html[data-theme="dark"] .recommendation-item,
-html[data-theme="dark"] .strategy-count,
+html[data-theme="dark"] .basket-strategy-board,
+html[data-theme="dark"] .basket-strategy-count,
 html[data-theme="dark"] .scenario-impact > div,
-html[data-theme="dark"] .strategy-guidance,
 html[data-theme="dark"] .decision-compare-table thead th {
   background: #111827;
 }
@@ -1327,12 +1227,6 @@ html[data-theme="dark"] .decision-compare-table thead th {
 html[data-theme="dark"] .decision-status-unknown {
   background: #334155;
   color: #cbd5e1;
-}
-
-@media (max-width: 1200px) {
-  .recommendation-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 767px) {
@@ -1355,31 +1249,21 @@ html[data-theme="dark"] .decision-status-unknown {
     font-size: 12px;
   }
 
-  .recommendation-controls {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .recommendation-category {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .recommendation-category button,
-  .recommendation-controls select {
-    min-width: 0;
-    min-height: 44px;
-  }
-
-  .recommendation-grid,
-  .strategy-count-grid,
   .scenario-controls,
   .scenario-result-list {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .recommendation-item h3 {
-    min-height: auto;
+  .basket-strategy-heading {
+    align-items: flex-start;
+  }
+
+  .basket-strategy-counts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .basket-strategy-count {
+    min-height: 42px;
   }
 
   .scenario-impact {

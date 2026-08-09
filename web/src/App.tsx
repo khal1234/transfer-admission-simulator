@@ -69,7 +69,10 @@ import {
   type ExceptionDepartmentRecord,
 } from "./utils/dataValidation";
 import { focusElement } from "./utils/focusManagement";
-import { buildDecisionCandidates } from "./utils/decisionSupport";
+import {
+  getDataConfidence,
+  type DecisionCandidate,
+} from "./utils/decisionSupport";
 
 import {
   AlertTriangle,
@@ -395,20 +398,6 @@ export default function App() {
     return Array.from(latest.values());
   }, [standardRecords]);
 
-  const decisionCandidates = useMemo(() => buildDecisionCandidates(
-    recordsByDepartment,
-    recentRecordYears,
-    toeic,
-    gpa100,
-    comparisonBasis,
-  ), [
-    comparisonBasis,
-    gpa100,
-    recentRecordYears,
-    recordsByDepartment,
-    toeic,
-  ]);
-
   // =========================================================================
   // 3. Basket Management Helpers
   // =========================================================================
@@ -637,6 +626,19 @@ export default function App() {
     toeic,
   ]);
 
+  const decisionCandidates = useMemo<DecisionCandidate[]>(() => (
+    targetSummaries.map((summary) => ({
+      key: summary.key,
+      target: summary.target,
+      referenceRecord: summary.referenceRecord,
+      score: summary.score,
+      comparableYearCount: summary.yearlyComparisons.filter(
+        (comparison) => comparison.score.acceptedIndexSum !== null,
+      ).length,
+      dataConfidence: getDataConfidence(summary.referenceRecord),
+    }))
+  ), [targetSummaries]);
+
   return (
     <div className="app-container">
       {/* ===================================================================
@@ -790,11 +792,9 @@ export default function App() {
         <section className="dashboard-column results-area">
           <DecisionSupportPanel
             candidates={decisionCandidates}
-            targetKeys={targetKeySet}
             toeic={toeic}
             gpaRaw={gpaRaw}
             gpaType={gpaType}
-            onToggleTarget={toggleTarget}
           />
 
           {chartTarget !== null && (

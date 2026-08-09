@@ -3,7 +3,6 @@ import type { DepartmentRecord } from "./converter";
 import {
   countDecisionCategories,
   getDataConfidence,
-  sortDecisionCandidates,
   type DecisionCandidate,
 } from "./decisionSupport";
 
@@ -27,11 +26,9 @@ function record(overrides: Partial<DepartmentRecord> = {}): DepartmentRecord {
 
 function candidate(
   diff: number | null,
-  recruited: number | null,
-  competitionRatio: number | null,
   status: DecisionCandidate["score"]["status"] = "safe",
 ): DecisionCandidate {
-  const referenceRecord = record({ 모집인원: recruited });
+  const referenceRecord = record();
   return {
     key: `${diff}`,
     target: { univ: referenceRecord.대학명, dept: `${diff}` },
@@ -44,35 +41,18 @@ function candidate(
       diff,
       status,
     },
-    normalizedDiffPercent: diff,
     comparableYearCount: 3,
-    competitionRatio,
     dataConfidence: getDataConfidence(referenceRecord),
   };
 }
 
 describe("decision support", () => {
-  it("keeps unavailable values at the end for every sort", () => {
-    const candidates = [
-      candidate(null, null, null),
-      candidate(-1, 3, 4),
-      candidate(2, 8, 7),
-    ];
-
-    expect(sortDecisionCandidates(candidates, "gap").map((item) => item.score.diff))
-      .toEqual([2, -1, null]);
-    expect(sortDecisionCandidates(candidates, "recruited").map((item) => item.referenceRecord.모집인원))
-      .toEqual([8, 3, null]);
-    expect(sortDecisionCandidates(candidates, "competition").map((item) => item.competitionRatio))
-      .toEqual([4, 7, null]);
-  });
-
   it("counts every decision category", () => {
     expect(countDecisionCategories([
-      candidate(1, 5, 3, "safe"),
-      candidate(-1, 5, 3, "borderline"),
-      candidate(-8, 5, 3, "risk"),
-      candidate(null, 5, 3, "unknown"),
+      candidate(1, "safe"),
+      candidate(-1, "borderline"),
+      candidate(-8, "risk"),
+      candidate(null, "unknown"),
     ])).toEqual({ safe: 1, borderline: 1, risk: 1, unknown: 1 });
   });
 

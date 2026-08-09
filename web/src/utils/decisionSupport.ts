@@ -1,14 +1,8 @@
-import {
-  calculateScore,
-  type ConversionResult,
-  type DepartmentRecord,
-} from "./converter";
-import { getCompetitionRatio } from "./competition";
-import { pickBasisRecord } from "./comparisonBasis";
+import type { ConversionResult, DepartmentRecord } from "./converter";
 import { getConversionFormula } from "./formulaRegistry";
-import { getLatestComparableRecord, getLatestRecord, isComparableRecord } from "./records";
+import { isComparableRecord } from "./records";
 import { getGpaDisclosure, getToeicDisclosure } from "./scoreProvenance";
-import { getRecordKey, type ComparisonBasis, type Target } from "./targets";
+import type { Target } from "./targets";
 
 export type DecisionCategory = ConversionResult["status"];
 
@@ -23,26 +17,9 @@ export type DecisionCandidate = {
   target: Target;
   referenceRecord: DepartmentRecord;
   score: ConversionResult;
-  normalizedDiffPercent: number | null;
   comparableYearCount: number;
-  competitionRatio: number | null;
   dataConfidence: DataConfidence;
 };
-
-export type CandidateSort = "gap" | "recruited" | "competition";
-
-function getNormalizedDiffPercent(
-  record: DepartmentRecord,
-  diff: number | null,
-): number | null {
-  if (diff === null) return null;
-  const formula = getConversionFormula(record.대학명, record.연도, record.학과);
-  if (formula === null) return null;
-  const maxIndexSum = (formula.convertEnglish?.(990) ?? 0)
-    + (formula.convertGpa?.(100) ?? 0);
-  if (maxIndexSum <= 0) return null;
-  return Math.round((diff / maxIndexSum) * 10_000) / 100;
-}
 
 export function getDataConfidence(record: DepartmentRecord): DataConfidence {
   const formula = getConversionFormula(record.대학명, record.연도, record.학과);
@@ -101,113 +78,8 @@ export function getDataConfidence(record: DepartmentRecord): DataConfidence {
   };
 }
 
-export function buildDecisionCandidates(
-  recordsByDepartment: ReadonlyMap<string, DepartmentRecord[]>,
-  recentYears: readonly string[],
-  toeic: number | null,
-  gpa100: number | null,
-  comparisonBasis: ComparisonBasis,
-): DecisionCandidate[] {
-  const candidates: DecisionCandidate[] = [];
-
-  recordsByDepartment.forEach((history) => {
-    const latestRecord = getLatestRecord(history);
-    if (latestRecord === undefined) {
-      return;
-    }
-
-    const historyByYear = new Map(history.map((record) => [record.연도, record]));
-    const comparisons = recentYears.map((year) => {
-      const record = historyByYear.get(year);
-      const comparableRecord = record !== undefined && isComparableRecord(record)
-        ? record
-        : null;
-
-      return {
-        year,
-        score: calculateScore(
-          latestRecord.대학명,
-          year,
-          toeic,
-          gpa100,
-          comparableRecord,
-          latestRecord.학과,
-        ),
-      };
-    });
-    const comparableRecord = pickBasisRecord(
-      comparisons,
-      historyByYear,
-      comparisonBasis,
-    ) ?? getLatestComparableRecord(history);
-    const referenceRecord = comparableRecord ?? latestRecord;
-    const score = calculateScore(
-      referenceRecord.대학명,
-      referenceRecord.연도,
-      toeic,
-      gpa100,
-      comparableRecord ?? null,
-      referenceRecord.학과,
-    );
-
-    candidates.push({
-      key: getRecordKey(referenceRecord.대학명, referenceRecord.학과),
-      target: { univ: referenceRecord.대학명, dept: referenceRecord.학과 },
-      referenceRecord,
-      score,
-      normalizedDiffPercent: getNormalizedDiffPercent(referenceRecord, score.diff),
-      comparableYearCount: history.filter(isComparableRecord).length,
-      competitionRatio: getCompetitionRatio(referenceRecord),
-      dataConfidence: getDataConfidence(referenceRecord),
-    });
-  });
-
-  return candidates;
-}
-
-function compareNullableNumbers(
-  left: number | null,
-  right: number | null,
-  direction: "asc" | "desc",
-): number {
-  if (left === null && right === null) return 0;
-  if (left === null) return 1;
-  if (right === null) return -1;
-  return direction === "asc" ? left - right : right - left;
-}
-
-export function sortDecisionCandidates(
-  candidates: readonly DecisionCandidate[],
-  sort: CandidateSort,
-): DecisionCandidate[] {
-  return [...candidates].sort((left, right) => {
-    if (sort === "recruited") {
-      return compareNullableNumbers(
-        left.referenceRecord.모집인원,
-        right.referenceRecord.모집인원,
-        "desc",
-      ) || left.target.dept.localeCompare(right.target.dept, "ko");
-    }
-
-    if (sort === "competition") {
-      return compareNullableNumbers(
-        left.competitionRatio,
-        right.competitionRatio,
-        "asc",
-      ) || left.target.dept.localeCompare(right.target.dept, "ko");
-    }
-
-    return compareNullableNumbers(
-      left.normalizedDiffPercent,
-      right.normalizedDiffPercent,
-      "desc",
-    )
-      || left.target.dept.localeCompare(right.target.dept, "ko");
-  });
-}
-
 export function countDecisionCategories(
-  candidates: readonly Pick<DecisionCandidate, "score">[],
+  candidates: readonly { score: Pick<ConversionResult, "status"> }[],
 ): Record<DecisionCategory, number> {
   return candidates.reduce<Record<DecisionCategory, number>>((counts, candidate) => {
     counts[candidate.score.status] += 1;
