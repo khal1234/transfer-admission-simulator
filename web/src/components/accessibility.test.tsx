@@ -97,11 +97,12 @@ describe("component accessibility contracts", () => {
 
     expect(notice).toContain("업데이트 알림");
     expect(notice).toContain('aria-haspopup="dialog"');
-    expect(UPDATE_NOTICE_DATE.iso).toBe("2026-08-04");
-    expect(UPDATE_ITEMS[0]).toContain("업데이트 알림");
-    expect(UPDATE_ITEMS[1]).toContain("지망 목록");
-    expect(UPDATE_ITEMS[2]).toContain("제외 기록");
-    expect(UPDATE_ITEMS[3]).toContain("로딩 부담");
+    expect(UPDATE_NOTICE_DATE.iso).toBe("2026-08-09");
+    expect(UPDATE_ITEMS[0]).toContain("맞춤 모집단위 추천");
+    expect(UPDATE_ITEMS[2]).toContain("업데이트 알림");
+    expect(UPDATE_ITEMS[3]).toContain("지망 목록");
+    expect(UPDATE_ITEMS[4]).toContain("제외 기록");
+    expect(UPDATE_ITEMS[5]).toContain("로딩 부담");
   });
 });
 

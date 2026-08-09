@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import DepartmentExplorer from "./components/DepartmentExplorer";
+import DecisionSupportPanel from "./components/DecisionSupportPanel";
 import ChartErrorBoundary from "./components/ChartErrorBoundary";
 import SpecInputPanel from "./components/SpecInputPanel";
 import TargetBasket, { type TargetSummary } from "./components/TargetBasket";
@@ -68,6 +69,7 @@ import {
   type ExceptionDepartmentRecord,
 } from "./utils/dataValidation";
 import { focusElement } from "./utils/focusManagement";
+import { buildDecisionCandidates } from "./utils/decisionSupport";
 
 import {
   AlertTriangle,
@@ -392,6 +394,20 @@ export default function App() {
 
     return Array.from(latest.values());
   }, [standardRecords]);
+
+  const decisionCandidates = useMemo(() => buildDecisionCandidates(
+    recordsByDepartment,
+    recentRecordYears,
+    toeic,
+    gpa100,
+    comparisonBasis,
+  ), [
+    comparisonBasis,
+    gpa100,
+    recentRecordYears,
+    recordsByDepartment,
+    toeic,
+  ]);
 
   // =========================================================================
   // 3. Basket Management Helpers
@@ -772,6 +788,15 @@ export default function App() {
         </a>
 
         <section className="dashboard-column results-area">
+          <DecisionSupportPanel
+            candidates={decisionCandidates}
+            targetKeys={targetKeySet}
+            toeic={toeic}
+            gpaRaw={gpaRaw}
+            gpaType={gpaType}
+            onToggleTarget={toggleTarget}
+          />
+
           {chartTarget !== null && (
             <div className="chart-region" ref={chartRegionRef} tabIndex={-1}>
               <ChartErrorBoundary

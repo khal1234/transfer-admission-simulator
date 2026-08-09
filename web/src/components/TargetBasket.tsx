@@ -30,6 +30,8 @@ import {
 import RawScoreValue from "./RawScoreValue";
 import ScoreBasis from "./ScoreBasis";
 import UniversityName from "./UniversityName";
+import DataConfidenceBadge from "./DataConfidenceBadge";
+import { getDataConfidence } from "../utils/decisionSupport";
 
 type YearlyComparison = {
   year: string;
@@ -296,20 +298,26 @@ function TargetBasket({
                     <p>
                       <UniversityName university={target.univ} logoSize="small" />
                     </p>
-                    {(() => {
-                      const badge = getAcceptanceBasisBadge(
-                        referenceRecord.합격자기준,
-                      );
+                    <div className="target-data-badges">
+                      {(() => {
+                        const badge = getAcceptanceBasisBadge(
+                          referenceRecord.합격자기준,
+                        );
 
-                      return (
-                        <span
-                          className={`acceptance-basis ${badge.modifier}`}
-                          title={badge.title}
-                        >
-                          [{badge.label}]
-                        </span>
-                      );
-                    })()}
+                        return (
+                          <span
+                            className={`acceptance-basis ${badge.modifier}`}
+                            title={badge.title}
+                          >
+                            [{badge.label}]
+                          </span>
+                        );
+                      })()}
+                      <DataConfidenceBadge
+                        confidence={getDataConfidence(referenceRecord)}
+                        compact
+                      />
+                    </div>
                   </div>
                   <button
                     type="button"
