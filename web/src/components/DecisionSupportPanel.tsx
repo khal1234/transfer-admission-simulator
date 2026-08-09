@@ -299,7 +299,11 @@ function DecisionSupportPanel({
                     <td>{formatCompetitionRatio(candidate.referenceRecord)}</td>
                     <td>{candidate.comparableYearCount}개년</td>
                     <td>
-                      <DataConfidenceBadge confidence={candidate.dataConfidence} compact />
+                      <DataConfidenceBadge
+                        align="end"
+                        confidence={candidate.dataConfidence}
+                        compact
+                      />
                     </td>
                   </tr>
                 ))}

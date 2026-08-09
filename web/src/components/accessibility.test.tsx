@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import DepartmentExplorer from "./DepartmentExplorer";
+import DataConfidenceBadge from "./DataConfidenceBadge";
 import SpecInputPanel from "./SpecInputPanel";
 import TransferReviewLinks from "./TransferReviewLinks";
 import TrendChart from "./TrendChart";
@@ -98,11 +99,30 @@ describe("component accessibility contracts", () => {
     expect(notice).toContain("업데이트 알림");
     expect(notice).toContain('aria-haspopup="dialog"');
     expect(UPDATE_NOTICE_DATE.iso).toBe("2026-08-09");
-    expect(UPDATE_ITEMS[0]).toContain("지망 전략 분포");
-    expect(UPDATE_ITEMS[2]).toContain("업데이트 알림");
-    expect(UPDATE_ITEMS[3]).toContain("지망 목록");
-    expect(UPDATE_ITEMS[4]).toContain("제외 기록");
-    expect(UPDATE_ITEMS[5]).toContain("로딩 부담");
+    expect(UPDATE_ITEMS[0]).toContain("표나 화면 밖으로 잘리지 않도록");
+    expect(UPDATE_ITEMS.some((item) => item.includes("화면 다른 곳 클릭이나 Esc 키"))).toBe(true);
+    expect(UPDATE_ITEMS.some((item) => item.includes("지망 전략 분포"))).toBe(true);
+    expect(UPDATE_ITEMS.some((item) => item.includes("업데이트 알림"))).toBe(true);
+    expect(UPDATE_ITEMS.some((item) => item.includes("지망 목록"))).toBe(true);
+    expect(UPDATE_ITEMS.some((item) => item.includes("제외 기록"))).toBe(true);
+    expect(UPDATE_ITEMS.some((item) => item.includes("로딩 부담"))).toBe(true);
+  });
+
+  it("connects data confidence controls to their dismissible explanation", () => {
+    const badge = renderToStaticMarkup(
+      <DataConfidenceBadge
+        confidence={{
+          level: "low",
+          label: "주의 필요",
+          reasons: ["환산식에 추정 또는 근사값이 포함됩니다."],
+        }}
+        compact
+      />,
+    );
+
+    expect(badge).toContain('aria-expanded="false"');
+    expect(badge).toMatch(/aria-controls="([^"]+)"/);
+    expect(badge).toContain('aria-label="데이터 신뢰도: 주의 필요"');
   });
 });
 
