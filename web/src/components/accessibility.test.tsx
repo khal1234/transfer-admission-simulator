@@ -93,19 +93,37 @@ describe("component accessibility contracts", () => {
     expect(chart).toContain('aria-label="차트 지표 선택"');
   });
 
-  it("publishes the latest simulator fixes in the update notice", () => {
+  /**
+   * 예전에는 여기서 날짜와 문구를 통째로 못 박고 있었다
+   * (`expect(UPDATE_NOTICE_DATE.iso).toBe("2026-08-09")` 식).
+   *
+   * 방향이 반대였다 — 알림을 **잊었을 때는 통과하고, 갱신했을 때 깨진다.**
+   * 실제로 2026-08-12 데이터 수정 3건이 알림 없이 그대로 커밋·푸시됐고
+   * 이 검사는 내내 초록이었다. 잊는 것을 막지 못하는 검사는 갱신하는 쪽만
+   * 귀찮게 한다.
+   *
+   * 그래서 여기서는 **모양만** 본다. '알림이 최신인가'는 내용으로 알 수 없고
+   * 커밋 이력과 견줘야 하므로 tools/check_update_notice.py 가 맡는다.
+   */
+  it("keeps the update notice well-formed", () => {
     const notice = renderToStaticMarkup(<UpdateNotice />);
 
     expect(notice).toContain("업데이트 알림");
     expect(notice).toContain('aria-haspopup="dialog"');
-    expect(UPDATE_NOTICE_DATE.iso).toBe("2026-08-09");
-    expect(UPDATE_ITEMS[0]).toContain("표나 화면 밖으로 잘리지 않도록");
-    expect(UPDATE_ITEMS.some((item) => item.includes("화면 다른 곳 클릭이나 Esc 키"))).toBe(true);
-    expect(UPDATE_ITEMS.some((item) => item.includes("지망 전략 분포"))).toBe(true);
-    expect(UPDATE_ITEMS.some((item) => item.includes("업데이트 알림"))).toBe(true);
-    expect(UPDATE_ITEMS.some((item) => item.includes("지망 목록"))).toBe(true);
-    expect(UPDATE_ITEMS.some((item) => item.includes("제외 기록"))).toBe(true);
-    expect(UPDATE_ITEMS.some((item) => item.includes("로딩 부담"))).toBe(true);
+
+    expect(UPDATE_NOTICE_DATE.iso).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(Number.isNaN(Date.parse(UPDATE_NOTICE_DATE.iso))).toBe(false);
+
+    // 화면에 뜨는 라벨과 iso 가 다른 날을 가리키면 안 된다.
+    const [year, month, day] = UPDATE_NOTICE_DATE.iso.split("-");
+    expect(UPDATE_NOTICE_DATE.label)
+      .toBe(`${year}. ${Number(month)}. ${Number(day)}.`);
+
+    expect(UPDATE_ITEMS.length).toBeGreaterThan(0);
+    // 맨 위가 최신이라는 약속(AGENTS.md)이라 첫 항목은 반드시 실물이어야 한다.
+    expect(UPDATE_ITEMS[0].trim().length).toBeGreaterThan(10);
+    UPDATE_ITEMS.forEach((item) => expect(item.trim()).not.toBe(""));
+    expect(new Set(UPDATE_ITEMS).size).toBe(UPDATE_ITEMS.length);
   });
 
   it("connects data confidence controls to their dismissible explanation", () => {

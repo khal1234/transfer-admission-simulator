@@ -38,6 +38,13 @@ if (-not (Test-Path (Join-Path $WebDir "node_modules"))) {
     throw "web/node_modules 가 없다. 먼저 'cd web; npm ci'."
 }
 
+# 업데이트 알림이 뒤처졌는지 먼저 본다. 사이트가 실제로 바뀌는 자리가 여기라,
+# 여기서 안 막으면 사용자는 바뀐 줄 모르는 채로 바뀐 사이트를 보게 된다.
+# (2026-08-12 데이터 수정 3건이 알림 없이 나갈 뻔했다.)
+Write-Host "[deploy] 업데이트 알림 확인..." -ForegroundColor Cyan
+& python (Join-Path $PSScriptRoot "check_update_notice.py")
+if ($LASTEXITCODE -ne 0) { throw "업데이트 알림이 뒤처졌다 — 배포를 중단한다." }
+
 Set-Location $WebDir
 
 if (-not $SkipTests) {
