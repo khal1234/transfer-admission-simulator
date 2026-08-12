@@ -57,8 +57,13 @@ NAME_ALIASES = {
 # 원본에는 있으나 추출기가 의심 행으로 격리해 대조에 오르지 않는 레코드.
 # 값은 원문을 직접 읽어 반영했다(tools/apply_fixes.py 의 KNU_2024_RESTORED).
 # 고아로 잡히면 매번 가짜 신호가 되므로 여기서 제외한다.
+#
+# 이름은 normalize_name 으로 맞춰서 비교한다. 글자 그대로 두면 표시명 표기가
+# 바뀔 때(가운뎃점 'ㆍ'→'·' 등) 조용히 빗나가 가짜 [B] 가 된다 — apply_fixes
+# 단계 7 을 넣자마자 실제로 그렇게 1건이 떴다.
 KNOWN_UNEXTRACTED = {
-    ("경북대학교", "2024", "농업토목ㆍ생물산업공학부(생물산업기계공학전공)"),
+    ("경북대학교", "2024",
+     normalize_name("농업토목·생물산업공학부(생물산업기계공학전공)")),
 }
 
 
@@ -211,10 +216,12 @@ def main():
     for identity, record in sorted(record_ids.items()):
         if identity in matched_positions:
             continue
-        known = (record["대학명"], record["연도"], record.get("학과"))
+        known = (record["대학명"], record["연도"],
+                 normalize_name(record.get("학과")))
         if known in KNOWN_UNEXTRACTED:
             continue
-        orphans.append((identity[0], *known))
+        orphans.append(
+            (identity[0], record["대학명"], record["연도"], record.get("학과")))
 
     def show(rows, limit=25):
         for line in rows[:None if show_all else limit]:

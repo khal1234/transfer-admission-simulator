@@ -59,14 +59,14 @@ describe("경북대 공식 편입학 결과 ↔ 저장 데이터", () => {
   it("fills the six previously omitted reverse-calculated raw values", () => {
     expect(recordAt(
       "2024",
-      "농업토목ㆍ생물산업공학부(농업토목공학전공)",
+      "농업토목·생물산업공학부(농업토목공학전공)",
     )).toMatchObject({
       최종합격_토익원점수: 714.98,
       최종합격_학점원점수_100점만점: 85.05,
     });
     expect(recordAt(
       "2024",
-      "농업토목ㆍ생물산업공학부(생물산업기계공학전공)",
+      "농업토목·생물산업공학부(생물산업기계공학전공)",
     )).toMatchObject({
       최종합격_토익원점수: 518.36,
       최종합격_학점원점수_100점만점: 88,

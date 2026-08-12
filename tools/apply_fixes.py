@@ -17,6 +17,9 @@
      0은 '값 없음'이 아니라 '0점'으로 읽혀 평균과 비교를 오염시킨다.
   5. 충남대 2024 회화과(서양화) 예외 — 학점 원점수 177.1 을 null 로.
      백분위는 100을 넘을 수 없다. 원본은 환산점수 17.71 만 싣는다.
+  6. 강원대 2026 환산공식 — 공인영어 배점 150, 전적대성적 미반영.
+  7. 학과 표시명 정규화 — 줄바꿈·가운뎃점·원본 오타 때문에 같은 학과가 연도마다
+     다른 이름으로 갈라져 있던 것 3종. 원본 대조는 아래 상수 주석에 적었다.
 
 고치지 않는 것
   - 역산으로 채워진 원점수 709건. 값이 틀린 것이 아니라 '대학이 발표한 값이
@@ -27,6 +30,7 @@
 """
 import io
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -56,6 +60,38 @@ SCORE_FIELDS = [
     "최종합격_학점환산점수",
     "최종합격_학점원점수_100점만점",
 ]
+
+# ── 학과 표시명 정규화 ────────────────────────────────────────
+# '학과' 는 화면에 쓰는 이름이고 '학과_원본명' 은 원본에 찍힌 그대로다.
+# 아래는 표시명에만 적용한다 — 원본명을 손대면 원문 대조가 성립하지 않는다.
+
+# 가운뎃점. 같은 대학이 해마다 다른 문자를 쓴다 — 경북대는 24 PDF 3쪽과
+# 26 xlsx 가 'ㆍ'(U+318D), 25 xlsx 는 '·'(U+00B7) 다. 원본이 갈라져 있으니
+# 추출로는 맞출 수 없고 표시명에서 모아야 한다. results 전체가 '·' 쪽으로
+# 크게 기울어 있고 web/src/utils/departmentSearch.ts 도 'ㆍ' 를 '·' 로 바꿔
+# 쓰므로 '·' 로 모은다.
+MIDDLE_DOT = "·"
+MIDDLE_DOT_VARIANTS = "ㆍ‧•・･"
+
+# 원본에 찍힌 오타. 추출은 정확했고 대학이 낸 표가 틀렸다.
+#   부산대 2024 '유기소재스템공학과' — 24_부산대_성적.pdf 2쪽. '시'가 빠졌다.
+#   같은 학과가 25·26_부산대_성적.pdf 에는 '유기소재시스템공학과' 로 나온다.
+NAME_TYPOS = {
+    ("부산대학교", "2024", "유기소재스템공학과"): "유기소재시스템공학과",
+}
+
+
+def canonical_display_name(univ, year, name):
+    """results 의 '학과' 를 연도 사이에 갈라지지 않는 하나의 표기로 만든다."""
+    text = NAME_TYPOS.get((univ, year, str(name).strip()), str(name))
+
+    for dot in MIDDLE_DOT_VARIANTS:
+        text = text.replace(dot, MIDDLE_DOT)
+
+    # 셀 폭에 맞춘 줄바꿈은 이름의 일부가 아니라 조판 흔적이다. 공백으로
+    # 바꾸지 않고 지운다 — 다른 해의 같은 학과에는 그 자리에 공백이 없다.
+    text = re.sub(r"\s*[\r\n]+\s*", "", text)
+    return re.sub(r"[ \t]+", " ", text).strip()
 
 
 def load(path):
@@ -296,6 +332,19 @@ def main():
                 "전적대학성적 미반영. " + str(record.get("비고", ""))
             ).strip()
             changes.append("[6] 환산공식 강원대 2026 배점 수정 (영어 150 / 면접 100 / 전적대 미반영)")
+
+    # ── 7. 학과 표시명 정규화 ─────────────────────────────────
+    # 2번에서 새로 넣은 레코드까지 함께 지나가도록 맨 뒤에 둔다.
+    for record in standard + exceptions:
+        before = record["학과"]
+        after = canonical_display_name(
+            record["대학명"], record["연도"], before)
+        if after != before:
+            changes.append(
+                f"[7] {record['연도']} {record['대학명']} 학과 표시명 "
+                f"{before!r} → {after!r}"
+            )
+            record["학과"] = after
 
     # ── 보고와 저장 ───────────────────────────────────────────
     print(f"=== 수정 {len(changes)}건 ===")
