@@ -5,6 +5,7 @@ import {
   decomposeToJamo,
   filterDepartmentSearchIndex,
   getDepartmentGroupKey,
+  isSameDepartmentLabel,
   resolveDepartmentAliases,
 } from "./departmentSearch";
 
@@ -197,5 +198,32 @@ describe("grouped ordering", () => {
       "기계공학전공",
       "기계공학교육과",
     ]);
+  });
+});
+
+describe("isSameDepartmentLabel", () => {
+  // 표기만 손본 것에 '이전 명칭' 이 붙으면 이름이 바뀐 적 없는 학과에
+  // 없는 이력이 생긴다. 가운뎃점을 모으자마자 실제로 10건이 그렇게 떴다.
+  it("treats middle-dot and whitespace variants as the same name", () => {
+    expect(isSameDepartmentLabel(
+      "산림과학·조경학부(임학전공)",
+      "산림과학ㆍ조경학부(임학전공)",
+    )).toBe(true);
+    expect(isSameDepartmentLabel(
+      "농업토목·생물산업공학부(생물산업기계공학전공)",
+      "농업토목·생물산업공학부\n(생물산업기계공학전공)",
+    )).toBe(true);
+  });
+
+  it("still reports a genuine rename", () => {
+    expect(isSameDepartmentLabel("조선·해양공학과", "조선해양공학과")).toBe(false);
+    expect(isSameDepartmentLabel("분자생물학과", "분자생물학")).toBe(false);
+    expect(isSameDepartmentLabel("유기소재시스템공학과", "유기소재스템공학과"))
+      .toBe(false);
+  });
+
+  // 꼬리는 떼지 않는다 — 학과와 학부는 진짜 다른 이름이다.
+  it("does not collapse 과/부 the way the sort key does", () => {
+    expect(isSameDepartmentLabel("기계공학과", "기계공학부")).toBe(false);
   });
 });

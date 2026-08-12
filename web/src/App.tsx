@@ -28,7 +28,10 @@ import {
   getRecordYear,
   isComparableRecord,
 } from "./utils/records";
-import { getDepartmentGroupKey } from "./utils/departmentSearch";
+import {
+  getDepartmentGroupKey,
+  isSameDepartmentLabel,
+} from "./utils/departmentSearch";
 import {
   getComparisonYearNotice,
   pickBasisRecord,
@@ -163,7 +166,9 @@ function getSortedRecordYears(records: DepartmentRecord[]): string[] {
 function getRenamedHistoryText(history: DepartmentRecord[]): string {
   return history
     .flatMap((record) => (
-      record.학과 !== record.학과_원본명 ? [`[${record.연도}년] ${record.학과_원본명}`] : []
+      isSameDepartmentLabel(record.학과, record.학과_원본명)
+        ? []
+        : [`[${record.연도}년] ${record.학과_원본명}`]
     ))
     .join(" ➔ ");
 }

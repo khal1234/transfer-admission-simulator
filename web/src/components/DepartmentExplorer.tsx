@@ -12,6 +12,7 @@ import {
   buildDepartmentSearchIndex,
   filterDepartmentSearchIndex,
   getDepartmentGroupKey,
+  isSameDepartmentLabel,
 } from "../utils/departmentSearch";
 import {
   getGpaDisclosure,
@@ -199,7 +200,7 @@ function DepartmentExplorer({
                     <td>
                       <div className="dept-name-wrapper">
                         <h4>{record.학과}</h4>
-                        {record.학과 !== record.학과_원본명 && (
+                        {!isSameDepartmentLabel(record.학과, record.학과_원본명) && (
                           <span>이전 명칭: {record.학과_원본명}</span>
                         )}
                       </div>
@@ -261,7 +262,7 @@ function DepartmentExplorer({
                 </div>
                 <div className="dept-name-wrapper">
                   <h3>{record.학과}</h3>
-                  {record.학과 !== record.학과_원본명 && (
+                  {!isSameDepartmentLabel(record.학과, record.학과_원본명) && (
                     <span>이전 명칭: {record.학과_원본명}</span>
                   )}
                 </div>

@@ -195,6 +195,23 @@ export function resolveDepartmentAliases(normalizedQuery: string): string[] {
 }
 
 /**
+ * 같은 이름을 다르게 적은 것뿐인가.
+ *
+ * `학과` 는 화면용 표시명이고 `학과_원본명` 은 원본에 찍힌 그대로다. 둘이
+ * 다르면 화면에 '이전 명칭' 을 붙이는데, 표기만 손본 것까지 그렇게 뜨면
+ * 이름이 바뀐 적 없는 학과에 없는 이력이 붙는다 — 원본의 가운뎃점을 'ㆍ'
+ * 에서 '·' 로 모으자마자 실제로 10건이 그렇게 떴다(경북대 산림과학·조경학부
+ * 등). 꼬리는 떼지 않는다. '기계공학과'와 '기계공학부'는 진짜 다른 이름이다.
+ */
+export function isSameDepartmentLabel(a: string, b: string): boolean {
+  const flatten = (text: string) => text
+    .replace(/[ㆍ‧・･]/g, "·")
+    .replace(/\s+/g, "");
+
+  return flatten(a) === flatten(b);
+}
+
+/**
  * 정렬용 표준명 — 같은 과인데 대학마다 다르게 부르는 꼬리를 뗀다.
  *
  * '기계'로 검색하면 기계공학과·기계공학부·기계공학전공이 학과명 가나다순에
