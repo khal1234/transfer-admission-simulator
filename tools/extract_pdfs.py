@@ -170,6 +170,9 @@ SPECS = {
         "years": ["2024", "2025", "2026"],
         "type_labels": ["편입유형"],
         "type_keep": "일반편입",
+        # 2단계 전형 학과는 비고에 '1단계합격자'/'최초합격자' 두 줄로 실린다.
+        # 우리가 쓰는 값은 최초합격자다.
+        "row_drop_contains": ["1단계합격자"],
         "header_depth": 1,
         "labels": {
             "unit": ["모집단위"],
@@ -405,6 +408,20 @@ def extract_one(univ, year, spec):
             unit = row[cols["unit"]]
             unit_text = str(unit).strip() if unit else ""
             if not unit_text or squash(unit_text).startswith("모집단위"):
+                continue
+
+            # 같은 모집단위가 단계별로 두 줄인 표가 있다(충북대 2단계 전형의
+            # 약학-의학-수의학-제약학과). 비고 칸에 '1단계합격자'/'최초합격자'
+            # 로만 갈려 있어 학과명만 보면 두 줄이 같아 보이고, 먼저 나오는
+            # 1단계 줄이 채택된다. results 는 최초합격자를 싣고 있어서
+            # 대조가 통째로 가짜 불일치가 됐다(2024-2025 합 7건).
+            # 띄어쓰기는 해마다 다르다 — 24 는 '1단계합격자', 25 는
+            # '1단계 합격자'. 공백을 지우고 견준다.
+            drop = spec.get("row_drop_contains")
+            if drop and any(
+                any(word in squash(str(cell)).replace(" ", "") for word in drop)
+                for cell in row if cell
+            ):
                 continue
 
             # 전형 필터가 걸린 대학인데 아직 구분을 못 읽었으면 넣지 않는다.
