@@ -12,6 +12,12 @@ __pycache__/
 .env
 *.key
 
+# Claude Code — 공유하는 것은 settings.json 과 hooks/ 뿐이다.
+# 아래는 이 기계에만 해당하는 것이라 올리지 않는다 (`*.local` 로는 안 걸린다).
+.claude/settings.local.json
+.claude/shared-system.lock
+.claude/worktrees/
+
 # Standard OS metadata & editor assets
 .DS_Store
 Thumbs.db
