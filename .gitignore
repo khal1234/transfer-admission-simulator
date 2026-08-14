@@ -15,8 +15,12 @@ __pycache__/
 # Claude Code — 공유하는 것은 settings.json 과 hooks/ 뿐이다.
 # 아래는 이 기계에만 해당하는 것이라 올리지 않는다 (`*.local` 로는 안 걸린다).
 .claude/settings.local.json
-.claude/shared-system.lock
 .claude/worktrees/
+.claude/공용시스템-판정.md
+저점-면제.txt
+# 훅이 만드는 로컬 상태(.shared-system.lock 등)는 열거하지 않고 기본값을 막는 쪽으로 둔다 —
+# 열거하면 훅이 파일을 하나 더 만들 때마다 샌다.
+/.claude/hooks/.*
 
 # Standard OS metadata & editor assets
 .DS_Store
