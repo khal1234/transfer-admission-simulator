@@ -37,7 +37,9 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 SHARED = Path(os.environ.get("CLAUDE_SHARED_SYSTEM")
-              or Path.home() / "Documents" / "Claude")
+              or next((p for p in (Path.home() / "Documents" / "naru",
+                                    Path.home() / "Documents" / "Claude")
+                            if p.is_dir()), Path.home() / "Documents" / "naru"))
 LOCK = Path(__file__).resolve().parent / ".shared-system.lock"   # dot 접두 = 이미 무시되는 자리
 # 해시를 뜰 대상. 산출물·캐시는 세지 않는다.
 SUFFIXES = (".md", ".py", ".ps1", ".txt", ".json")
@@ -76,16 +78,25 @@ def diff(now, before):
     return added, changed, gone
 
 
+def load_lock():
+    """lock 에 적힌 «지난번에 본 상태». 못 읽으면 빈 dict.
+
+    세 자리(`main`·`accept`·`show_list`)가 같은 것을 읽는다 — 따로 적으면 갈라진다
+    (이 리포가 「같은 질문에 답하는 자가 둘」이라 부르는 부류).
+    """
+    if not LOCK.is_file():
+        return {}
+    try:
+        return json.loads(LOCK.read_text(encoding="utf-8")).get("files") or {}
+    except ValueError:
+        return {}
+
+
 def main():
     now = fingerprint(SHARED)
     if not now:
         return 0                      # 공용 폴더가 없는 환경 — 조용히 넘어간다
-    before = {}
-    if LOCK.is_file():
-        try:
-            before = json.loads(LOCK.read_text(encoding="utf-8")).get("files") or {}
-        except ValueError:
-            before = {}
+    before = load_lock()
     added, changed, gone = diff(now, before)
     if not LOCK.is_file():
         # 첫 실행 — 지금 상태를 기준으로 삼고 알리지 않는다(전부 '새것' 으로 뜨면 소음이다).
@@ -96,8 +107,31 @@ def main():
         return 0                      # ★ 평소: 출력 0
     names = [*(f"+{k}" for k in added), *changed]
     print("[공용 시스템] 변경 %d건 — %s%s · `Documents/Claude/변경일지.md` 의 그 줄만 읽고"
-          " 가져올지 판정할 것 (가져왔으면 `--accept <경로…>` 로 표시)"
+          " 가져올지 판정할 것 (전체 목록 `--list` · 가져왔으면 `--accept <경로…>` 로 표시)"
           % (len(names), ", ".join(names[:5]), " …" if len(names) > 5 else ""))
+    return 0
+
+
+def show_list():
+    """`--list` — **잘리지 않은** 전체 목록. 판정하는 세션이 부른다.
+
+    ★ 왜 따로 두나 (2026-08-15): 위 한 줄은 **다섯 개에서 자른다**(`names[:5]`). 평소 비용을
+    0 에 가깝게 두려는 것이라 그 자름 자체는 옳다. 그런데 자른 뒤 «전체를 볼 길»이 없어서
+    판정하는 세션이 **나머지를 눈으로 추측**하게 됐다 — 규칙 11 이 「조용히 잘린 순회」라 부르는
+    그 형태다(*"상한에 걸린 0건은 「없다」가 아니라 「거기까지는 없다」이다"*).
+    → 자르는 쪽은 그대로 두고 **여는 문**을 만든다. 부르는 자리는 위 한 줄이 스스로 광고한다.
+    ★ 사라진 것(`gone`)도 함께 낸다 — 한 줄 알림은 «가져올 것»만 세느라 그것을 빼는데,
+      판정하는 자리에서는 «공용에서 없어졌다» 도 판정 대상이다.
+    """
+    now = fingerprint(SHARED)
+    if not now:
+        print("[공용 시스템] 공용 폴더가 없다: " + str(SHARED))
+        return 0
+    added, changed, gone = diff(now, load_lock())
+    for label, names in (("새로 생김", added), ("바뀜", changed), ("공용에서 사라짐", gone)):
+        print("[%s] %d건" % (label, len(names)))
+        for name in names:
+            print("  " + name)
     return 0
 
 
@@ -110,12 +144,7 @@ def accept(only=None):
     """
     now = fingerprint(SHARED)
     if only:
-        keep = {}
-        if LOCK.is_file():
-            try:
-                keep = json.loads(LOCK.read_text(encoding="utf-8")).get("files") or {}
-            except ValueError:
-                keep = {}
+        keep = load_lock()
         unknown = [p for p in only if p not in now]
         for path in only:
             if path in now:
@@ -134,4 +163,6 @@ if __name__ == "__main__":
     if "--accept" in sys.argv:
         paths = [a for a in sys.argv[1:] if not a.startswith("--")]
         raise SystemExit(accept(paths or None))
+    if "--list" in sys.argv:
+        raise SystemExit(show_list())
     raise SystemExit(main())

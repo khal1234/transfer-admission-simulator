@@ -31,7 +31,9 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 SHARED = Path(os.environ.get("CLAUDE_SHARED_SYSTEM")
-              or Path.home() / "Documents" / "Claude")
+              or next((p for p in (Path.home() / "Documents" / "naru",
+                                    Path.home() / "Documents" / "Claude")
+                            if p.is_dir()), Path.home() / "Documents" / "naru"))
 RECORD = SHARED / "기록" / "세션비용.csv"
 MIN_EDITS = 15          # 이보다 작은 세션은 비율이 요동쳐서 안 본다
 MIN_PAST = 2            # 견줄 과거가 이만큼은 있어야 «추세» 라 부를 수 있다
