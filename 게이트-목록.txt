@@ -1,0 +1,15 @@
+# 이 프로젝트의 **게이트 선언** — `도구/audit_session_cost.py` 가 읽는다.
+#
+# 형식:  <명령 조각> | <왜 이것이 게이트인가>
+#   ★ 사유 없는 줄은 안 친다.
+#
+# ★ 이 리포는 이름 어림이 **깎는 쪽으로** 틀린다 — 주 게이트인
+#   `check_update_notice.py` 에 hint 낱말이 하나도 없어 한 번도 안 세어졌다.
+
+check_update_notice.py | 커밋 직전 «업데이트 알림 누락» 게이트. 이 리포의 주 게이트인데 이름에 hint 낱말이 없다
+audit_data_parity.py   | results/ ↔ web/src/data/ SHA-256 대조 — 정본과 산출물이 갈라졌는지 판정한다
+diff_extraction.py     | 원본(PDF·엑셀) 대조. data/ 가 있어야 돈다
+npm test               | web/ 테스트 102건 + TypeScript strict + lint + build
+scan_private.py        | 공개 저장소라 넘기기 전 필수. 기준선 3건보다 늘면 새로 생긴 것이다
+audit_path_names.py    | 파일 이름이 다른 OS 로 건너갈 때 갈리는지
+check_floor.py         | 바닥 방어가 배선됐는지
