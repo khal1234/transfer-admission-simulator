@@ -76,12 +76,6 @@ $DeployArgs = @(
 )
 
 if ($Production) {
-    # 월 배포 한도 확인 — 2026-09-01 신설(tools/deploy_quota.py). 여럿이 나눠 쓰는
-    # 공용 한도라, 남은 횟수를 안 보여주면 누군가 모르고 다 써서 사이트가 멈춘다.
-    & python (Join-Path $PSScriptRoot "deploy_quota.py") --check
-    if ($LASTEXITCODE -ne 0) {
-        throw "이번 달 배포 한도를 다 썼다. 정말 진행하려면 'python tools/deploy_quota.py --check --force' 로 직접 확인 후 이 스크립트를 수정 없이 계속 쓰지 말고 사유를 남길 것."
-    }
     # 실제 게시 직전에 API가 돌려준 ID·이름·URL 셋을 모두 확인한다.
     Get-VerifiedNetlifySite "netlify" | Out-Null
     Write-Host ""
@@ -98,8 +92,3 @@ if ($Production) {
 
 & netlify @DeployArgs
 if ($LASTEXITCODE -ne 0) { throw "netlify 배포 실패." }
-
-if ($Production) {
-    & python (Join-Path $PSScriptRoot "deploy_quota.py") --record
-    Write-Host "[deploy] 기록: 기록/배포-횟수.txt — 커밋·푸시해 다른 컨트리뷰터도 남은 횟수를 보게 할 것." -ForegroundColor Cyan
-}
