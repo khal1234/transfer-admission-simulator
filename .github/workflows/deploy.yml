@@ -34,6 +34,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # tools/check_update_notice.py 는 git log --name-only 로 최근 커밋의
+          # 변경 파일을 비교한다 — depth=1(기본값)이면 히스토리가 한 커밋뿐이라
+          # git이 "이전 커밋과의 diff"가 아니라 트리 전체 파일 목록을 내놔서
+          # 알림이 뒤처진 것처럼 오탐한다(2026-09-01 첫 CI 실행에서 발견).
+          fetch-depth: 40
 
       - uses: actions/setup-node@v4
         with:
