@@ -5469,7 +5469,8 @@ html[data-theme="dark"] .decision-tabs button strong {
   justify-content: center;
   gap: 6px;
   color: var(--primary-color);
-  font-size: 13px;
+  /* 카드 본문(연도별 줄 12.5px · 알림 12px)과 같은 크기. 굵기와 색으로만 단추임을 알린다. */
+  font-size: 12.5px;
   font-weight: 700;
 }
 
@@ -5500,11 +5501,12 @@ html[data-theme="dark"] .decision-tabs button strong {
     box-shadow: none;
   }
 
-  /* 높이 44px 은 엄지로 누르는 자리의 최소 크기라 그대로 두고, 그 안의 글자를 11.5px 에서 키운다. */
+  /* 높이 44px 은 엄지로 누르는 자리의 최소 크기라 그대로 두고, 그 안의 글자를 11.5px 에서 본문 크기로 올린다.
+     13.5px 까지 키웠더니 본문보다 커 보였다(2026-11-15 사용자 지적). */
   .target-card-body > .score-basis:not([open]) .score-basis-summary,
   .target-card-body > .target-details:not([open]) .target-details-summary,
   .target-card-footer .btn-card-action {
-    font-size: 13.5px;
+    font-size: 12.5px;
     padding: 10px 4px;
   }
 }
@@ -5819,5 +5821,21 @@ html[data-theme="dark"] :is(.btn-reload-chart, .capture-action--primary, .explor
 
   .target-card .btn-card-action:hover {
     border-color: var(--border-color);
+  }
+
+  /* 세 칸의 높이가 31 · 44 · 34px 로 달라, 아래를 맞춰도 글자 줄이 6px 씩 어긋났다
+     (2026-11-15 사용자 지적). 접혀 있을 때는 셋 다 같은 높이로 두어 글자가 한 줄에 놓이게 한다. */
+  .target-card .score-basis:not([open]) .score-basis-summary,
+  .target-card .target-details:not([open]) .target-details-summary,
+  .target-card .btn-card-action {
+    box-sizing: border-box;
+    height: 40px;
+    min-height: 40px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .target-card > .target-card-footer {
+    background: transparent;
   }
 }
