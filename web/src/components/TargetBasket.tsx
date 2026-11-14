@@ -28,6 +28,10 @@ import {
   type RecentHistoryRow,
 } from "../utils/historyStatus";
 import RawScoreValue from "./RawScoreValue";
+import RecruitmentCount from "./RecruitmentCount";
+import ScoreExplanation from "./ScoreExplanation";
+import { getDisclosureEvidence } from "../utils/disclosureEvidence";
+import { getUnavailableScoreDescription } from "../utils/scoreAvailability";
 import ScoreBasis from "./ScoreBasis";
 import UniversityName from "./UniversityName";
 import DataConfidenceBadge from "./DataConfidenceBadge";
@@ -481,7 +485,11 @@ function TargetBasket({
                           {year === referenceRecord.연도 && (
                             <span className="compare-year-basis">기준</span>
                           )}
-                          {!hasRecord ? (
+                          {getDisclosureEvidence(target.univ, year, target.dept) ? (
+                            <ScoreExplanation label="연도별 입결 안내" description={getDisclosureEvidence(target.univ, year, target.dept)!.description}>
+                              {getDisclosureEvidence(target.univ, year, target.dept)!.kind === "not-recruited" ? "미모집" : "합격 2명 이하"}
+                            </ScoreExplanation>
+                          ) : !hasRecord ? (
                             // '모집 없음'이라고 단정하면 안 된다. 그 해에 안 뽑은
                             // 경우와 다른 이름으로 뽑은 경우를 지금 데이터로는
                             // 구별하지 못한다(강원대 기계의용 계열 등).
@@ -711,7 +719,7 @@ function TargetBasket({
                           <thead>
                             <tr>
                               <th>연도</th>
-                              <th>모집</th>
+                              <th>등록 / 모집</th>
                               <th>지원</th>
                               <th>경쟁률</th>
                               <th>TOEIC 평균</th>
@@ -725,6 +733,7 @@ function TargetBasket({
                               exclusionReason,
                               exceptionLookupStatus,
                               siblingDepartments,
+                              disclosureEvidence,
                             }) => {
                               const status = getRecentHistoryStatus({
                                 year,
@@ -732,6 +741,7 @@ function TargetBasket({
                                 exclusionReason,
                                 exceptionLookupStatus,
                                 siblingDepartments,
+                                disclosureEvidence,
                               });
                               if (record === null) {
                                 return (
@@ -742,7 +752,7 @@ function TargetBasket({
                                       className={`history-unavailable history-${status.kind}`}
                                       title={status.title}
                                     >
-                                      {status.label}
+                                      {status.title ? <ScoreExplanation label="연도별 입결 안내" description={status.title}>{status.label}</ScoreExplanation> : status.label}
                                     </td>
                                   </tr>
                                 );
@@ -754,13 +764,14 @@ function TargetBasket({
                                     {record.연도}년
                                     <span className="sr-only"> · {status.label}</span>
                                   </td>
-                                  <td>{record.모집인원 ?? "-"}</td>
+                                  <td><RecruitmentCount record={record} /></td>
                                   <td>{record.지원인원 ?? "-"}</td>
                                   <td>{formatCompetitionRatio(record)}</td>
                                   <td>
                                     <RawScoreValue
                                       value={record.최종합격_토익원점수}
                                       note={getToeicDisclosure(record.대학명)}
+                                      unavailableDescription={getUnavailableScoreDescription(record, "toeic")}
                                       suffix=""
                                     />
                                   </td>
@@ -768,6 +779,7 @@ function TargetBasket({
                                     <RawScoreValue
                                       value={record.최종합격_학점원점수_100점만점}
                                       note={getGpaDisclosure(record.대학명)}
+                                      unavailableDescription={getUnavailableScoreDescription(record, "gpa")}
                                       suffix=""
                                     />
                                   </td>

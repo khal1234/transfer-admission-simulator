@@ -18,25 +18,67 @@ import {
   getGpaDisclosure,
   getToeicDisclosure,
 } from "../utils/scoreProvenance";
+import { getUnavailableScoreDescription } from "../utils/scoreAvailability";
+import {
+  CATEGORY_TRACKS,
+  getDepartmentCategory,
+  type DepartmentCategory,
+} from "../utils/departmentCategory";
+import {
+  EXPLORER_SORT_LABELS,
+  getExplorerMargin,
+  sortExplorerRecords,
+  type ExplorerMargin,
+  type ExplorerSort,
+} from "../utils/explorerSort";
 import { getRecordKey } from "../utils/targets";
 import RawScoreValue from "./RawScoreValue";
+import RecruitmentCount from "./RecruitmentCount";
 import UniversityName from "./UniversityName";
 
 const ITEMS_PER_PAGE = 10;
+const UNKNOWN_MARGIN: ExplorerMargin = { diff: null, ratio: null, status: "unknown" };
 
 type DepartmentExplorerProps = {
   records: DepartmentRecord[];
+  nonRecruitmentExceptions?: { university: string; department: string; years: string[]; evidence: string[] }[];
   targetKeys: ReadonlySet<string>;
   onToggleTarget: (univ: string, dept: string) => void;
+  toeic?: number | null;
+  gpa100?: number | null;
 };
+
+const MARGIN_LABELS: Record<ExplorerMargin["status"], string> = {
+  safe: "평균 이상",
+  borderline: "평균 근접",
+  risk: "평균 미달",
+  unknown: "판정 불가",
+};
+
+function MarginBadge({ margin }: { margin: ExplorerMargin }) {
+  const sign = margin.diff !== null && margin.diff > 0 ? "+" : "";
+  return (
+    <span className={`explorer-margin explorer-margin--${margin.status}`}>
+      {MARGIN_LABELS[margin.status]}
+      {margin.diff !== null && ` ${sign}${margin.diff}점`}
+      {margin.ratio !== null && ` (${sign}${(margin.ratio * 100).toFixed(1)}%)`}
+    </span>
+  );
+}
 
 function DepartmentExplorer({
   records,
+  nonRecruitmentExceptions = [],
   targetKeys,
   onToggleTarget,
+  toeic = null,
+  gpa100 = null,
 }: DepartmentExplorerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUnivs, setSelectedUnivs] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<DepartmentCategory[]>([]);
+  const [sort, setSort] = useState<ExplorerSort>("default");
+  const hasMyScore = toeic !== null || gpa100 !== null;
   const [currentPage, setCurrentPage] = useState(1);
   const resultsStartRef = useRef<HTMLParagraphElement | null>(null);
 
@@ -52,7 +94,7 @@ function DepartmentExplorer({
     () => new Set(selectedUnivs),
     [selectedUnivs],
   );
-  const filteredDepartments = useMemo(
+  const searchedDepartments = useMemo(
     () => filterDepartmentSearchIndex(
       searchableRecords,
       searchQuery,
@@ -60,6 +102,46 @@ function DepartmentExplorer({
     ),
     [searchQuery, searchableRecords, selectedUnivSet],
   );
+  // 계열 칩 옆 숫자는 대학·검색어까지 거른 뒤의 개수다. 0인 칩을 눌러 빈 화면을 보는 일을 막는다.
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<DepartmentCategory, number>();
+    searchedDepartments.forEach((record) => {
+      const category = getDepartmentCategory(record.학과);
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    });
+    return counts;
+  }, [searchedDepartments]);
+  const selectedCategorySet = useMemo(
+    () => new Set(selectedCategories),
+    [selectedCategories],
+  );
+  const effectiveSort: ExplorerSort = sort === "myMargin" && !hasMyScore ? "default" : sort;
+  const marginByKey = useMemo(() => {
+    const margins = new Map<string, ExplorerMargin>();
+    if (effectiveSort !== "myMargin") {
+      return margins;
+    }
+    searchedDepartments.forEach((record) => {
+      margins.set(
+        getRecordKey(record.대학명, record.학과),
+        getExplorerMargin(record, toeic, gpa100),
+      );
+    });
+    return margins;
+  }, [effectiveSort, gpa100, searchedDepartments, toeic]);
+  const getMargin = (record: DepartmentRecord): ExplorerMargin => (
+    marginByKey.get(getRecordKey(record.대학명, record.학과)) ?? UNKNOWN_MARGIN
+  );
+  const filteredDepartments = useMemo(() => {
+    const inCategory = selectedCategorySet.size === 0
+      ? searchedDepartments
+      : searchedDepartments.filter((record) => (
+        selectedCategorySet.has(getDepartmentCategory(record.학과))
+      ));
+    return sortExplorerRecords(inCategory, effectiveSort, (record) => (
+      marginByKey.get(getRecordKey(record.대학명, record.학과)) ?? UNKNOWN_MARGIN
+    ));
+  }, [effectiveSort, marginByKey, searchedDepartments, selectedCategorySet]);
 
   const totalPages = Math.ceil(filteredDepartments.length / ITEMS_PER_PAGE);
   const paginatedRecords = useMemo(() => {
@@ -76,8 +158,28 @@ function DepartmentExplorer({
     setSelectedUnivs((current) => (
       current.includes(university)
         ? current.filter((selected) => selected !== university)
-        : [university]
+        : [...current, university]
     ));
+    setCurrentPage(1);
+  };
+
+  const toggleCategory = (category: DepartmentCategory) => {
+    setSelectedCategories((current) => (
+      current.includes(category)
+        ? current.filter((selected) => selected !== category)
+        : [...current, category]
+    ));
+    setCurrentPage(1);
+  };
+
+  // 「이과」를 누르면 그 아래 계열을 한꺼번에 켜고, 다 켜져 있으면 한꺼번에 끈다.
+  const toggleTrack = (categories: DepartmentCategory[]) => {
+    setSelectedCategories((current) => {
+      const allOn = categories.every((category) => current.includes(category));
+      return allOn
+        ? current.filter((selected) => !categories.includes(selected))
+        : [...current, ...categories.filter((category) => !current.includes(category))];
+    });
     setCurrentPage(1);
   };
 
@@ -104,6 +206,19 @@ function DepartmentExplorer({
         <BookOpen size={20} color="var(--secondary-color)" />
         거점국립대 모집단위 탐색 및 지망 담기
       </h2>
+
+      {nonRecruitmentExceptions.length > 0 && (
+        <details className="non-recruitment-exceptions">
+          <summary>최근 3개년 미모집 제외 사례 ({nonRecruitmentExceptions.length}개)</summary>
+          <p>공식 자료에서 최근 3개년 모두 모집계획 0명이 확인된 학과만 탐색 목록에서 제외합니다. 이력은 보존하며, 새로운 모집인원이 반영되면 다시 표시합니다. 자료가 없다는 이유만으로 제외하지 않습니다.</p>
+          <ul>{nonRecruitmentExceptions.map(item => (
+            <li key={`${item.university}|${item.department}`}>
+              <strong>{item.university} {item.department}</strong> ({[...item.years].reverse().join("·")} 미모집)
+              <details><summary>연도별 공식 근거</summary>{item.evidence.map(text => <p key={text}>{text}</p>)}</details>
+            </li>
+          ))}</ul>
+        </details>
+      )}
 
       <div className="explorer-filters">
         <div className="search-input-box">
@@ -153,6 +268,82 @@ function DepartmentExplorer({
         </div>
       </div>
 
+      <div className="explorer-refine">
+        <div className="explorer-category-groups" role="group" aria-label="계열 필터">
+          <button
+            type="button"
+            className={`univ-chip ${selectedCategories.length === 0 ? "active" : ""}`}
+            aria-pressed={selectedCategories.length === 0}
+            onClick={() => {
+              setSelectedCategories([]);
+              setCurrentPage(1);
+            }}
+          >
+            전체 계열
+          </button>
+          {CATEGORY_TRACKS.map(({ track, categories }) => {
+            const trackOn = categories.every((category) => selectedCategorySet.has(category));
+            return (
+              <div className="explorer-category-row" key={track}>
+                <button
+                  type="button"
+                  className={`explorer-track-chip ${trackOn ? "active" : ""}`}
+                  aria-pressed={trackOn}
+                  onClick={() => toggleTrack(categories)}
+                >
+                  {track}
+                </button>
+                {categories.map((category) => {
+                  const count = categoryCounts.get(category) ?? 0;
+                  const isOn = selectedCategorySet.has(category);
+                  return (
+                    <button
+                      type="button"
+                      key={category}
+                      className={`univ-chip ${isOn ? "active" : ""}`}
+                      aria-pressed={isOn}
+                      disabled={count === 0 && !isOn}
+                      onClick={() => toggleCategory(category)}
+                    >
+                      {category}
+                      <span className="explorer-chip-count">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+
+        <label className="explorer-sort">
+          <span>정렬</span>
+          <select
+            value={effectiveSort}
+            onChange={(event) => {
+              setSort(event.target.value as ExplorerSort);
+              setCurrentPage(1);
+            }}
+          >
+            {(Object.keys(EXPLORER_SORT_LABELS) as ExplorerSort[]).map((option) => (
+              <option
+                key={option}
+                value={option}
+                disabled={option === "myMargin" && !hasMyScore}
+              >
+                {EXPLORER_SORT_LABELS[option]}
+                {option === "myMargin" && !hasMyScore ? " (위에 점수를 넣으면 켜짐)" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="explorer-sort-note">
+          {effectiveSort === "myMargin"
+            ? "최신 해 합격 평균과 내 점수를 그 학교 환산식으로 비교해, 평균보다 몇 % 높은지 순으로 세웁니다(학교마다 만점이 달라 점수 차이 대신 비율). 합격 평균이 없는 학과는 맨 뒤에 둡니다. "
+            : ""}
+          계열은 학과 이름으로 나눈 것이라 학교의 실제 단과대와 다를 수 있습니다.
+        </p>
+      </div>
+
       <p
         className="explorer-result-count"
         aria-live="polite"
@@ -167,7 +358,7 @@ function DepartmentExplorer({
             <tr>
               <th className="explorer-university-column">대학명</th>
               <th className="explorer-department-column">학과명 (통합 표준과명)</th>
-              <th className="explorer-count-column table-cell-center">최신 모집인원</th>
+              <th className="explorer-count-column table-cell-center">최신 등록 / 모집인원</th>
               <th className="explorer-score-column table-cell-center">토익합격 평균</th>
               <th className="explorer-score-column table-cell-center">GPA합격 백분위</th>
               <th className="explorer-cart-column table-cell-center">장바구니</th>
@@ -203,21 +394,24 @@ function DepartmentExplorer({
                         {!isSameDepartmentLabel(record.학과, record.학과_원본명) && (
                           <span>이전 명칭: {record.학과_원본명}</span>
                         )}
+                        {effectiveSort === "myMargin" && <MarginBadge margin={getMargin(record)} />}
                       </div>
                     </td>
                     <td className="table-cell-center table-cell-semibold">
-                      {record.모집인원 !== null ? `${record.모집인원}명` : "-"}
+                      <RecruitmentCount record={record} />
                     </td>
                     <td className="table-cell-center table-cell-bold">
                       <RawScoreValue
                         value={record.최종합격_토익원점수}
                         note={getToeicDisclosure(record.대학명)}
+                        unavailableDescription={getUnavailableScoreDescription(record, "toeic")}
                       />
                     </td>
                     <td className="table-cell-center table-cell-bold">
                       <RawScoreValue
                         value={record.최종합격_학점원점수_100점만점}
                         note={getGpaDisclosure(record.대학명)}
+                        unavailableDescription={getUnavailableScoreDescription(record, "gpa")}
                       />
                     </td>
                     <td className="table-cell-center">
@@ -257,7 +451,7 @@ function DepartmentExplorer({
                     logoSize="small"
                   />
                   <span className="department-count">
-                    {record.모집인원 !== null ? `${record.모집인원}명 모집` : "인원 비공개"}
+                    <RecruitmentCount record={record} mobile />
                   </span>
                 </div>
                 <div className="dept-name-wrapper">
@@ -265,6 +459,7 @@ function DepartmentExplorer({
                   {!isSameDepartmentLabel(record.학과, record.학과_원본명) && (
                     <span>이전 명칭: {record.학과_원본명}</span>
                   )}
+                  {effectiveSort === "myMargin" && <MarginBadge margin={getMargin(record)} />}
                 </div>
                 <dl className="department-metrics">
                   <div>
@@ -273,6 +468,7 @@ function DepartmentExplorer({
                       <RawScoreValue
                         value={record.최종합격_토익원점수}
                         note={getToeicDisclosure(record.대학명)}
+                        unavailableDescription={getUnavailableScoreDescription(record, "toeic")}
                       />
                     </dd>
                   </div>
@@ -282,6 +478,7 @@ function DepartmentExplorer({
                       <RawScoreValue
                         value={record.최종합격_학점원점수_100점만점}
                         note={getGpaDisclosure(record.대학명)}
+                        unavailableDescription={getUnavailableScoreDescription(record, "gpa")}
                       />
                     </dd>
                   </div>

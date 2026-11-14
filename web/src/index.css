@@ -3517,6 +3517,69 @@ html[data-theme="dark"] .explorer-filters {
   vertical-align: baseline;
 }
 
+.score-unavailable {
+  border-bottom: 1px dashed currentColor;
+  color: var(--text-muted);
+  cursor: help;
+  outline-offset: 3px;
+}
+
+.score-explanation-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 4px 8px;
+  border: 1px dashed var(--text-muted);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+  vertical-align: middle;
+  touch-action: manipulation;
+}
+.score-explanation-trigger:hover,
+.score-explanation-trigger[aria-expanded="true"] { background: var(--bg-secondary); }
+.score-explanation-trigger:focus-visible { outline: 2px solid var(--text-secondary); outline-offset: 2px; }
+.score-explanation-trigger.score-derived-mark { margin-left: 4px; font-size: 13px; line-height: 1; }
+.score-explanation-panel {
+  position: fixed;
+  z-index: 1000;
+  width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 16px;
+  border: 1px solid var(--tooltip-border);
+  border-radius: 14px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  box-shadow: 0 12px 32px #0004;
+}
+.score-explanation-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.score-explanation-heading button {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 44px; min-height: 44px;
+  border: 1px solid var(--tooltip-border); border-radius: 8px;
+  background: transparent; color: inherit; cursor: pointer;
+}
+.score-explanation-panel p { margin: 8px 0 0; font-size: 14px; line-height: 1.75; overflow-wrap: anywhere; }
+.recruitment-count-button { max-width: 200px; font-size: 12px; line-height: 1.5; white-space: normal; }
+.recruitment-count-button svg { flex-shrink: 0; }
+.recruitment-count-inline { display: inline-block; max-width: 200px; font-size: 12px; line-height: 1.5; white-space: normal; }
+.recruitment-count-inline small { display: block; margin-top: 3px; color: var(--text-muted); font-size: 11px; font-weight: 400; }
+.recruitment-cohort-note { display: block; margin-top: 3px; font-size: 11px; font-weight: 700; }
+@media (max-width: 767px) {
+  .score-explanation-panel {
+    left: 12px; right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: auto; max-height: 60dvh;
+  }
+}
+
 /* ── 스펙 입력 접이식 바 (SpecInputPanel) ──────────────────── */
 
 /* 한 번 입력하면 다시 볼 일이 드문 영역이다. 평소에는 값만 한 줄로 보이고,
@@ -4421,4 +4484,158 @@ html[data-theme="dark"] .compare-score-primary {
 
 html[data-theme="dark"] .compare-action {
   color: #cbd5e1;
+}
+.non-recruitment-exceptions { margin: 0 0 16px; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.non-recruitment-exceptions summary { cursor: pointer; min-height: 44px; display: list-item; align-content: center; }
+.non-recruitment-exceptions p { color: var(--text-muted); margin: 8px 0; }
+
+/* 학과 탐색 — 계열 필터·정렬 */
+.explorer-refine {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: -6px 0 18px;
+}
+
+.explorer-category-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.explorer-category-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.explorer-track-chip {
+  border: 1px dashed var(--border-color);
+  background: transparent;
+  padding: 6px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.explorer-track-chip.active {
+  border-style: solid;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.explorer-chip-count {
+  margin-left: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.univ-chip:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.explorer-sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.explorer-sort select {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--card-bg, white);
+  color: var(--text-primary, inherit);
+  font-size: 13px;
+}
+
+.explorer-sort-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.explorer-margin {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.explorer-margin--safe {
+  background: var(--status-safe-bg);
+  color: var(--status-safe);
+}
+
+.explorer-margin--borderline {
+  background: var(--status-borderline-bg);
+  color: var(--status-borderline);
+}
+
+.explorer-margin--risk {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+html[data-theme="dark"] .explorer-margin {
+  background: #1f2937;
+  color: #d1d5db;
+}
+
+html[data-theme="dark"] .explorer-margin--safe {
+  background: rgba(4, 120, 87, 0.25);
+  color: #6ee7b7;
+}
+
+html[data-theme="dark"] .explorer-margin--borderline {
+  background: rgba(146, 64, 14, 0.3);
+  color: #fcd34d;
+}
+
+html[data-theme="dark"] .explorer-margin--risk {
+  background: rgba(185, 28, 28, 0.25);
+  color: #fca5a5;
+}
+
+@media (max-width: 767px) {
+  .explorer-refine {
+    margin-top: 0;
+  }
+
+  /* 계열 줄마다 가로로 밀어 본다. 줄바꿈하면 355px 폭에서 칩이 여섯 줄로 늘어난다. */
+  .explorer-category-row {
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .explorer-category-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .explorer-track-chip {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 12px;
+  }
+
+  .explorer-sort select {
+    flex: 1;
+    min-height: 44px;
+  }
 }

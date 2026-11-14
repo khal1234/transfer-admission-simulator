@@ -74,7 +74,7 @@ export default function UpdateNotice() {
               <span>최근 업데이트</span>
               <time dateTime={UPDATE_NOTICE_DATE.iso}>{UPDATE_NOTICE_DATE.label}</time>
             </div>
-            <p>계산 정확도, 기록 판정 및 로딩 성능 개선 사항을 반영했습니다.</p>
+            <p>표시된 날짜에 반영한 변경 사항만 안내합니다.</p>
           </header>
           <ul>
             {UPDATE_ITEMS.map((item) => (

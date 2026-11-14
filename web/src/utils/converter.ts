@@ -9,6 +9,7 @@ export interface DepartmentRecord {
   학과: string;
   학과_원본명: string;
   모집인원: number | null;
+  모집인원_근거?: string;
   지원인원: number | null;
   합격인원: number | null;
   최종합격_토익환산점수: number | null;

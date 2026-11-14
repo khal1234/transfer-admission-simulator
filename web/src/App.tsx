@@ -8,6 +8,8 @@ import {
   useState,
 } from "react";
 import DepartmentExplorer from "./components/DepartmentExplorer";
+import { getDisclosureEvidence } from "./utils/disclosureEvidence";
+import { partitionNonRecruitment } from "./utils/nonRecruitment";
 import DecisionSupportPanel from "./components/DecisionSupportPanel";
 import ChartErrorBoundary from "./components/ChartErrorBoundary";
 import SpecInputPanel from "./components/SpecInputPanel";
@@ -117,10 +119,11 @@ const DEFAULT_TARGETS: Target[] = [
 
 function buildValidatedData() {
   const preparedStandardData = prepareDepartmentRecords(rawStandardData);
-  const standardRecords = preparedStandardData.records;
+  const { records: standardRecords, excluded: nonRecruitmentExceptions } = partitionNonRecruitment(preparedStandardData.records);
 
   return {
     standardRecords,
+    nonRecruitmentExceptions,
     standardDataIssueCount: preparedStandardData.affectedRecordCount,
     standardTargetKeys: new Set(
       standardRecords.map((record) => getRecordKey(record.대학명, record.학과)),
@@ -176,6 +179,7 @@ function getRenamedHistoryText(history: DepartmentRecord[]): string {
 export default function App() {
   const {
     standardRecords,
+    nonRecruitmentExceptions,
     standardDataIssueCount,
     standardTargetKeys,
   } = getValidatedData();
@@ -615,6 +619,7 @@ export default function App() {
             `${key}::${year}`
           )?.제거사유 ?? null,
           exceptionLookupStatus: exceptionHistory.status,
+          disclosureEvidence: getDisclosureEvidence(target.univ, year, target.dept, history.map(record => record.학과_원본명)),
         })),
       }];
     });
@@ -778,8 +783,11 @@ export default function App() {
 
         <DepartmentExplorer
           records={latestExplorerRecords}
+          nonRecruitmentExceptions={nonRecruitmentExceptions}
           targetKeys={targetKeySet}
           onToggleTarget={toggleTarget}
+          toeic={toeic}
+          gpa100={gpa100}
         />
 
         <a

@@ -1,4 +1,5 @@
 import type { DepartmentRecord } from "./converter";
+import type { DisclosureEvidence } from "./disclosureEvidence";
 
 export type RecentHistoryRow = {
   year: string;
@@ -6,13 +7,19 @@ export type RecentHistoryRow = {
   exclusionReason: string | null;
   exceptionLookupStatus: "loading" | "ready" | "error";
   siblingDepartments: string[];
+  disclosureEvidence?: DisclosureEvidence | null;
 };
 
 export function getRecentHistoryStatus(row: RecentHistoryRow): {
-  kind: "exact" | "renamed" | "excluded" | "loading" | "error" | "unknown";
+  kind: "exact" | "renamed" | "excluded" | "loading" | "error" | "unknown" | "not-recruited" | "small-cohort";
   label: string;
   title?: string;
 } {
+  if (row.disclosureEvidence) return {
+    kind: row.disclosureEvidence.kind,
+    label: row.disclosureEvidence.kind === "not-recruited" ? "미모집 (모집계획 0명)" : "평균 성적 미공개 (합격자 2명 이하)",
+    title: row.disclosureEvidence.description,
+  };
   if (row.record !== null) {
     return { kind: "exact", label: "정확한 이름의 기록 존재" };
   }
