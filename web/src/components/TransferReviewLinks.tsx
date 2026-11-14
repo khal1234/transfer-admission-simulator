@@ -6,7 +6,7 @@ import {
   TRANSFER_REVIEWS,
   type TransferReview,
 } from "../data/transferReviews";
-import UniversityName from "./UniversityName";
+import { UniversityLogo } from "./UniversityName";
 
 const ALL_FILTER = "전체";
 const COMPARISON_FILTER = "복수 대학 비교";
@@ -43,6 +43,10 @@ function getShortUniversityName(university: string) {
 
   return university.replace("대학교", "대");
 }
+
+const isReviewUniversity = (id: string) => (
+  SITE_REVIEW_UNIVERSITIES.includes(id as typeof SITE_REVIEW_UNIVERSITIES[number])
+);
 
 function TransferReviewLinks() {
   const [selectedFilter, setSelectedFilter] = useState(ALL_FILTER);
@@ -142,11 +146,21 @@ function TransferReviewLinks() {
                   key={option.id}
                   type="button"
                   aria-pressed={selectedFilter === option.id}
-                  className={`transfer-review-tab ${selectedFilter === option.id ? "active" : ""}`}
+                  className={`transfer-review-tab ${
+                    isReviewUniversity(option.id) ? "transfer-review-tab--univ" : ""
+                  } ${selectedFilter === option.id ? "active" : ""}`}
+                  aria-label={isReviewUniversity(option.id) ? `${option.id} 후기 ${option.count}개` : undefined}
                   onClick={() => setSelectedFilter(option.id)}
                 >
-                  {SITE_REVIEW_UNIVERSITIES.includes(option.id as typeof SITE_REVIEW_UNIVERSITIES[number]) ? (
-                    <UniversityName university={option.id} logoSize="small" />
+                  {isReviewUniversity(option.id) ? (
+                    <>
+                      {/* 폰에서는 모집단위 탐색의 대학 칩과 같이 «대학교»를 떼고 두 글자만 보인다. */}
+                      <UniversityLogo university={option.id} size="small" />
+                      <span className="univ-chip-name">
+                        {option.id.replace(/대학교$/, "")}
+                        <span className="univ-chip-suffix">대학교</span>
+                      </span>
+                    </>
                   ) : (
                     <span>{option.label}</span>
                   )}

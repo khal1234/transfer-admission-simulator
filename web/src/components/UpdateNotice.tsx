@@ -52,12 +52,13 @@ export default function UpdateNotice() {
         aria-expanded={open}
         aria-controls={panelId}
         aria-haspopup="dialog"
+        aria-label="업데이트 알림"
         onClick={() => setOpen((current) => !current)}
         ref={triggerRef}
       >
         <Bell size={18} aria-hidden="true" />
-        <span>업데이트 알림</span>
-        <span className="update-notice-badge">NEW</span>
+        {/* «NEW»는 눌러도 사라지지 않아 뜻이 없었다(2026-11-15 사용자 지적). 글자도 «업데이트»만 둔다. */}
+        <span>업데이트</span>
       </button>
 
       {open && typeof document !== "undefined" && createPortal(

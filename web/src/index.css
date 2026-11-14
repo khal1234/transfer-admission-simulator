@@ -5688,8 +5688,7 @@ html[data-theme="dark"] .decision-tabs button strong {
   .btn-remove-target,
   .target-card-footer,
   .score-basis:not([open]),
-  .target-details:not([open]),
-  .guideline-card-notice a
+  .target-details:not([open])
 ) {
   display: none !important;
 }
@@ -5964,5 +5963,503 @@ html .univ-chip.univ-chip:not(.active):hover {
   html .univ-chip.univ-chip:not(.active):hover {
     border-color: var(--border-color);
     color: var(--text-secondary);
+  }
+}
+
+/* ── 2026-11-15 화면 지적(3차) ──────────────────────────────────────── */
+
+/* 제목 딱지: 폰에서 «비교»와 딱지 사이 틈이 0 이라 글자에 붙어 보였다. */
+.header-title-block h1 .badge-2026 {
+  margin-left: 8px;
+}
+
+/* 헤더(폰): 대학 이름 줄 / 연도·건수 줄 — 가운뎃점으로 잇지 않고 두 줄로 끊는다. */
+.header-description-mobile > span {
+  display: block;
+}
+
+/* «9개 대학 자료 수록»이 «자 / 료 수록»으로 꺾였다. */
+.header-status span {
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .header-actions .header-status {
+    align-self: center;
+  }
+}
+
+/* 2027 안내 머리글: 문장마다 한 줄 */
+.guideline-changes-lead > span {
+  display: block;
+}
+
+.guideline-changes-lead > span + span {
+  margin-top: 2px;
+}
+
+/* 분석 도구: «850 →»는 한 덩어리 */
+.scenario-goal-from {
+  white-space: nowrap;
+}
+
+/* 분석 도구: «자격 미달»의 까닭 한 줄(예: TOEIC 850점 이상 필요) */
+.scenario-result-list > div.has-requirement > span:first-child {
+  white-space: normal;
+}
+
+.scenario-requirement {
+  display: block;
+  margin-top: 2px;
+  color: var(--status-risk);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* 장바구니 제목 줄: 넓은 화면에서 단추 묶음이 한가운데 떠 «제목 … 단추 … 판정 기준»으로 벌어졌다.
+   제목만 왼쪽에 두고 나머지는 오른쪽에 붙인다. */
+.basket-title-row {
+  justify-content: flex-start;
+}
+
+.basket-title-row .card-title {
+  margin-right: auto;
+}
+
+/* 지망 카드의 «달라진 점 보기»: 그 자리에서 아래로 펼친다. */
+.guideline-card-more {
+  margin-top: 4px;
+}
+
+.guideline-card-more > summary {
+  display: flex;
+  width: max-content;
+  min-height: 28px;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary-color);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.guideline-card-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.guideline-card-more > summary svg {
+  transition: transform 0.2s ease;
+}
+
+.guideline-card-more[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.guideline-card-more[open] .details-closed-label {
+  display: none;
+}
+
+.guideline-card-more[open] .details-open-label {
+  display: inline;
+}
+
+.guideline-card-more > ul {
+  display: grid;
+  gap: 8px;
+  margin: 2px 0 2px;
+  padding: 0;
+  list-style: none;
+}
+
+.guideline-card-more > ul > li {
+  border-top: 1px solid color-mix(in srgb, var(--text-muted) 30%, transparent);
+  padding-top: 6px;
+}
+
+.guideline-card-more .guideline-change-detail {
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+#target-basket.is-capturing .guideline-card-more:not([open]) {
+  display: none !important;
+}
+
+/* «학점→백분위 추정 사용»: 점선 테두리는 누르는 것처럼 보였다. 설명이 달린 표시(ⓘ)로 바꾼다. */
+.gpa-estimate-chip {
+  border: 0;
+  background: color-mix(in srgb, var(--text-muted) 16%, transparent);
+  cursor: help;
+}
+
+.gpa-estimate-chip::before {
+  content: "ⓘ ";
+}
+
+/* «최근 3개년 미모집 제외 사례»: 안쪽 여백 12px 위에 44px 줄이 얹혀 70px 였다. 다른 펼침 단추와 같은 높이로. */
+.non-recruitment-exceptions {
+  padding: 0 12px;
+}
+
+.non-recruitment-exceptions[open] {
+  padding-bottom: 12px;
+}
+
+/* 고른 칩의 대학 로고: 남색 바탕에 남색·자주색 로고가 묻혔다(부산·충북). 흰 바탕을 깔아 준다. */
+:is(.univ-chip, .transfer-review-tab).active .university-logo {
+  border-radius: 99px;
+  background: #fff;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+html[data-theme="dark"] :is(.univ-chip, .transfer-review-tab).active .university-logo-image {
+  filter: none;
+}
+
+html[data-theme="dark"] :is(.univ-chip, .transfer-review-tab).active .university-logo--theme-tint .university-logo-image {
+  filter: brightness(0) saturate(100%) invert(18%) sepia(39%) saturate(1908%)
+    hue-rotate(181deg) brightness(91%) contrast(96%);
+}
+
+/* 구버전 화면 알림 */
+.stale-build-banner {
+  position: fixed;
+  z-index: 60;
+  top: 12px;
+  left: 50%;
+  display: flex;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  padding: 8px 8px 8px 14px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.35);
+  transform: translateX(-50%);
+}
+
+.stale-build-banner button {
+  flex: none;
+  min-height: 40px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 14px;
+  background: #10b981;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* 넓은 화면: 지망 카드의 막대가 카드 끝까지 뻗지 않게, 요약 줄의 «합격선» 글자 언저리에서 끊는다. */
+@media (min-width: 900px) {
+  .compare-progress-track {
+    max-width: 340px;
+  }
+}
+
+/* 넓은 화면의 분석 도구: 두 칸이 화면 끝까지 벌어져 이름표와 값 사이가 휑했다.
+   목표 점수와 요약은 왼쪽 좁은 칸에 모으고, 지망 목록은 오른쪽에 둔다. */
+@media (min-width: 1400px) {
+  .scenario-content {
+    display: grid;
+    grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "controls list"
+      "impact list";
+    align-items: start;
+    gap: 12px 28px;
+  }
+
+  .scenario-controls {
+    grid-area: controls;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin-bottom: 0;
+  }
+
+  .scenario-impact {
+    grid-area: impact;
+    margin-bottom: 0;
+  }
+
+  .scenario-impact > div {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 10px 12px;
+  }
+
+  .scenario-content > :is(.scenario-result-list, .decision-empty) {
+    grid-area: list;
+  }
+
+  .scenario-result-list {
+    column-gap: 24px;
+  }
+}
+
+@media (min-width: 1640px) {
+  .scenario-result-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 899px) {
+  /* 연도 줄: «기준» 딱지가 있는 줄만 숫자가 오른쪽으로 밀렸다(넓은 화면은 칸을 따로 잡는다).
+     딱지 폭을 못박고, 딱지가 없는 줄은 그만큼 비워 숫자의 시작선을 맞춘다. */
+  .compare-year-label {
+    flex: none;
+    box-sizing: border-box;
+    width: 36px;
+    min-width: 0;
+  }
+
+  .compare-year-basis {
+    flex: none;
+    box-sizing: border-box;
+    width: 26px;
+    padding: 0;
+    text-align: center;
+  }
+
+  .compare-year:not(.compare-year-reference) .compare-year-label {
+    margin-right: 34px;
+  }
+
+  .guideline-card-more > summary {
+    min-height: 44px;
+  }
+
+  /* «근거 보기 · 상세 분석»: 하나를 펴도 단추 줄은 그대로 두고, 내용만 그 아래 카드 폭 전체로 펼친다.
+     예전에는 편 것이 제 줄로 내려가 «상세 분석 접기»가 아랫줄에 놓였다. 둘 다 펴진 드문 경우
+     (넓은 화면에서 펴 둔 채 창을 좁힘)는 예전처럼 각자 한 줄을 쓴다. */
+  .target-card-body > .score-basis:not([open]) + .target-details[open] {
+    grid-column: auto;
+    min-width: 0;
+    margin: 0;
+    border: 0;
+    padding: 0;
+  }
+
+  .target-card-body > .score-basis:not([open]) + .target-details[open] > .target-details-summary {
+    box-sizing: border-box;
+    min-height: 46px;
+    justify-content: center;
+    border: 1px solid var(--primary-color);
+    border-radius: 8px;
+    padding: 10px 4px;
+    white-space: nowrap;
+  }
+
+  .target-card-body > .score-basis:not([open]) + .target-details[open] > .target-details-content {
+    box-sizing: border-box;
+    width: calc(200% + 6px);
+    margin: 6px 0 0 calc(-100% - 6px);
+  }
+}
+
+/* :has 를 모르는 브라우저는 아래 묶음을 통째로 건너뛰고 예전 모양으로 남는다. */
+@media (max-width: 899px) {
+  .target-card-body > .score-basis[open]:has(+ .target-details:not([open])) {
+    grid-column: auto;
+    min-width: 0;
+    margin: 0;
+    border: 0;
+    padding: 0;
+  }
+
+  .target-card-body > .score-basis[open]:has(+ .target-details:not([open])) > .score-basis-summary {
+    box-sizing: border-box;
+    min-height: 46px;
+    justify-content: center;
+    border: 1px solid var(--primary-color);
+    border-radius: 8px;
+    padding: 10px 4px;
+    white-space: nowrap;
+  }
+
+  .target-card-body > .score-basis[open]:has(+ .target-details:not([open])) > .score-basis-body {
+    box-sizing: border-box;
+    width: calc(200% + 6px);
+    margin-top: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 767px) {
+  /* 상세 분석 표: 500px 로 못박아 옆으로 밀어야 TOEIC·GPA 평균이 보였다. 카드 폭 안에 여섯 칸을 다 넣는다. */
+  .target-history-scroll {
+    overflow-x: visible;
+  }
+
+  .mini-table {
+    min-width: 0;
+    font-size: 11px;
+  }
+
+  .mini-table th,
+  .mini-table td {
+    padding: 6px 2px;
+  }
+
+  /* 낱말 중간에서 꺾이지 않게(«지/원» · «2026/년»). 긴 머리글만 띄어 쓴 자리에서 두 줄로 내린다. */
+  .mini-table {
+    word-break: keep-all;
+  }
+
+  .mini-table th {
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+
+  .mini-table th:nth-child(n + 5) {
+    white-space: normal;
+  }
+
+  .mini-table td:first-child {
+    white-space: nowrap;
+  }
+
+  .mini-table :is(.recruitment-count-button, .recruitment-count-inline) {
+    max-width: none;
+    font-size: 11px;
+  }
+
+  .mini-table .recruitment-count-inline small {
+    font-size: 10px;
+  }
+
+  /* 계열 줄: 줄마다 한 줄. 칩이 남는 폭을 나눠 갖고, 건수는 오른쪽 위 구석에 띄워 폭을 먹지 않는다. */
+  .explorer-category-subs {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .explorer-category-subs .univ-chip {
+    position: relative;
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 6px;
+    white-space: nowrap;
+  }
+
+  .explorer-category-subs .univ-chip .explorer-chip-count {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    margin: 0;
+  }
+
+  .explorer-track-chip {
+    flex: 0 0 auto;
+    min-width: 64px;
+    white-space: nowrap;
+  }
+
+  /* 후기 모음의 대학 칩: 옆으로 밀던 것을 모집단위 탐색과 같은 다섯 칸 격자로. */
+  .transfer-review-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    overflow: visible;
+    margin-right: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+  }
+
+  .transfer-review-tab {
+    justify-content: center;
+    min-width: 0;
+    padding: 0 4px;
+    white-space: nowrap;
+  }
+
+  .transfer-review-tab:first-child {
+    grid-column: span 2;
+    order: -2;
+  }
+
+  .transfer-review-tab:last-child {
+    grid-column: span 3;
+    order: -1;
+  }
+
+  .transfer-review-tab--univ {
+    position: relative;
+    gap: 4px;
+    padding: 0 2px;
+  }
+
+  .transfer-review-tab--univ .university-logo {
+    --logo-width: 16px;
+    --logo-height: 16px;
+  }
+
+  .transfer-review-tab--univ .transfer-review-tab-count {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    background: none;
+    color: inherit;
+    font-size: 9.5px;
+    line-height: 1;
+    opacity: 0.75;
+  }
+}
+
+@media (max-width: 640px) {
+  /* 판정 기준: 이름표가 단추 셋과 한 알약 안에 나란히 있어 넷째 단추처럼 보였다.
+     이름표는 윗줄 글로 빼고, 누르는 것 셋만 테두리를 둔다. */
+  .basis-switch {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px 6px;
+    border: 0;
+    padding: 0;
+    background: none;
+  }
+
+  .basis-switch-label {
+    grid-column: 1 / -1;
+    padding: 0 2px;
+    font-size: 11.5px;
+  }
+
+  .basis-switch-option {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--card-bg);
+  }
+
+  .basis-switch-option.active {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+  }
+}
+
+/* 320px 폭 폰: 표 안의 설명 단추(≈ · ⓘ)를 조금 좁혀 여섯 칸이 넘치지 않게 한다. */
+@media (max-width: 340px) {
+  .mini-table .score-explanation-trigger {
+    min-width: 32px;
+    padding-inline: 2px;
   }
 }

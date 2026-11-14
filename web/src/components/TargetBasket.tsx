@@ -22,10 +22,13 @@ import {
 } from "../utils/eligibility";
 import { formatScore, formatSignedScore } from "../utils/formatScore";
 import {
+  GUIDELINE_CHANGES,
   getAreaLabel,
   getRelevantChanges,
   type UniversityGuidelineChange,
 } from "../utils/guidelineChanges";
+import { closeSiblingDisclosureOnNarrow } from "../utils/disclosure";
+import GuidelineChangeDetail from "./GuidelineChangeDetail";
 import { formatCompetitionRatio } from "../utils/competition";
 import { getGpaMax, type GpaType } from "../utils/scoreInput";
 import {
@@ -723,9 +726,29 @@ function TargetBasket({
                           </ul>
                           <p className="guideline-card-notice-foot">
                             이 카드의 판정은 {referenceRecord.연도}학년도 식으로 낸 것입니다.{" "}
-                            {otherChangeCount > 0 && `그 밖에 달라지는 것 ${otherChangeCount}건. `}
-                            <a href="#guideline-changes">달라진 점 보기</a>
+                            {otherChangeCount > 0 && `그 밖에 달라지는 것 ${otherChangeCount}건.`}
                           </p>
+                          {/* 누르면 첫 화면 위쪽 상자로 옮겨 가던 것을, 그 자리에서 아래로 펼친다(2026-11-15 사용자 지적). */}
+                          <details className="guideline-card-more">
+                            <summary>
+                              <span className="details-closed-label">달라진 점 보기</span>
+                              <span className="details-open-label">달라진 점 접기</span>
+                              <ChevronDown size={14} aria-hidden="true" />
+                            </summary>
+                            <ul>
+                              {relevantChanges.map((change) => (
+                                <li key={change.title}>
+                                  <strong>{change.title}</strong>
+                                  <GuidelineChangeDetail
+                                    entry={guidelineChange!}
+                                    change={change}
+                                    baseYear={GUIDELINE_CHANGES.baseYear}
+                                    targetYear={guidelineTargetYear}
+                                  />
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
                         </div>
                       ) : (
                         <div className="guideline-card-notice">
@@ -740,11 +763,32 @@ function TargetBasket({
                               </li>
                             ))}
                           </ul>
-                          <p className="guideline-card-notice-foot">
-                            {relevantChanges.length > CARD_NOTICE_LIMIT
-                              && `외 ${relevantChanges.length - CARD_NOTICE_LIMIT}건 · `}
-                            <a href="#guideline-changes">달라진 점 보기</a>
-                          </p>
+                          {relevantChanges.length > CARD_NOTICE_LIMIT && (
+                            <p className="guideline-card-notice-foot">
+                              외 {relevantChanges.length - CARD_NOTICE_LIMIT}건
+                            </p>
+                          )}
+                          {/* 누르면 첫 화면 위쪽 상자로 옮겨 가던 것을, 그 자리에서 아래로 펼친다(2026-11-15 사용자 지적). */}
+                          <details className="guideline-card-more">
+                            <summary>
+                              <span className="details-closed-label">달라진 점 보기</span>
+                              <span className="details-open-label">달라진 점 접기</span>
+                              <ChevronDown size={14} aria-hidden="true" />
+                            </summary>
+                            <ul>
+                              {relevantChanges.map((change) => (
+                                <li key={change.title}>
+                                  <strong>{change.title}</strong>
+                                  <GuidelineChangeDetail
+                                    entry={guidelineChange!}
+                                    change={change}
+                                    baseYear={GUIDELINE_CHANGES.baseYear}
+                                    targetYear={guidelineTargetYear}
+                                  />
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
                         </div>
                       )
                     )}
@@ -885,7 +929,7 @@ function TargetBasket({
                     formulaBasis={formulaBasis}
                   />
 
-                  <details className="target-details">
+                  <details className="target-details" onToggle={closeSiblingDisclosureOnNarrow}>
                     <summary className="target-details-summary">
                       <span className="details-closed-label">
                         <span className="summary-label-wide">상세 분석 보기</span>

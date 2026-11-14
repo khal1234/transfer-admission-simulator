@@ -12,7 +12,7 @@ import {
   getGpaMax,
   type GpaType,
 } from "../utils/scoreInput";
-import { checkEligibility } from "../utils/eligibility";
+import { checkEligibility, describeEligibilityFailure } from "../utils/eligibility";
 import UniversityName from "./UniversityName";
 import DataConfidenceBadge from "./DataConfidenceBadge";
 
@@ -54,17 +54,26 @@ function getStatusRank(status: DecisionCategory, ineligible = false): number {
   return 0;
 }
 
+/** 요강의 지원 자격에 못 미치면 그 기준(예: «TOEIC 850점 이상»)을, 아니면 null 을 돌려준다. */
+function getIneligibleRequirement(
+  candidate: DecisionCandidate,
+  toeic: number | null,
+  gpa100: number | null,
+): string | null {
+  return describeEligibilityFailure(checkEligibility(
+    candidate.target.univ,
+    candidate.target.dept,
+    toeic,
+    gpa100,
+  ));
+}
+
 function isIneligible(
   candidate: DecisionCandidate,
   toeic: number | null,
   gpa100: number | null,
 ): boolean {
-  return checkEligibility(
-    candidate.target.univ,
-    candidate.target.dept,
-    toeic,
-    gpa100,
-  ).failures.length > 0;
+  return getIneligibleRequirement(candidate, toeic, gpa100) !== null;
 }
 
 function StatusChip({
@@ -223,7 +232,7 @@ function ScenarioSimulator({
           <span>
             TOEIC 목표
             <span className="scenario-goal-value">
-              {toeic} →
+              <span className="scenario-goal-from">{toeic} →</span>
               <GoalNumberInput
                 ariaLabel="TOEIC 목표 점수"
                 min={toeic}
@@ -250,7 +259,7 @@ function ScenarioSimulator({
           <span>
             GPA 목표
             <span className="scenario-goal-value">
-              {gpaRaw} →
+              <span className="scenario-goal-from">{gpaRaw} →</span>
               <GoalNumberInput
                 ariaLabel={`GPA 목표 점수 (${gpaType} 기준)`}
                 min={gpaRaw}
@@ -301,10 +310,22 @@ function ScenarioSimulator({
           {projectedCandidates.map((candidate, index) => {
             const current = candidates[index];
             if (current === undefined) return null;
+            // «자격 미달»만 뜨면 왜인지 알 수 없다(2026-11-15 사용자 지적). 목표 점수로도 못 미치면 그 기준을,
+            // 지금 점수만 못 미치면 «지금 점수로는»을 붙여 한 줄로 적는다.
+            const projectedRequirement = getIneligibleRequirement(candidate, projectedToeic, projectedGpa100);
+            const currentRequirement = getIneligibleRequirement(current, toeic, currentGpa100);
+            const requirementText = projectedRequirement !== null
+              ? `지원 자격: ${projectedRequirement} 필요`
+              : currentRequirement !== null
+                ? `지금 점수로는 지원 자격 미달 — ${currentRequirement} 필요`
+                : null;
             return (
-              <div key={candidate.key}>
+              <div key={candidate.key} className={requirementText === null ? undefined : "has-requirement"}>
                 <span>
                   {candidate.target.univ.replace("대학교", "대")} · {candidate.target.dept}
+                  {requirementText !== null && (
+                    <small className="scenario-requirement">{requirementText}</small>
+                  )}
                 </span>
                 <StatusChip
                   status={current.score.status}

@@ -9,6 +9,7 @@ import {
   type GuidelineChangeItem,
   type UniversityGuidelineChange,
 } from "../utils/guidelineChanges";
+import GuidelineChangeDetail from "./GuidelineChangeDetail";
 import UniversityName from "./UniversityName";
 
 const VERDICT_LABEL: Record<UniversityGuidelineChange["verdict"], string> = {
@@ -56,27 +57,12 @@ function ChangeLine({
           {change.affectsScore && <span className="guideline-score-chip">점수 계산</span>}
           <ChevronDown size={14} aria-hidden="true" />
         </summary>
-        <div className="guideline-change-detail">
-          <p className="guideline-change-scope">해당: {change.scope}</p>
-          <dl>
-            <div>
-              <dt>{baseYear}</dt>
-              <dd>{change.before}</dd>
-            </div>
-            <div className="guideline-change-after">
-              <dt>{targetYear}</dt>
-              <dd>{change.after}</dd>
-            </div>
-          </dl>
-          {change.impact !== null && (
-            <p className="guideline-change-impact">→ {change.impact}</p>
-          )}
-          <p className="guideline-change-pages">
-            확인할 곳:{" "}
-            {change.pageBefore === null ? "" : `${baseYear} 요강 ${change.pageBefore} · `}
-            {targetYear} {entry.documentKind} {change.pageAfter}
-          </p>
-        </div>
+        <GuidelineChangeDetail
+          entry={entry}
+          change={change}
+          baseYear={baseYear}
+          targetYear={targetYear}
+        />
       </details>
     </li>
   );
@@ -97,7 +83,7 @@ function GuidelineChangesPanel() {
   const [open, setOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
-  // 카드의 「달라진 점 보기」(#guideline-changes)로 오면 펼쳐서 보여 준다.
+  // 주소에 #guideline-changes 를 붙여 들어오면 펼쳐서 보여 준다.
   useEffect(() => {
     const openIfTargeted = () => {
       if (window.location.hash === `#${PANEL_ID}`) {
@@ -151,17 +137,17 @@ function GuidelineChangesPanel() {
             <strong id="guideline-changes-title">{targetYear}학년도 지원자라면</strong>
           </span>
           <span className="guideline-changes-lead">
-            이 사이트의 점수 계산과 합격 평균은 {baseYear}학년도까지의 자료입니다.{" "}
-            {changed.length === 0
-              ? `${targetYear}학년도에 달라진 점이 확인된 대학은 아직 없습니다.`
-              : [
-                scoreChanged.length > 0
-                  ? `${targetYear}학년도에 점수 계산이 달라지는 대학: ${names(scoreChanged)}.`
-                  : null,
-                otherChanged.length > 0
-                  ? `모집단위·전형 방법 등이 달라진 대학: ${names(otherChanged)}.`
-                  : null,
-              ].filter(Boolean).join(" ")}
+            {/* 세 문장을 한 줄로 이으면 어디서 끊어 읽을지 눈에 안 들어온다(2026-11-15 사용자 지적). */}
+            <span>이 사이트의 점수 계산과 합격 평균은 {baseYear}학년도까지의 자료입니다.</span>
+            {changed.length === 0 && (
+              <span>{targetYear}학년도에 달라진 점이 확인된 대학은 아직 없습니다.</span>
+            )}
+            {scoreChanged.length > 0 && (
+              <span>{targetYear}학년도에 점수 계산이 달라지는 대학: {names(scoreChanged)}.</span>
+            )}
+            {otherChanged.length > 0 && (
+              <span>모집단위·전형 방법 등이 달라진 대학: {names(otherChanged)}.</span>
+            )}
           </span>
           <span className="guideline-changes-toggle">
             달라진 점 {open ? "접기" : "보기"}

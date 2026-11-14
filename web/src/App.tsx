@@ -11,6 +11,7 @@ import DepartmentExplorer from "./components/DepartmentExplorer";
 import { getDisclosureEvidence } from "./utils/disclosureEvidence";
 import { partitionNonRecruitment } from "./utils/nonRecruitment";
 import DecisionSupportPanel from "./components/DecisionSupportPanel";
+import StaleBuildBanner from "./components/StaleBuildBanner";
 import GuidelineChangesPanel from "./components/GuidelineChangesPanel";
 import { UPDATE_NOTICE_DATE } from "./components/updateNoticeContent";
 import { checkEligibility } from "./utils/eligibility";
@@ -759,6 +760,7 @@ export default function App() {
 
   return (
     <div className="app-container">
+      <StaleBuildBanner />
       {/* ===================================================================
           AESTHETIC HEADER BANNER
           =================================================================== */}
@@ -778,8 +780,10 @@ export default function App() {
               {standardTargetKeys.size.toLocaleString("ko-KR")}개 모집단위를 내 점수와 비교합니다.
             </span>
             <span className="header-description-mobile">
-              {universityShortNames.join("·")} · 2024~2026학년도 결과{" "}
-              {standardRecords.length.toLocaleString("ko-KR")}건
+              <span>{universityShortNames.join("·")}</span>
+              <span>
+                2024~2026학년도 결과 {standardRecords.length.toLocaleString("ko-KR")}건
+              </span>
             </span>
           </p>
           <aside className="ai-disclaimer" aria-label="서비스 이용 주의사항">
