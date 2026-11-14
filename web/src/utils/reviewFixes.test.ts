@@ -282,10 +282,25 @@ describe("새 학년도 달라진 점 자료 (3번)", () => {
     // 내 학과 것이 앞에, 모든 학과 것이 뒤에 온다.
     const nursing = relevant("강원대학교", "간호학과");
     expect(nursing[0]).toBe("간호학과 1단계 선발인원 기준 변경");
-    expect(nursing).toHaveLength(4);
+    expect(nursing.slice(1)).toEqual([
+      "전적대 성적은 최근 2개 대학까지만 반영",
+      "TOEFL·TEPS 환산표 교체(TOEIC 제출자는 무관)",
+    ]);
     // 목록에 이름만 나오고 배수는 그대로인 학과에는 «선발 배수» 항목을 알리지 않는다.
     expect(relevant("전남대학교", "전자컴퓨터공학부").some((title) => title.includes("배수"))).toBe(false);
     expect(relevant("전남대학교", "산업공학과").some((title) => title.includes("배수"))).toBe(true);
+  });
+
+  // 영어 성적 인정 기간은 해마다 1년씩 밀릴 뿐이라 어느 대학이든 같다 — 달라진 점이 아니다(2026-11-15 사용자 지적).
+  it("영어 성적 인정 기간이 한 해 밀린 것은 달라진 점으로 싣지 않는다", () => {
+    const all = GUIDELINE_CHANGES.universities.flatMap((entry) => entry.changes);
+    const rolling = all.filter((change) => /시험만 인정|인정 기간/.test(change.title));
+
+    expect(all.length).toBeGreaterThan(30);
+    expect(rolling.map((change) => change.title)).toEqual([]);
+    GUIDELINE_CHANGES.universities.forEach((entry) => {
+      expect(entry.headline, entry.univ).not.toContain("인정 기간");
+    });
   });
 
   it("학과별 항목에 실린 학과 이름은 사이트 자료에 있는 이름이다", () => {

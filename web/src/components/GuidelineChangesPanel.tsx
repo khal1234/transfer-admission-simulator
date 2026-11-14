@@ -159,7 +159,7 @@ function GuidelineChangesPanel() {
                   ? `${targetYear}학년도에 점수 계산이 달라지는 대학: ${names(scoreChanged)}.`
                   : null,
                 otherChanged.length > 0
-                  ? `영어 성적 인정 기간·모집단위 등이 달라진 대학: ${names(otherChanged)}.`
+                  ? `모집단위·전형 방법 등이 달라진 대학: ${names(otherChanged)}.`
                   : null,
               ].filter(Boolean).join(" ")}
           </span>
