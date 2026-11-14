@@ -1,9 +1,10 @@
-import { memo, useState } from "react";
+import { memo, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
   BookOpen,
   ChevronDown,
+  ImageDown,
   Link2,
   Star,
   Trash2,
@@ -49,6 +50,13 @@ import { getUnavailableScoreDescription } from "../utils/scoreAvailability";
 import ScoreBasis from "./ScoreBasis";
 import UniversityName from "./UniversityName";
 import DataConfidenceBadge from "./DataConfidenceBadge";
+import BasketCaptureDialog from "./BasketCaptureDialog";
+import {
+  captureElement,
+  captureFileName,
+  formatCaptureDate,
+} from "../utils/captureImage";
+import { getGuidelineImpact } from "../utils/guidelineImpact";
 import {
   countDecisionCategories,
   getDataConfidence,
@@ -331,6 +339,37 @@ function TargetBasket({
   guidelineTargetYear,
 }: TargetBasketProps) {
   const [shareState, setShareState] = useState<"idle" | "copied" | "failed">("idle");
+  const basketRef = useRef<HTMLDivElement>(null);
+  const [captureState, setCaptureState] = useState<"idle" | "working" | "failed">("idle");
+  const [captured, setCaptured] = useState<{ url: string; file: File } | null>(null);
+  // 사진 맨 아래에 찍히는 한 줄(어떤 점수로, 언제 본 화면인지). 찍는 동안에만 보인다.
+  const [captureDate, setCaptureDate] = useState("");
+  const saveAsImage = () => {
+    const node = basketRef.current;
+    if (node === null || captureState === "working") {
+      return;
+    }
+
+    const now = new Date();
+    setCaptureDate(formatCaptureDate(now));
+    setCaptureState("working");
+    void captureElement(node)
+      .then((blob) => {
+        setCaptured({
+          url: URL.createObjectURL(blob),
+          file: new File([blob], captureFileName(now), { type: "image/png" }),
+        });
+        setCaptureState("idle");
+      })
+      .catch(() => setCaptureState("failed"));
+  };
+  const closeCapture = () => {
+    if (captured !== null) {
+      URL.revokeObjectURL(captured.url);
+    }
+    setCaptured(null);
+  };
+  const basisLabel = COMPARISON_BASIS_OPTIONS.find(({ value }) => value === comparisonBasis)?.label ?? "";
   const copyShareLink = () => {
     void onCopyShareLink().then((copied) => {
       setShareState(copied ? "copied" : "failed");
@@ -339,7 +378,7 @@ function TargetBasket({
   };
 
   return (
-    <div className="card basket-card" id="target-basket">
+    <div className="card basket-card" id="target-basket" ref={basketRef}>
       <div className="basket-title-row">
         <h2 className="card-title">
           <Star
@@ -361,12 +400,24 @@ function TargetBasket({
               <Link2 size={15} aria-hidden="true" />
               이 구성 주소 복사
             </button>
+            <button
+              type="button"
+              className="basket-share-button"
+              onClick={saveAsImage}
+              disabled={captureState === "working"}
+              title="지금 보이는 지망 장바구니를 사진 한 장으로 만듭니다. 펼쳐 둔 상세 분석은 펼친 채로 찍힙니다."
+            >
+              <ImageDown size={15} aria-hidden="true" />
+              {captureState === "working" ? "사진 만드는 중…" : "사진으로 저장"}
+            </button>
             <span className="basket-share-status" role="status">
-              {shareState === "copied"
-                ? "복사했습니다. 점수와 지망이 주소에 들어 있으니 보낼 곳을 확인하세요."
-                : shareState === "failed"
-                  ? "복사하지 못했습니다. 브라우저가 복사를 막았습니다."
-                  : ""}
+              {captureState === "failed"
+                ? "사진을 만들지 못했습니다. 화면을 새로 고친 뒤 다시 눌러 주세요."
+                : shareState === "copied"
+                  ? "복사했습니다. 점수와 지망이 주소에 들어 있으니 보낼 곳을 확인하세요."
+                  : shareState === "failed"
+                    ? "복사하지 못했습니다. 브라우저가 복사를 막았습니다."
+                    : ""}
             </span>
           </div>
         )}
@@ -432,6 +483,10 @@ function TargetBasket({
               : getRelevantChanges(guidelineChange, target.dept);
             const scoreCautions = relevantChanges.filter((change) => change.affectsScore);
             const otherChangeCount = relevantChanges.length - scoreCautions.length;
+            // 무엇이 바뀌었는지보다 «그래서 내 점수에 유리한가 불리한가»가 먼저다.
+            const impact = scoreCautions.length > 0
+              ? getGuidelineImpact(target.univ, target.dept, toeic, referenceRecord)
+              : null;
             const borderline = getBorderlineMargin(
               target.univ,
               referenceRecord.연도,
@@ -487,10 +542,13 @@ function TargetBasket({
                           </span>
                         );
                       })()}
-                      <DataConfidenceBadge
-                        confidence={getDataConfidence(referenceRecord)}
-                        compact
-                      />
+                      {/* 판정이 서지 않는 카드(자료 부족·입력 없음)에는 «자료 부족»이 이미 말하므로 겹쳐 띄우지 않는다. */}
+                      {!comparisonUnavailable && (
+                        <DataConfidenceBadge
+                          confidence={getDataConfidence(referenceRecord)}
+                          compact
+                        />
+                      )}
                       {gpaType !== "100" && score.gpaConv !== null && (
                         <span
                           className="gpa-estimate-chip"
@@ -630,30 +688,49 @@ function TargetBasket({
                     )}
                     {relevantChanges.length > 0 && (
                       scoreCautions.length > 0 ? (
-                        <p className="guideline-card-notice guideline-card-notice--caution">
-                          <strong>
+                        <div className="guideline-card-notice guideline-card-notice--caution">
+                          <p className="guideline-card-notice-lead">
                             ⚠️ 주의 · {guidelineTargetYear}학년도에는 이 학과의 점수 계산이 달라집니다.
-                          </strong>{" "}
-                          {scoreCautions.map((change) => change.title).join(" · ")}. 이 카드의 판정은{" "}
-                          {referenceRecord.연도}학년도 식으로 낸 것이라, 같은 성적이어도 올해는 다르게
-                          나올 수 있습니다.{" "}
-                          {otherChangeCount > 0 && `그 밖에 달라지는 것 ${otherChangeCount}건. `}
-                          <a href="#guideline-changes">달라진 점 보기</a>
-                        </p>
+                          </p>
+                          {impact !== null && (
+                            <p className={`guideline-impact guideline-impact--${impact.tone}`}>
+                              <strong>{impact.headline}</strong>{" "}
+                              <span>{impact.detail}</span>
+                            </p>
+                          )}
+                          <ul className="guideline-card-notice-list">
+                            {scoreCautions.map((change) => (
+                              <li key={change.title}>
+                                <span className="guideline-change-area">{getAreaLabel(change)}</span>
+                                <span>{change.title}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="guideline-card-notice-foot">
+                            이 카드의 판정은 {referenceRecord.연도}학년도 식으로 낸 것입니다.{" "}
+                            {otherChangeCount > 0 && `그 밖에 달라지는 것 ${otherChangeCount}건. `}
+                            <a href="#guideline-changes">달라진 점 보기</a>
+                          </p>
+                        </div>
                       ) : (
-                        <p className="guideline-card-notice">
-                          📢 {guidelineTargetYear}학년도에 달라지는 것:{" "}
-                          {relevantChanges.slice(0, CARD_NOTICE_LIMIT).map((change, index) => (
-                            <span key={change.title}>
-                              {index > 0 && " · "}
-                              <span className="guideline-change-area">{getAreaLabel(change)}</span>
-                              {change.title}
-                            </span>
-                          ))}
-                          {relevantChanges.length > CARD_NOTICE_LIMIT
-                            && ` 외 ${relevantChanges.length - CARD_NOTICE_LIMIT}건`}{" "}
-                          <a href="#guideline-changes">달라진 점 보기</a>
-                        </p>
+                        <div className="guideline-card-notice">
+                          <p className="guideline-card-notice-lead">
+                            📢 {guidelineTargetYear}학년도에 달라지는 것
+                          </p>
+                          <ul className="guideline-card-notice-list">
+                            {relevantChanges.slice(0, CARD_NOTICE_LIMIT).map((change) => (
+                              <li key={change.title}>
+                                <span className="guideline-change-area">{getAreaLabel(change)}</span>
+                                <span>{change.title}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="guideline-card-notice-foot">
+                            {relevantChanges.length > CARD_NOTICE_LIMIT
+                              && `외 ${relevantChanges.length - CARD_NOTICE_LIMIT}건 · `}
+                            <a href="#guideline-changes">달라진 점 보기</a>
+                          </p>
+                        </div>
                       )
                     )}
 
@@ -1020,6 +1097,19 @@ function TargetBasket({
             );
           })}
         </div>
+      )}
+      {targetCount > 0 && (
+        <p className="basket-capture-caption">
+          TOEIC {toeic ?? "미입력"} · 전적대 {gpaRaw === null ? "미입력" : `${gpaRaw} / ${getGpaMax(gpaType)}`}
+          {" "}· 판정 기준 {basisLabel} · {captureDate} 저장 · 국립대 9곳 편입 비교
+        </p>
+      )}
+      {captured !== null && (
+        <BasketCaptureDialog
+          imageUrl={captured.url}
+          file={captured.file}
+          onClose={closeCapture}
+        />
       )}
     </div>
   );

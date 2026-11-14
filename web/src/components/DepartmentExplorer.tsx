@@ -40,6 +40,7 @@ import UniversityName from "./UniversityName";
 
 const ITEMS_PER_PAGE = 10;
 const UNKNOWN_MARGIN: ExplorerMargin = { diff: null, ratio: null, status: "unknown" };
+const NO_UNIVERSITY_FILTER: ReadonlySet<string> = new Set();
 
 type DepartmentExplorerProps = {
   records: DepartmentRecord[];
@@ -153,6 +154,22 @@ function DepartmentExplorer({
     () => new Set(selectedCategories),
     [selectedCategories],
   );
+  // 대학 칩 옆 숫자는 검색어·계열까지 거른 뒤 그 대학에 남는 개수다. 대학 고른 것은 넣지 않고 센다 —
+  // 넣으면 고르지 않은 대학이 전부 0이 된다. 0인 대학을 눌러 빈 화면을 보는 일을 막는다.
+  const universityCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    filterDepartmentSearchIndex(searchableRecords, parsedQuery.rest, NO_UNIVERSITY_FILTER)
+      .forEach((record) => {
+        if (
+          selectedCategorySet.size > 0
+          && !selectedCategorySet.has(getDepartmentCategory(record.학과))
+        ) {
+          return;
+        }
+        counts.set(record.대학명, (counts.get(record.대학명) ?? 0) + 1);
+      });
+    return counts;
+  }, [parsedQuery.rest, searchableRecords, selectedCategorySet]);
   const effectiveSort: ExplorerSort = sort === "myMargin" && !hasMyScore ? "default" : sort;
   const marginByKey = useMemo(() => {
     const margins = new Map<string, ExplorerMargin>();
@@ -292,17 +309,23 @@ function DepartmentExplorer({
           >
             전체 대학
           </button>
-          {universities.map((university) => (
-            <button
-              type="button"
-              key={university}
-              className={`univ-chip ${selectedUnivSet.has(university) ? "active" : ""}`}
-              aria-pressed={selectedUnivSet.has(university)}
-              onClick={() => toggleUniversity(university)}
-            >
-              <UniversityName university={university} logoSize="small" />
-            </button>
-          ))}
+          {universities.map((university) => {
+            const count = universityCounts.get(university) ?? 0;
+            const isOn = selectedUnivSet.has(university);
+            return (
+              <button
+                type="button"
+                key={university}
+                className={`univ-chip ${isOn ? "active" : ""}`}
+                aria-pressed={isOn}
+                disabled={count === 0 && !isOn}
+                onClick={() => toggleUniversity(university)}
+              >
+                <UniversityName university={university} logoSize="small" />
+                <span className="explorer-chip-count">{count}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -321,16 +344,27 @@ function DepartmentExplorer({
           </button>
           {CATEGORY_TRACKS.map(({ track, categories }) => {
             const trackOn = categories.every((category) => selectedCategorySet.has(category));
+            const trackCount = categories.reduce(
+              (sum, category) => sum + (categoryCounts.get(category) ?? 0),
+              0,
+            );
+            // 큰 갈래(이과·문과·그 외)는 줄 머리에, 그 아래 계열은 같은 줄 안쪽에 둔다.
+            // 한 줄에 섞어 두면 «이과»가 «공학»과 같은 급의 계열로 읽힌다(2026-11-15 사용자 지적).
             return (
               <div className="explorer-category-row" key={track}>
                 <button
                   type="button"
                   className={`explorer-track-chip ${trackOn ? "active" : ""}`}
                   aria-pressed={trackOn}
+                  aria-label={`${track} 계열 전체 (${trackCount}개)`}
+                  title={`${track}에 드는 계열을 한꺼번에 고릅니다.`}
+                  disabled={trackCount === 0 && !trackOn}
                   onClick={() => toggleTrack(categories)}
                 >
                   {track}
+                  <span className="explorer-chip-count">{trackCount}</span>
                 </button>
+                <div className="explorer-category-subs">
                 {categories.map((category) => {
                   const count = categoryCounts.get(category) ?? 0;
                   const isOn = selectedCategorySet.has(category);
@@ -348,6 +382,7 @@ function DepartmentExplorer({
                     </button>
                   );
                 })}
+                </div>
               </div>
             );
           })}

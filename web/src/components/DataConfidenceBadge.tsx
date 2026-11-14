@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Info } from "lucide-react";
 import { useAnchoredPopover } from "../hooks/useAnchoredPopover";
 import type { DataConfidence } from "../utils/decisionSupport";
 import type { PopoverAlignment } from "../utils/popoverPosition";
@@ -54,6 +55,12 @@ export default function DataConfidenceBadge({
     };
   }, [open]);
 
+  // 걸리는 것이 없으면 아무것도 띄우지 않는다. 초록 «근거 높음»이 «미달» 카드에 붙으면 합격 근거가
+  // 높다는 말로 읽혔고, 판정(상회·근접·미달)보다 먼저 눈에 들어왔다(2026-11-15 사용자 지적).
+  if (confidence.level === "high") {
+    return null;
+  }
+
   return (
     <details
       className={`confidence-badge confidence-${confidence.level}`}
@@ -70,8 +77,8 @@ export default function DataConfidenceBadge({
         }}
         ref={triggerRef}
       >
-        <span aria-hidden="true">{confidence.level === "high" ? "●" : "▲"}</span>
-        {compact ? confidence.label.replace(" 필요", "") : confidence.label}
+        <Info size={13} aria-hidden="true" />
+        {compact ? `자료 ${confidence.label.replace(" 필요", "")}` : `자료 ${confidence.label}`}
       </summary>
       {open && typeof document !== "undefined" && createPortal(
         <div
@@ -82,7 +89,7 @@ export default function DataConfidenceBadge({
           role="region"
           style={popoverStyle}
         >
-          <strong>데이터 판단 근거</strong>
+          <strong>이 판정에서 확인해 둘 점</strong>
           <ul>
             {confidence.reasons.map((reason) => <li key={reason}>{reason}</li>)}
           </ul>

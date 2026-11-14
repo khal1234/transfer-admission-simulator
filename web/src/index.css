@@ -5428,3 +5428,396 @@ html[data-theme="dark"] .decision-tabs button strong {
     padding-bottom: 88px;
   }
 }
+
+/* ── 2026-11-15 사용자 지적 반영 ──────────────────────────────────────── */
+
+/* 차트 조각 파일을 못 받았을 때의 «새로 고침» */
+.btn-reload-chart {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  margin-top: 12px;
+  border: 1px solid var(--primary-color);
+  border-radius: 8px;
+  padding: 8px 14px;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chart-card[role="alert"] .chart-subtitle {
+  max-width: 62ch;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* 카드 아래 세 단추(근거 보기 · 상세 분석 · 추이 차트)를 한 벌로 맞춘다.
+   예전에는 회색 600 + «▸», 남색 700 + 화살표, 테두리 안에 또 테두리가 있는 단추로 제각각이었다. */
+.target-card .score-basis-summary::before,
+.target-card .score-basis[open] .score-basis-summary::before {
+  content: none;
+}
+
+.target-card .score-basis-summary,
+.target-card .target-details-summary,
+.target-card .btn-card-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--primary-color);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.target-card .score-basis-summary svg,
+.target-card .target-details-summary svg,
+.target-card .btn-card-action svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+.target-card .score-basis[open] .score-basis-summary svg {
+  transform: rotate(180deg);
+}
+
+@media (max-width: 899px) {
+  /* 세 칸 모두 같은 테두리 한 겹. 추이 차트는 바깥 칸이 테두리를 갖고 안쪽 단추는 글자만 남긴다. */
+  .target-card > .target-card-footer {
+    display: block;
+    background: transparent;
+  }
+
+  .target-card-footer .btn-card-action {
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* 높이 44px 은 엄지로 누르는 자리의 최소 크기라 그대로 두고, 그 안의 글자를 11.5px 에서 키운다. */
+  .target-card-body > .score-basis:not([open]) .score-basis-summary,
+  .target-card-body > .target-details:not([open]) .target-details-summary,
+  .target-card-footer .btn-card-action {
+    font-size: 13.5px;
+    padding: 10px 4px;
+  }
+}
+
+/* 판정 딱지(상회 · 근접 · 미달)가 카드에서 가장 먼저 읽히게 */
+.compare-summary .status-badge {
+  border: 1.5px solid currentColor;
+  padding: 5px 11px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* 자료 확인 표시는 판정과 겨루지 않게 회색 글자로만 */
+.confidence-badge > summary {
+  min-height: 28px;
+  border: 0;
+  padding: 3px 2px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.confidence-badge.confidence-low > summary {
+  color: var(--status-borderline);
+}
+
+/* 누르면 설명이 나오는 값: 점선 테두리 대신 ⓘ 만 남긴다 */
+.score-explanation-trigger {
+  border-color: transparent;
+}
+
+/* 카드의 «달라지는 것»: 항목을 세로로 */
+.guideline-card-notice p {
+  margin: 0;
+}
+
+.guideline-card-notice-lead {
+  font-weight: 700;
+}
+
+.guideline-card-notice-list {
+  display: grid;
+  gap: 3px;
+  margin: 5px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guideline-card-notice-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.guideline-card-notice-foot {
+  color: var(--text-secondary);
+}
+
+/* «주의»의 요점: 그래서 내 점수에 유리한가 불리한가 */
+.guideline-impact {
+  margin: 6px 0 !important;
+  border-radius: 6px;
+  padding: 7px 9px;
+  background: var(--card-bg);
+  line-height: 1.55;
+}
+
+.guideline-impact strong {
+  display: block;
+  font-size: 13px;
+}
+
+.guideline-impact span {
+  color: var(--text-secondary);
+}
+
+.guideline-impact--worse strong,
+.guideline-impact--blocked strong {
+  color: var(--status-risk);
+}
+
+.guideline-impact--better strong {
+  color: var(--status-safe);
+}
+
+/* 검색: 계열을 큰 갈래 줄마다. 큰 갈래는 줄 머리(네모), 그 아래 계열은 안쪽(둥근 칩). */
+.explorer-category-groups {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.explorer-category-groups > .univ-chip {
+  align-self: flex-start;
+}
+
+.explorer-category-row {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.explorer-track-chip {
+  display: inline-flex;
+  flex: 0 0 76px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--bg-color);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.explorer-track-chip.active {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.explorer-track-chip:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.explorer-category-subs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  border-left: 2px solid var(--border-color);
+  padding-left: 10px;
+}
+
+@media (max-width: 767px) {
+  .explorer-category-row {
+    overflow: visible;
+  }
+
+  .explorer-track-chip {
+    flex-basis: 72px;
+    min-height: 44px;
+  }
+
+  /* 줄 머리는 제자리에 두고 안쪽 계열만 가로로 민다. */
+  .explorer-category-subs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .explorer-category-subs::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* 사진으로 저장: 찍는 동안에만 적용되는 모양 */
+.basket-capture-caption {
+  display: none;
+}
+
+#target-basket.is-capturing .basket-capture-caption {
+  display: block;
+  margin: 14px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+#target-basket.is-capturing :is(
+  .basket-share,
+  .basis-switch,
+  .btn-move-target,
+  .btn-remove-target,
+  .target-card-footer,
+  .score-basis:not([open]),
+  .target-details:not([open]),
+  .guideline-card-notice a
+) {
+  display: none !important;
+}
+
+.basket-share-button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.capture-backdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.capture-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 32px);
+  border-radius: 16px;
+  padding: 18px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.3);
+}
+
+.capture-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.capture-dialog-header h2 {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.capture-close {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin: -10px -10px -10px 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.capture-preview {
+  min-height: 120px;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-color);
+}
+
+.capture-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.capture-hint {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.capture-hint--failed {
+  color: var(--status-risk);
+}
+
+.capture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.capture-action {
+  display: inline-flex;
+  flex: 1 1 160px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 46px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 0 14px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.capture-action--primary {
+  border-color: var(--primary-color);
+  background: var(--primary-color);
+  color: #fff;
+}
+
+html[data-theme="dark"] :is(.btn-reload-chart, .capture-action--primary, .explorer-track-chip.active) {
+  border-color: #6366f1;
+  background: #4f46e5;
+  color: #fff;
+}
+
+/* 넓은 화면에서도 세 단추를 글자 + 아이콘 한 벌로(상세 분석 위의 선, 추이 차트의 테두리를 걷는다). */
+@media (min-width: 900px) {
+  .target-card .target-details:not([open]) {
+    border-top: 0;
+  }
+
+  .target-card .btn-card-action {
+    border-color: transparent;
+    background: transparent;
+  }
+
+  .target-card .btn-card-action:hover {
+    border-color: var(--border-color);
+  }
+}

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { ChevronDown } from "lucide-react";
 import type {
   AcceptedScoreExplanation,
   ComponentSource,
@@ -100,6 +101,7 @@ function ScoreBasis({ mine, accepted, formulaBasis }: ScoreBasisProps) {
       <summary className="score-basis-summary">
         <span className="summary-label-wide">이 점수가 나온 근거 보기</span>
         <span className="summary-label-narrow">근거 보기</span>
+        <ChevronDown size={16} aria-hidden="true" />
       </summary>
 
       <div className="score-basis-body">
