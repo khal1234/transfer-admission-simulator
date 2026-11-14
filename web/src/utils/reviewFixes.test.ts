@@ -17,6 +17,7 @@ import { getConversionFormula } from "./formulaRegistry";
 import {
   GUIDELINE_CHANGES,
   getGuidelineGroups,
+  getRelevantChanges,
   getScoreCautions,
   getScoreChangeReach,
   isCommonChange,
@@ -266,6 +267,43 @@ describe("새 학년도 달라진 점 자료 (3번)", () => {
     expect(cautions("충남대학교", "약학과")).toBe(1);
     expect(cautions("충남대학교", "기계공학부")).toBe(0);
     expect(cautions("부산대학교", "기계공학부")).toBe(0);
+  });
+
+  // 부산대 기계공학부 카드에 «세 학과의 서류·면접 배점 변경»이 떴다(2026-11-14 사용자 지적).
+  it("카드는 그 학과에 해당하는 것만 알린다", () => {
+    const relevant = (univ: string, dept: string) => getRelevantChanges(
+      GUIDELINE_CHANGES.universities.find((entry) => entry.univ === univ)!,
+      dept,
+    ).map((change) => change.title);
+
+    // 부산대는 모든 학과에 해당하는 변경이 없다 — 기계공학부 카드에는 알릴 것이 없다.
+    expect(relevant("부산대학교", "기계공학부")).toEqual([]);
+    expect(relevant("부산대학교", "산업공학과")).toEqual(["산업공학과: 면접 40 → 서류 20 + 면접 20"]);
+    // 내 학과 것이 앞에, 모든 학과 것이 뒤에 온다.
+    const nursing = relevant("강원대학교", "간호학과");
+    expect(nursing[0]).toBe("간호학과 1단계 선발인원 기준 변경");
+    expect(nursing).toHaveLength(4);
+    // 목록에 이름만 나오고 배수는 그대로인 학과에는 «선발 배수» 항목을 알리지 않는다.
+    expect(relevant("전남대학교", "전자컴퓨터공학부").some((title) => title.includes("배수"))).toBe(false);
+    expect(relevant("전남대학교", "산업공학과").some((title) => title.includes("배수"))).toBe(true);
+  });
+
+  it("학과별 항목에 실린 학과 이름은 사이트 자료에 있는 이름이다", () => {
+    const known = new Set((rawRecords as DepartmentRecord[]).map((row) => `${row.대학명}|${row.학과}`));
+    let checked = 0;
+
+    GUIDELINE_CHANGES.universities.forEach((entry) => entry.changes.forEach((change) => {
+      change.departments.forEach((department) => {
+        checked += 1;
+        expect(known.has(`${entry.univ}|${department}`), `${entry.univ} ${department}`).toBe(true);
+      });
+      // 학과를 가리지 않는 항목에는 학과 이름이 없다.
+      if (isCommonChange(change)) {
+        expect(change.departments, change.title).toEqual([]);
+      }
+    }));
+
+    expect(checked).toBeGreaterThan(30);
   });
 });
 

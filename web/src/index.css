@@ -4755,6 +4755,12 @@ html[data-theme="dark"] .strategy-count-ineligible {
   line-height: 1.5;
 }
 
+.guideline-card-notice .guideline-change-area {
+  display: inline-block;
+  min-width: 0;
+  margin-right: 5px;
+}
+
 .guideline-card-notice--caution {
   border-left: 3px solid var(--status-risk);
   background: var(--status-risk-bg);

@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { ChevronDown, Megaphone } from "lucide-react";
 import {
   GUIDELINE_CHANGES,
+  getAreaLabel,
   getGuidelineGroups,
   getScoreChangeReach,
   isCommonChange,
@@ -20,14 +21,6 @@ const VERDICT_ORDER: Record<UniversityGuidelineChange["verdict"], number> = {
   changed: 0,
   unknown: 1,
   same: 2,
-};
-
-/** 한 줄 앞에 붙는 짧은 갈래 이름. */
-const AREA_SHORT: Record<string, string> = {
-  공인영어: "영어",
-  전적대성적: "전적대",
-  지원자격: "자격",
-  모집단위: "모집",
 };
 
 const PANEL_ID = "guideline-changes";
@@ -58,7 +51,7 @@ function ChangeLine({
           {showUniversity && (
             <span className="guideline-change-univ">{shortName(entry.univ)}</span>
           )}
-          <span className="guideline-change-area">{AREA_SHORT[change.area] ?? change.area}</span>
+          <span className="guideline-change-area">{getAreaLabel(change)}</span>
           <span className="guideline-change-title">{change.title}</span>
           {change.affectsScore && <span className="guideline-score-chip">점수 계산</span>}
           <ChevronDown size={14} aria-hidden="true" />

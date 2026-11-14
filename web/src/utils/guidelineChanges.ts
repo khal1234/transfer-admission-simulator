@@ -8,7 +8,7 @@ export type GuidelineChangeItem = {
   title: string;
   /** 해당하는 학과 계열. 비어 있으면 학과를 가리지 않는 항목이다. */
   groups: string[];
-  /** 학과별 항목 가운데 점수 계산이 달라지는 것은 사이트의 학과 이름을 싣는다(카드 «주의»용). */
+  /** 학과별 항목이 해당하는 사이트의 학과 이름. 지망 카드는 여기 실린 학과에만 그 항목을 알린다. */
   departments: string[];
   before: string;
   after: string;
@@ -62,19 +62,43 @@ export function getScoreChangeReach(entry: UniversityGuidelineChange): "all" | "
   return affecting.some(isCommonChange) ? "all" : "some";
 }
 
+/** 한 줄 앞에 붙는 짧은 갈래 이름. */
+const AREA_SHORT: Record<string, string> = {
+  공인영어: "영어",
+  전적대성적: "전적대",
+  지원자격: "자격",
+  모집단위: "모집",
+};
+
+export function getAreaLabel(change: GuidelineChangeItem): string {
+  return AREA_SHORT[change.area] ?? change.area;
+}
+
 /**
- * 이 학과의 카드에 «주의»로 띄울 항목 — 새 학년도에 점수 계산이 달라지는 것만.
- * 학과를 가리지 않는 항목과, 이 학과 이름이 실린 학과별 항목을 고른다.
+ * 이 학과의 지망 카드에 알릴 항목 — 이 학과 이름이 실린 학과별 항목을 앞에,
+ * 학과를 가리지 않는 항목을 뒤에 둔다. 다른 학과의 항목은 넣지 않는다
+ * (부산대 기계공학부 카드에 «세 학과의 면접 배점 변경»이 뜨던 것, 2026-11-14 사용자 지적).
+ * 못 보는 것: 사이트에 없는 이름으로만 적힌 학과별 항목은 어느 카드에도 뜨지 않는다.
+ */
+export function getRelevantChanges(
+  entry: UniversityGuidelineChange,
+  department: string,
+): GuidelineChangeItem[] {
+  return [
+    ...entry.changes.filter((change) => change.departments.includes(department)),
+    ...entry.changes.filter(isCommonChange),
+  ];
+}
+
+/**
+ * 이 학과의 카드에 «주의»로 띄울 항목 — 해당 항목 가운데 점수 계산이 달라지는 것만.
  * 못 보는 것: 새 식으로 다시 계산해 판정이 실제로 뒤집히는지는 재지 않는다.
  */
 export function getScoreCautions(
   entry: UniversityGuidelineChange,
   department: string,
 ): GuidelineChangeItem[] {
-  return entry.changes.filter((change) => (
-    change.affectsScore
-      && (isCommonChange(change) || change.departments.includes(department))
-  ));
+  return getRelevantChanges(entry, department).filter((change) => change.affectsScore);
 }
 
 export type GuidelineGroupRow = {

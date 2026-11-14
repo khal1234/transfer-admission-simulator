@@ -21,7 +21,8 @@ import {
 } from "../utils/eligibility";
 import { formatScore, formatSignedScore } from "../utils/formatScore";
 import {
-  getScoreCautions,
+  getAreaLabel,
+  getRelevantChanges,
   type UniversityGuidelineChange,
 } from "../utils/guidelineChanges";
 import { formatCompetitionRatio } from "../utils/competition";
@@ -287,6 +288,9 @@ function TargetStrategyBoard({ summaries }: { summaries: TargetSummary[] }) {
   );
 }
 
+/** 카드 알림에 제목으로 적는 항목 수. 넘는 것은 «외 N건»으로 줄인다(카드가 길어지지 않게). */
+const CARD_NOTICE_LIMIT = 3;
+
 /** 판정 딱지. 판정 기준은 딱지에 갖다 대거나(폰은 누르면) 나온다 — 늘 펼쳐 두면 글이 많다. */
 function StatusBadge({
   modifier,
@@ -421,10 +425,13 @@ function TargetBasket({
             guidelineChange,
           }, cardIndex) => {
             const ineligibleText = describeEligibilityFailure(eligibility);
-            // 올해 점수 계산이 달라지는 학과에만 «주의»를 띄운다(대학 전체에 붙이면 무관한 학과에도 뜬다).
-            const scoreCautions = guidelineChange === null
+            // 카드는 이 학과에 해당하는 것만 알린다. 대학 한 줄 요약을 붙이면 다른 학과 얘기가
+            // 뜬다. 그 가운데 올해 점수 계산이 달라지는 것이 있으면 «주의»로 올린다.
+            const relevantChanges = guidelineChange === null || guidelineChange.verdict !== "changed"
               ? []
-              : getScoreCautions(guidelineChange, target.dept);
+              : getRelevantChanges(guidelineChange, target.dept);
+            const scoreCautions = relevantChanges.filter((change) => change.affectsScore);
+            const otherChangeCount = relevantChanges.length - scoreCautions.length;
             const borderline = getBorderlineMargin(
               target.univ,
               referenceRecord.연도,
@@ -621,7 +628,7 @@ function TargetBasket({
                         {" "}({eligibility.year}학년도 요강)
                       </p>
                     )}
-                    {guidelineChange !== null && guidelineChange.verdict === "changed" && (
+                    {relevantChanges.length > 0 && (
                       scoreCautions.length > 0 ? (
                         <p className="guideline-card-notice guideline-card-notice--caution">
                           <strong>
@@ -629,11 +636,22 @@ function TargetBasket({
                           </strong>{" "}
                           {scoreCautions.map((change) => change.title).join(" · ")}. 이 카드의 판정은{" "}
                           {referenceRecord.연도}학년도 식으로 낸 것이라, 같은 성적이어도 올해는 다르게
-                          나올 수 있습니다. <a href="#guideline-changes">달라진 점 보기</a>
+                          나올 수 있습니다.{" "}
+                          {otherChangeCount > 0 && `그 밖에 달라지는 것 ${otherChangeCount}건. `}
+                          <a href="#guideline-changes">달라진 점 보기</a>
                         </p>
                       ) : (
                         <p className="guideline-card-notice">
-                          📢 {guidelineTargetYear}학년도에 달라집니다: {guidelineChange.headline}{" "}
+                          📢 {guidelineTargetYear}학년도에 달라지는 것:{" "}
+                          {relevantChanges.slice(0, CARD_NOTICE_LIMIT).map((change, index) => (
+                            <span key={change.title}>
+                              {index > 0 && " · "}
+                              <span className="guideline-change-area">{getAreaLabel(change)}</span>
+                              {change.title}
+                            </span>
+                          ))}
+                          {relevantChanges.length > CARD_NOTICE_LIMIT
+                            && ` 외 ${relevantChanges.length - CARD_NOTICE_LIMIT}건`}{" "}
                           <a href="#guideline-changes">달라진 점 보기</a>
                         </p>
                       )
