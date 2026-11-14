@@ -4755,6 +4755,11 @@ html[data-theme="dark"] .strategy-count-ineligible {
   line-height: 1.5;
 }
 
+.guideline-card-notice--caution {
+  border-left: 3px solid var(--status-risk);
+  background: var(--status-risk-bg);
+}
+
 .guideline-card-notice a {
   color: var(--primary-color);
   font-weight: 700;
@@ -4771,11 +4776,35 @@ html[data-theme="dark"] .strategy-count-ineligible {
   white-space: nowrap;
 }
 
-.status-rule-note {
-  margin: 0 0 10px;
-  color: var(--text-secondary);
+/* 판정 기준은 딱지에 갖다 대면(폰은 누르면) 나온다. */
+.status-badge--tip {
+  position: relative;
+  cursor: help;
+}
+
+.status-tip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: min(300px, 74vw);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--card-bg);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+  color: var(--text-primary);
   font-size: 12px;
+  font-weight: 500;
   line-height: 1.5;
+  white-space: normal;
+  text-align: left;
+}
+
+.status-badge--tip:hover .status-tip,
+.status-badge--tip:focus .status-tip {
+  display: block;
 }
 
 /* 카드: 순서 바꾸기(16번) */
@@ -4918,7 +4947,7 @@ html[data-theme="dark"] .shared-setup-apply {
   color: #0f172a;
 }
 
-/* 새 학년도 달라진 점(3번) */
+/* 새 학년도 달라진 점(3번) — 한 줄씩 보이고, 누르면 전·후가 펴진다 */
 .guideline-changes {
   margin-bottom: 16px;
   border: 1px solid color-mix(in srgb, var(--status-borderline) 45%, var(--border-color));
@@ -4929,17 +4958,20 @@ html[data-theme="dark"] .shared-setup-apply {
 }
 
 .guideline-changes summary {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr) max-content;
-  align-items: center;
-  gap: 6px 14px;
-  padding: 12px 16px;
   cursor: pointer;
   list-style: none;
 }
 
 .guideline-changes summary::-webkit-details-marker {
   display: none;
+}
+
+.guideline-changes > details > summary {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 12px 16px;
 }
 
 .guideline-changes-heading {
@@ -4970,32 +5002,114 @@ html[data-theme="dark"] .shared-setup-apply {
   white-space: nowrap;
 }
 
-.guideline-changes details[open] .guideline-changes-toggle svg {
+.guideline-changes > details[open] .guideline-changes-toggle svg,
+.guideline-change[open] > summary > svg,
+.guideline-dept[open] > summary > svg {
   transform: rotate(180deg);
 }
 
 .guideline-changes-body {
   border-top: 1px solid var(--border-color);
-  padding: 14px 16px 16px;
+  padding: 12px 16px 16px;
 }
 
 .guideline-changes-legend {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   color: var(--text-secondary);
   font-size: 12.5px;
   line-height: 1.55;
 }
 
+/* 계열 단추: 학과별 항목을 대학을 넘어 모아 본다 */
+.guideline-groups {
+  margin-bottom: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--card-bg);
+}
+
+.guideline-groups-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.guideline-groups-label span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.guideline-group-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.guideline-group-chips button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 5px 11px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.guideline-group-chips button span {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.guideline-group-chips button:hover {
+  border-color: var(--primary-color);
+}
+
+.guideline-group-chips button[aria-pressed="true"] {
+  border-color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 16%, transparent);
+  color: var(--primary-color);
+}
+
+.guideline-group-chips button[aria-pressed="true"] span {
+  color: inherit;
+}
+
+.guideline-group-result {
+  margin-top: 10px;
+}
+
+.guideline-group-result-title {
+  margin: 0 0 2px;
+  font-size: 13px;
+}
+
+.guideline-common-label {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .guideline-university-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+  align-items: start;
+  gap: 10px;
 }
 
 .guideline-university {
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 10px 12px 6px;
   background: var(--card-bg);
 }
 
@@ -5008,14 +5122,14 @@ html[data-theme="dark"] .shared-setup-apply {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 8px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   font-weight: 700;
 }
 
 .guideline-verdict,
 .guideline-document-kind,
 .guideline-score-chip,
-.guideline-unconfirmed,
+.guideline-confirmed,
 .guideline-change-area {
   border-radius: 6px;
   padding: 1px 7px;
@@ -5029,7 +5143,8 @@ html[data-theme="dark"] .shared-setup-apply {
   color: var(--status-borderline);
 }
 
-.guideline-verdict--same {
+.guideline-verdict--same,
+.guideline-confirmed {
   background: var(--status-safe-bg);
   color: var(--status-safe);
 }
@@ -5045,57 +5160,99 @@ html[data-theme="dark"] .shared-setup-apply {
   color: var(--status-risk);
 }
 
-.guideline-headline {
-  margin: 0 0 8px;
-  font-size: 13.5px;
-  font-weight: 600;
+.guideline-headline,
+.guideline-none {
+  margin: 0 0 6px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
+.guideline-none {
+  color: var(--text-muted);
+}
+
 .guideline-change-list {
-  display: grid;
-  gap: 8px;
-  margin: 0 0 8px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .guideline-change-list li {
   border-top: 1px dashed var(--border-color);
-  padding-top: 8px;
-  font-size: 12.5px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-.guideline-change-title {
-  margin: 0 0 4px;
+.guideline-change > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0;
+}
+
+.guideline-change > summary > svg,
+.guideline-dept > summary > svg {
+  flex: none;
+  align-self: center;
+  color: var(--text-muted);
+}
+
+.guideline-change > summary:hover .guideline-change-title {
+  text-decoration: underline;
+}
+
+.guideline-change-univ {
+  flex: none;
+  min-width: 3.2em;
   font-weight: 700;
 }
 
 .guideline-change-area {
-  margin-right: 6px;
+  flex: none;
+  min-width: 3.6em;
   background: color-mix(in srgb, var(--primary-color) 14%, transparent);
   color: var(--primary-color);
+  text-align: center;
 }
 
-.guideline-change-list dl {
+.guideline-change-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.guideline-change-detail {
+  margin: 0 0 8px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--text-muted) 9%, transparent);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.guideline-change-scope {
+  margin: 0 0 4px;
+  color: var(--text-secondary);
+}
+
+.guideline-change-detail dl {
   display: grid;
   gap: 2px;
   margin: 0;
 }
 
-.guideline-change-list dl > div {
+.guideline-change-detail dl > div {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
   gap: 8px;
 }
 
-.guideline-change-list dt {
+.guideline-change-detail dt {
   color: var(--text-muted);
   font-weight: 700;
 }
 
-.guideline-change-list dd {
+.guideline-change-detail dd {
   margin: 0;
   color: var(--text-secondary);
 }
@@ -5110,18 +5267,38 @@ html[data-theme="dark"] .shared-setup-apply {
   color: var(--text-primary);
 }
 
-.guideline-change-pages,
-.guideline-source {
+.guideline-change-pages {
   margin: 4px 0 0;
   color: var(--text-muted);
   font-size: 11.5px;
 }
 
-.guideline-unconfirmed {
-  margin-left: 6px;
-  border: 1px dashed var(--text-muted);
-  color: var(--text-secondary);
-  font-weight: 600;
+/* 대학 카드 안의 학과별 항목: 접어 둔다 */
+.guideline-dept {
+  border-top: 1px solid var(--border-color);
+}
+
+.guideline-dept > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0;
+  font-size: 12.5px;
+}
+
+.guideline-dept-count {
+  flex: none;
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.guideline-dept-groups {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 탐색: 자료 연도(5번) · 검색 안내(15번) · 기준 설명(8번) */
@@ -5222,7 +5399,7 @@ html[data-theme="dark"] .decision-tabs button strong {
     pointer-events: none;
   }
 
-  .guideline-changes summary {
+  .guideline-changes > details > summary {
     grid-template-columns: minmax(0, 1fr) max-content;
   }
 

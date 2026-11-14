@@ -13,7 +13,14 @@ import {
 } from "./departmentSearch";
 import { checkEligibility, describeEligibilityFailure } from "./eligibility";
 import { formatScore, formatSignedScore } from "./formatScore";
-import { GUIDELINE_CHANGES } from "./guidelineChanges";
+import { getConversionFormula } from "./formulaRegistry";
+import {
+  GUIDELINE_CHANGES,
+  getGuidelineGroups,
+  getScoreCautions,
+  getScoreChangeReach,
+  isCommonChange,
+} from "./guidelineChanges";
 import { isComparableRecord } from "./records";
 import { getUnavailableScoreDescription } from "./scoreAvailability";
 import { buildShareHash, parseShareHash } from "./shareLink";
@@ -69,6 +76,38 @@ describe("어느 쪽이 유리 (9번)", () => {
     const on45 = analyzeScoreDeficit("부산대학교", "2026", "4.5", 0, 4.5, 990, "기계공학부");
     expect(on45.recommendedMetric).toBe(on100.recommendedMetric);
     expect(on45.gpaEfficiencyPer100).toBe(on100.gpaEfficiencyPer100);
+  });
+
+  // 전적대를 반영하지 않는 강원대 수의학과에 «전적대 백분위 1점 상승 시 +0점»과
+  // «영어 쪽이 유리»가 떴다(2026-11-14 사용자 지적). 한쪽만 반영하는 전형 전부를 본다.
+  it("한쪽만 반영하는 전형에는 견주는 말을 하지 않는다", () => {
+    const seen = new Set<string>();
+    const oneSided: string[] = [];
+
+    (rawRecords as DepartmentRecord[]).forEach((row) => {
+      const key = `${row.대학명}|${row.연도}|${row.학과}`;
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+
+      const formula = getConversionFormula(row.대학명, row.연도, row.학과);
+      if (formula === null) {
+        return;
+      }
+
+      const analysis = analyzeScoreDeficit(row.대학명, row.연도, "100", 1, 90, 800, row.학과);
+      expect(analysis.usesEnglish, key).toBe(formula.convertEnglish !== null);
+      expect(analysis.usesGpa, key).toBe(formula.convertGpa !== null);
+      if (formula.convertEnglish === null || formula.convertGpa === null) {
+        oneSided.push(key);
+        expect(analysis.recommendedMetric, key).toBe("none");
+      }
+    });
+
+    // 분모: 한쪽만 반영하는 전형이 자료에 실제로 있어야 이 검사가 뜻이 있다.
+    expect(oneSided.length).toBeGreaterThan(0);
+    expect(oneSided).toContain("강원대학교|2026|수의학과");
   });
 });
 
@@ -173,6 +212,60 @@ describe("새 학년도 달라진 점 자료 (3번)", () => {
           expect(change.pageAfter, `${entry.univ} ${change.area}`).not.toBe("");
         });
       });
+  });
+
+  it("항목마다 한 줄 제목이 있고, 학과를 가리지 않는 항목에는 계열이 없다", () => {
+    const all = GUIDELINE_CHANGES.universities.flatMap((entry) => entry.changes);
+    expect(all.length).toBeGreaterThan(0);
+    all.forEach((change) => {
+      expect(change.title.length, change.scope).toBeGreaterThan(0);
+      expect(change.title.length, change.title).toBeLessThanOrEqual(44);
+      if (change.scope.includes("전체 모집단위")) {
+        expect(isCommonChange(change), change.title).toBe(true);
+      }
+    });
+  });
+
+  it("같은 계열이 달라진 대학을 한데 모은다", () => {
+    const groups = getGuidelineGroups();
+    const universitiesOf = (name: string) => [
+      ...new Set(groups.find((item) => item.group === name)?.rows.map((row) => row.entry.univ)),
+    ];
+
+    expect(universitiesOf("간호")).toEqual(["강원대학교", "전북대학교", "충북대학교"]);
+    expect(universitiesOf("수의")).toEqual(["강원대학교", "전북대학교", "충북대학교"]);
+    // 겹치는 대학이 많은 계열이 앞에 온다.
+    const counts = groups.map((item) => item.universityCount);
+    expect(counts).toEqual([...counts].sort((a, b) => b - a));
+    // 학과를 가리지 않는 항목은 어느 계열에도 들어가지 않는다.
+    groups.forEach((item) => item.rows.forEach((row) => {
+      expect(isCommonChange(row.change), row.change.title).toBe(false);
+    }));
+  });
+
+  it("점수 계산이 일부 학과에서만 달라지는 대학을 구별한다", () => {
+    const reach = (univ: string) => getScoreChangeReach(
+      GUIDELINE_CHANGES.universities.find((entry) => entry.univ === univ)!,
+    );
+
+    expect(reach("인천대학교")).toBe("some");
+    expect(reach("충북대학교")).toBe("all");
+    expect(reach("경북대학교")).toBe("none");
+  });
+
+  it("카드의 주의는 올해 점수 계산이 달라지는 학과에만 붙는다", () => {
+    const cautions = (univ: string, dept: string) => getScoreCautions(
+      GUIDELINE_CHANGES.universities.find((entry) => entry.univ === univ)!,
+      dept,
+    ).length;
+
+    expect(cautions("충북대학교", "기계공학부")).toBe(2); // 영어 식 · 환산표
+    expect(cautions("충북대학교", "약학과")).toBe(3); // + TOEIC 불가
+    expect(cautions("인천대학교", "한국화전공")).toBe(1);
+    expect(cautions("인천대학교", "경영학부")).toBe(0);
+    expect(cautions("충남대학교", "약학과")).toBe(1);
+    expect(cautions("충남대학교", "기계공학부")).toBe(0);
+    expect(cautions("부산대학교", "기계공학부")).toBe(0);
   });
 });
 

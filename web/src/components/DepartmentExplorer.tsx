@@ -264,7 +264,7 @@ function DepartmentExplorer({
           <input
             type="text"
             aria-label="학과 검색"
-            placeholder="학과 이름을 검색해 보세요 (예: 기계, 컴공, 부산대 기계, ㄱㄱㄱㅎ)"
+            placeholder="학과 이름을 검색해 보세요 (예: 기계, 컴공, ㄱㄱㄱㅎ)"
             value={searchQuery}
             onChange={(event) => updateSearchQuery(event.target.value)}
           />

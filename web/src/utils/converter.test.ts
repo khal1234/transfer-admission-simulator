@@ -211,6 +211,8 @@ describe("analyzeScoreDeficit characteristics", () => {
       toeicEfficiency: 0.3,
       gpaEfficiency: 0.03,
       gpaEfficiencyPer100: 0.3,
+      usesEnglish: true,
+      usesGpa: true,
       recommendedMetric: "toeic",
     });
   });
@@ -257,7 +259,9 @@ describe("analyzeScoreDeficit characteristics", () => {
     expect(result.isLookupBased).toBe(true);
     expect(result.toeicNeeded).toBe(120);
     expect(result.gpaNeeded).toBeNull();
-    expect(result.recommendedMetric).toBe("toeic");
+    // 충북대는 전적대를 점수에 넣지 않는다 — 견줄 상대가 없으니 «어느 쪽이 유리»를 말하지 않는다.
+    expect(result.usesGpa).toBe(false);
+    expect(result.recommendedMetric).toBe("none");
   });
 
   it("uses Chungbuk's real TOEIC band boundaries for reverse calculation", () => {

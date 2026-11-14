@@ -19,7 +19,10 @@
           "impact": "대학을 세 곳 이상 다닌 지원자는 반영되는 성적이 달라질 수 있습니다.",
           "affectsScore": false,
           "pageBefore": "15쪽",
-          "pageAfter": "14쪽"
+          "pageAfter": "14쪽",
+          "departments": [],
+          "title": "전적대 성적은 최근 2개 대학까지만 반영",
+          "groups": []
         },
         {
           "area": "공인영어",
@@ -29,7 +32,10 @@
           "impact": "2024년에 본 시험 성적은 쓸 수 없습니다.",
           "affectsScore": false,
           "pageBefore": "14쪽",
-          "pageAfter": "9쪽, 14쪽"
+          "pageAfter": "9쪽, 14쪽",
+          "departments": [],
+          "title": "2025년 1월 1일 이후 본 시험만 인정",
+          "groups": []
         },
         {
           "area": "기타",
@@ -39,7 +45,12 @@
           "impact": "모집인원이 4명 이하이면 1단계를 통과하는 인원이 20명 줄어듭니다.",
           "affectsScore": false,
           "pageBefore": "13쪽",
-          "pageAfter": "13쪽"
+          "pageAfter": "13쪽",
+          "departments": [],
+          "title": "간호학과 1단계 선발인원 기준 변경",
+          "groups": [
+            "간호"
+          ]
         },
         {
           "area": "면접",
@@ -49,7 +60,12 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "13쪽",
-          "pageAfter": "13쪽"
+          "pageAfter": "13쪽",
+          "departments": [],
+          "title": "수의학과 3단계 면접이 전형 표에서 빠짐",
+          "groups": [
+            "수의"
+          ]
         },
         {
           "area": "필기·실기",
@@ -59,7 +75,13 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "15쪽",
-          "pageAfter": "14쪽"
+          "pageAfter": "14쪽",
+          "departments": [],
+          "title": "수의학과·약학과 필기: 문제당 4점 → 문항마다 다름",
+          "groups": [
+            "수의",
+            "약학·제약"
+          ]
         },
         {
           "area": "공인영어",
@@ -69,7 +91,10 @@
           "impact": "TOEIC 성적을 내는 지원자는 영향이 없습니다.",
           "affectsScore": false,
           "pageBefore": "40쪽",
-          "pageAfter": "22쪽"
+          "pageAfter": "22쪽",
+          "departments": [],
+          "title": "TOEFL·TEPS 환산표 교체(TOEIC 제출자는 무관)",
+          "groups": []
         },
         {
           "area": "모집단위",
@@ -79,7 +104,14 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "7쪽",
-          "pageAfter": "7쪽"
+          "pageAfter": "7쪽",
+          "departments": [],
+          "title": "바이오산업공학부·에너지자원·산업공학부가 4개 학과로 바뀜",
+          "groups": [
+            "산업공학",
+            "에너지·환경·전기",
+            "농업·식품·산림"
+          ]
         }
       ],
       "ownerConfirmed": false
@@ -100,7 +132,10 @@
           "impact": "2025년 1월까지 본 시험 성적은 쓸 수 없습니다.",
           "affectsScore": false,
           "pageBefore": "17쪽",
-          "pageAfter": "2쪽, 6쪽"
+          "pageAfter": "2쪽, 6쪽",
+          "departments": [],
+          "title": "2025년 2월 1일 이후 본 시험만 인정",
+          "groups": []
         },
         {
           "area": "모집단위",
@@ -110,7 +145,14 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": null,
-          "pageAfter": "15쪽"
+          "pageAfter": "15쪽",
+          "departments": [],
+          "title": "융합학부 두 전공이 학과로 바뀌고 불어교육전공 폐지",
+          "groups": [
+            "의공학",
+            "기계·로봇·모빌리티",
+            "교육(사범)"
+          ]
         },
         {
           "area": "모집단위",
@@ -120,7 +162,16 @@
           "impact": "2026학년도와 마찬가지로 일반편입으로 지원할 수 없습니다.",
           "affectsScore": false,
           "pageBefore": "12~14쪽",
-          "pageAfter": "5쪽, 12쪽"
+          "pageAfter": "5쪽, 12쪽",
+          "departments": [],
+          "title": "의학과·치의학과·약학과 등 6곳은 일반편입 없음(작년과 같음)",
+          "groups": [
+            "약학·제약",
+            "의학·치의학",
+            "농업·식품·산림",
+            "교육(사범)",
+            "자율전공"
+          ]
         }
       ],
       "ownerConfirmed": false
@@ -141,7 +192,10 @@
           "impact": "지원하려는 학과가 면접을 보는지는 모집요강에서 확인해야 합니다.",
           "affectsScore": false,
           "pageBefore": "10쪽, 29쪽",
-          "pageAfter": "3쪽, 4쪽"
+          "pageAfter": "3쪽, 4쪽",
+          "departments": [],
+          "title": "면접을 보는 학과는 모집요강에서 확정",
+          "groups": []
         },
         {
           "area": "공인영어",
@@ -151,7 +205,10 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "12쪽",
-          "pageAfter": "2쪽"
+          "pageAfter": "2쪽",
+          "departments": [],
+          "title": "영어 성적 인정 기간은 모집요강에서 안내(날짜 미정)",
+          "groups": []
         },
         {
           "area": "지원자격",
@@ -161,7 +218,12 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "12쪽",
-          "pageAfter": "2쪽"
+          "pageAfter": "2쪽",
+          "departments": [],
+          "title": "일어일문학부·중국학과 어학 성적 요건은 모집요강에서 안내",
+          "groups": [
+            "일본어·중국어"
+          ]
         }
       ],
       "ownerConfirmed": false
@@ -182,7 +244,12 @@
           "impact": "면접 비중이 절반으로 줄고 서류평가가 새로 들어갑니다.",
           "affectsScore": false,
           "pageBefore": "14쪽",
-          "pageAfter": "7쪽, 22쪽"
+          "pageAfter": "7쪽, 22쪽",
+          "departments": [],
+          "title": "산업공학과: 면접 40 → 서류 20 + 면접 20",
+          "groups": [
+            "산업공학"
+          ]
         },
         {
           "area": "면접",
@@ -192,7 +259,12 @@
           "impact": "면접 비중이 절반으로 줄고 서류평가가 새로 들어갑니다.",
           "affectsScore": false,
           "pageBefore": "14쪽",
-          "pageAfter": "7쪽, 22쪽"
+          "pageAfter": "7쪽, 22쪽",
+          "departments": [],
+          "title": "통계학과: 면접 40 → 서류 20 + 면접 20",
+          "groups": [
+            "통계·데이터"
+          ]
         },
         {
           "area": "면접",
@@ -202,7 +274,12 @@
           "impact": "서류평가가 없어지고 면접 비중이 두 배가 됩니다.",
           "affectsScore": false,
           "pageBefore": "14쪽",
-          "pageAfter": "7쪽, 14쪽"
+          "pageAfter": "7쪽, 14쪽",
+          "departments": [],
+          "title": "의생명공학전공(바이오메디컬공학과): 서류 20 + 면접 20 → 면접 40",
+          "groups": [
+            "의공학"
+          ]
         },
         {
           "area": "모집단위",
@@ -212,7 +289,14 @@
           "impact": "이름과 소속만 바뀌고 배점은 같습니다.",
           "affectsScore": false,
           "pageBefore": "4~6쪽",
-          "pageAfter": "7쪽, 22쪽"
+          "pageAfter": "7쪽, 22쪽",
+          "departments": [],
+          "title": "정보컴퓨터공학부 등 5곳 이름·소속 변경(배점은 같음)",
+          "groups": [
+            "컴퓨터·AI",
+            "통계·데이터",
+            "나노·광공학"
+          ]
         },
         {
           "area": "면접",
@@ -222,7 +306,12 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "15쪽",
-          "pageAfter": "8쪽"
+          "pageAfter": "8쪽",
+          "departments": [],
+          "title": "약학대학 면접은 인성 및 사고 영역만 평가",
+          "groups": [
+            "약학·제약"
+          ]
         }
       ],
       "ownerConfirmed": false
@@ -243,7 +332,15 @@
           "impact": "전적대 백분율 90점이면 115점, 80점이면 110점을 받습니다.",
           "affectsScore": true,
           "pageBefore": "17쪽",
-          "pageAfter": "4쪽"
+          "pageAfter": "4쪽",
+          "departments": [
+            "한국화전공",
+            "서양화전공"
+          ],
+          "title": "조형예술학부: 면접 100% → 전적대 60% + 면접 40%",
+          "groups": [
+            "미술·디자인"
+          ]
         },
         {
           "area": "공인영어",
@@ -253,7 +350,10 @@
           "impact": "2025년 2월까지 본 시험 성적은 쓸 수 없습니다.",
           "affectsScore": false,
           "pageBefore": "12쪽, 17쪽",
-          "pageAfter": "3쪽, 7쪽"
+          "pageAfter": "3쪽, 7쪽",
+          "departments": [],
+          "title": "2025년 3월 1일 이후 본 시험만 인정",
+          "groups": []
         },
         {
           "area": "공인영어",
@@ -263,7 +363,10 @@
           "impact": "TOEIC 성적을 내는 지원자는 영향이 없습니다.",
           "affectsScore": false,
           "pageBefore": "12쪽",
-          "pageAfter": "3쪽, 9쪽"
+          "pageAfter": "3쪽, 9쪽",
+          "departments": [],
+          "title": "TOEFL iBT 새 채점 척도 기준 추가(TOEIC 제출자는 무관)",
+          "groups": []
         }
       ],
       "ownerConfirmed": false
@@ -284,7 +387,14 @@
           "impact": "이 여섯 학과는 2027학년도 일반편입으로 지원할 수 없습니다.",
           "affectsScore": false,
           "pageBefore": "5~6쪽",
-          "pageAfter": "5~6쪽"
+          "pageAfter": "5~6쪽",
+          "departments": [],
+          "title": "임산공학과 등 6개 학과는 일반편입 모집 없음",
+          "groups": [
+            "화학·생명",
+            "농업·식품·산림",
+            "교육(사범)"
+          ]
         },
         {
           "area": "기타",
@@ -294,7 +404,10 @@
           "impact": "어느 학과든 전형 총점이 700점에 못 미치면 불합격입니다.",
           "affectsScore": false,
           "pageBefore": "23쪽",
-          "pageAfter": "32쪽"
+          "pageAfter": "32쪽",
+          "departments": [],
+          "title": "모든 학과: 전형 총점 700점 미만이면 불합격",
+          "groups": []
         },
         {
           "area": "모집단위",
@@ -304,7 +417,10 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "4~8쪽",
-          "pageAfter": "4~7쪽"
+          "pageAfter": "4~7쪽",
+          "departments": [],
+          "title": "일반편입 모집인원 653명 → 647명",
+          "groups": []
         },
         {
           "area": "기타",
@@ -314,7 +430,17 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "12쪽",
-          "pageAfter": "18쪽, 30쪽"
+          "pageAfter": "18쪽, 30쪽",
+          "departments": [],
+          "title": "1단계 2~3배수 선발을 적용하는 학과가 바뀜",
+          "groups": [
+            "컴퓨터·AI",
+            "산업공학",
+            "기계·로봇·모빌리티",
+            "건축·토목",
+            "에너지·환경·전기",
+            "농업·식품·산림"
+          ]
         },
         {
           "area": "기타",
@@ -324,7 +450,12 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "12쪽",
-          "pageAfter": "18쪽"
+          "pageAfter": "18쪽",
+          "departments": [],
+          "title": "약학부 1단계: 204명 → 모집인원의 20배수",
+          "groups": [
+            "약학·제약"
+          ]
         },
         {
           "area": "공인영어",
@@ -334,7 +465,10 @@
           "impact": "2025년 1월까지 본 시험 성적은 쓸 수 없습니다.",
           "affectsScore": false,
           "pageBefore": "9쪽",
-          "pageAfter": "8쪽"
+          "pageAfter": "8쪽",
+          "departments": [],
+          "title": "2025년 2월 1일 이후 본 시험만 인정",
+          "groups": []
         },
         {
           "area": "모집단위",
@@ -344,7 +478,12 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "5쪽",
-          "pageAfter": "4쪽"
+          "pageAfter": "4쪽",
+          "departments": [],
+          "title": "헬스케어메디컬공학부 → 의공학부(13명 → 15명)",
+          "groups": [
+            "의공학"
+          ]
         }
       ],
       "ownerConfirmed": false
@@ -365,7 +504,10 @@
           "impact": "2024년에 본 시험 성적은 쓸 수 없습니다.",
           "affectsScore": false,
           "pageBefore": "11쪽",
-          "pageAfter": "6쪽"
+          "pageAfter": "6쪽",
+          "departments": [],
+          "title": "2025년 1월 1일 이후 본 시험만 인정",
+          "groups": []
         },
         {
           "area": "지원자격",
@@ -375,7 +517,12 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "10쪽",
-          "pageAfter": "5쪽, 6쪽"
+          "pageAfter": "5쪽, 6쪽",
+          "departments": [],
+          "title": "수의학과 편입 학년: 본과 1학년 → 본과 2학년",
+          "groups": [
+            "수의"
+          ]
         },
         {
           "area": "공인영어",
@@ -385,7 +532,10 @@
           "impact": "TOEIC 성적을 내는 지원자는 영향이 없습니다.",
           "affectsScore": false,
           "pageBefore": "52쪽",
-          "pageAfter": "30쪽"
+          "pageAfter": "30쪽",
+          "departments": [],
+          "title": "TOEFL iBT 환산표 구간 변경(TOEIC 제출자는 무관)",
+          "groups": []
         },
         {
           "area": "모집단위",
@@ -395,7 +545,13 @@
           "impact": "2026학년도와 마찬가지로 일반편입으로 지원할 수 없습니다.",
           "affectsScore": false,
           "pageBefore": "7쪽, 9쪽",
-          "pageAfter": "4쪽"
+          "pageAfter": "4쪽",
+          "departments": [],
+          "title": "간호학과·의학과는 일반편입 없음(작년과 같음)",
+          "groups": [
+            "간호",
+            "의학·치의학"
+          ]
         }
       ],
       "ownerConfirmed": false
@@ -416,7 +572,14 @@
           "impact": "영어 만점이 50점에서 40점으로 줄고 면접이 점수로 들어갑니다.",
           "affectsScore": true,
           "pageBefore": "20쪽",
-          "pageAfter": "6쪽, 7쪽"
+          "pageAfter": "6쪽, 7쪽",
+          "departments": [
+            "약학과"
+          ],
+          "title": "약학과: 영어 50점 → 40점, 면접 10점 신설",
+          "groups": [
+            "약학·제약"
+          ]
         },
         {
           "area": "기타",
@@ -424,9 +587,12 @@
           "before": "점수는 소수 셋째 자리에서 반올림(둘째 자리까지 표시)",
           "after": "점수는 소수 넷째 자리에서 반올림(셋째 자리까지 표시)",
           "impact": "환산점수가 소수 셋째 자리까지 계산됩니다.",
-          "affectsScore": true,
+          "affectsScore": false,
           "pageBefore": "20쪽",
-          "pageAfter": "7쪽"
+          "pageAfter": "7쪽",
+          "departments": [],
+          "title": "점수 반올림: 소수 둘째 자리 → 셋째 자리까지 표시",
+          "groups": []
         },
         {
           "area": "공인영어",
@@ -436,7 +602,10 @@
           "impact": "2024년에 본 시험 성적은 쓸 수 없습니다. 대학이 11월 5일에 기본계획을 고쳐 올리면서 TEPS 마지막 인정 시험이 12월 5일에서 11월 21일로 당겨졌습니다.",
           "affectsScore": false,
           "pageBefore": "12쪽",
-          "pageAfter": "3쪽"
+          "pageAfter": "3쪽",
+          "departments": [],
+          "title": "2025년 1월 이후 본 시험만 인정",
+          "groups": []
         },
         {
           "area": "필기·실기",
@@ -446,7 +615,12 @@
           "impact": "실기에서 C++을 고를 수 없습니다.",
           "affectsScore": false,
           "pageBefore": "21쪽",
-          "pageAfter": "7쪽"
+          "pageAfter": "7쪽",
+          "departments": [],
+          "title": "컴퓨터융합학부·인공지능학과 실기에서 C++ 제외",
+          "groups": [
+            "컴퓨터·AI"
+          ]
         },
         {
           "area": "기타",
@@ -456,7 +630,10 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "20쪽",
-          "pageAfter": "6쪽"
+          "pageAfter": "6쪽",
+          "departments": [],
+          "title": "1단계 선발 배수는 아직 미정",
+          "groups": []
         }
       ],
       "ownerConfirmed": false
@@ -477,7 +654,10 @@
           "impact": "같은 TOEIC 850점이 56.5점에서 51.6점으로 내려갑니다.",
           "affectsScore": true,
           "pageBefore": "25쪽",
-          "pageAfter": "12쪽, 14쪽"
+          "pageAfter": "12쪽, 14쪽",
+          "departments": [],
+          "title": "영어 점수 식: 40 + 환산 × 0.2 → 30 + 환산 × 0.3",
+          "groups": []
         },
         {
           "area": "공인영어",
@@ -487,7 +667,10 @@
           "impact": "TOEIC 850점의 환산점수가 82.5점에서 72점으로 내려가고 990점은 100점 그대로입니다.",
           "affectsScore": true,
           "pageBefore": "25쪽",
-          "pageAfter": "14쪽"
+          "pageAfter": "14쪽",
+          "departments": [],
+          "title": "TOEIC 환산표 교체(850점: 82.5점 → 72점)",
+          "groups": []
         },
         {
           "area": "공인영어",
@@ -497,7 +680,17 @@
           "impact": "TOEIC 성적만으로는 이 세 학과에 지원할 수 없습니다.",
           "affectsScore": true,
           "pageBefore": "8쪽",
-          "pageAfter": "6쪽, 8쪽, 14쪽"
+          "pageAfter": "6쪽, 8쪽, 14쪽",
+          "departments": [
+            "수의학과",
+            "약학과",
+            "제약학과"
+          ],
+          "title": "수의학과·약학과·제약학과는 TOEIC 불가(TEPS·TOEFL만)",
+          "groups": [
+            "수의",
+            "약학·제약"
+          ]
         },
         {
           "area": "지원자격",
@@ -507,7 +700,18 @@
           "impact": "안전공학과는 최저 점수가 90점 오르고, 인공지능전공·소프트웨어전공·지능로봇공학과는 10점 내려갑니다.",
           "affectsScore": false,
           "pageBefore": "5~8쪽",
-          "pageAfter": "6~8쪽"
+          "pageAfter": "6~8쪽",
+          "departments": [],
+          "title": "학과별 TOEIC 최저 점수 조정(안전공학과 660 → 750 등)",
+          "groups": [
+            "컴퓨터·AI",
+            "기계·로봇·모빌리티",
+            "건축·토목",
+            "화학·생명",
+            "농업·식품·산림",
+            "경영·경제",
+            "안전공학"
+          ]
         },
         {
           "area": "필기·실기",
@@ -517,7 +721,14 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "25쪽",
-          "pageAfter": "12쪽"
+          "pageAfter": "12쪽",
+          "departments": [],
+          "title": "실기를 보는 학과에 체육교육과·동양화·조소 추가",
+          "groups": [
+            "건축·토목",
+            "교육(사범)",
+            "미술·디자인"
+          ]
         },
         {
           "area": "기타",
@@ -527,7 +738,14 @@
           "impact": "모집인원이 1명인 학과는 1단계를 통과하는 인원이 절반으로 줄어듭니다.",
           "affectsScore": false,
           "pageBefore": "29쪽",
-          "pageAfter": "13쪽"
+          "pageAfter": "13쪽",
+          "departments": [],
+          "title": "수의·약학·제약·간호: 모집 1명이면 1단계 20명만 선발",
+          "groups": [
+            "간호",
+            "수의",
+            "약학·제약"
+          ]
         },
         {
           "area": "공인영어",
@@ -537,7 +755,10 @@
           "impact": "2025년 2월까지 본 시험 성적은 쓸 수 없습니다.",
           "affectsScore": false,
           "pageBefore": "8쪽, 9쪽",
-          "pageAfter": "6쪽"
+          "pageAfter": "6쪽",
+          "departments": [],
+          "title": "2025년 3월 1일 이후 본 시험만 인정",
+          "groups": []
         },
         {
           "area": "지원자격",
@@ -547,7 +768,12 @@
           "impact": null,
           "affectsScore": false,
           "pageBefore": "14쪽",
-          "pageAfter": "2쪽"
+          "pageAfter": "2쪽",
+          "departments": [],
+          "title": "수의학과 편입 학년: 1학년 1학기 → 2학년",
+          "groups": [
+            "수의"
+          ]
         },
         {
           "area": "모집단위",
@@ -557,7 +783,12 @@
           "impact": "2026학년도와 마찬가지로 지원할 수 없습니다.",
           "affectsScore": false,
           "pageBefore": "5~8쪽",
-          "pageAfter": "2쪽"
+          "pageAfter": "2쪽",
+          "departments": [],
+          "title": "의학과는 모집 없음(작년과 같음)",
+          "groups": [
+            "의학·치의학"
+          ]
         }
       ],
       "ownerConfirmed": false

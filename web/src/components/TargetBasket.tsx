@@ -21,7 +21,7 @@ import {
 } from "../utils/eligibility";
 import { formatScore, formatSignedScore } from "../utils/formatScore";
 import {
-  hasScoreAffectingChange,
+  getScoreCautions,
   type UniversityGuidelineChange,
 } from "../utils/guidelineChanges";
 import { formatCompetitionRatio } from "../utils/competition";
@@ -287,6 +287,31 @@ function TargetStrategyBoard({ summaries }: { summaries: TargetSummary[] }) {
   );
 }
 
+/** 판정 딱지. 판정 기준은 딱지에 갖다 대거나(폰은 누르면) 나온다 — 늘 펼쳐 두면 글이 많다. */
+function StatusBadge({
+  modifier,
+  label,
+  rule,
+}: {
+  modifier: string;
+  label: string;
+  rule: { fullMarks: number; margin: number } | null;
+}) {
+  if (rule === null) {
+    return <span className={`status-badge ${modifier}`}>{label}</span>;
+  }
+
+  return (
+    <span className={`status-badge status-badge--tip ${modifier}`} tabIndex={0}>
+      {label}
+      <span className="status-tip" role="tooltip">
+        합격 평균 이상이면 ‘상회’, 반영 만점 {rule.fullMarks}점의 5%({rule.margin}점) 안쪽으로
+        모자라면 ‘근접’, 그보다 더 모자라면 ‘미달’입니다. 면접·필기 점수는 넣지 않은 비교입니다.
+      </span>
+    </span>
+  );
+}
+
 function TargetBasket({
   summaries,
   targetCount,
@@ -396,6 +421,10 @@ function TargetBasket({
             guidelineChange,
           }, cardIndex) => {
             const ineligibleText = describeEligibilityFailure(eligibility);
+            // 올해 점수 계산이 달라지는 학과에만 «주의»를 띄운다(대학 전체에 붙이면 무관한 학과에도 뜬다).
+            const scoreCautions = guidelineChange === null
+              ? []
+              : getScoreCautions(guidelineChange, target.dept);
             const borderline = getBorderlineMargin(
               target.univ,
               referenceRecord.연도,
@@ -508,13 +537,13 @@ function TargetBasket({
                         </span>
                       )}
                       {ineligibleText === null && score.status === "safe" && (
-                        <span className="status-badge status-safe">🟢 상회</span>
+                        <StatusBadge modifier="status-safe" label="🟢 상회" rule={borderline} />
                       )}
                       {ineligibleText === null && score.status === "borderline" && (
-                        <span className="status-badge status-borderline">🟡 근접</span>
+                        <StatusBadge modifier="status-borderline" label="🟡 근접" rule={borderline} />
                       )}
                       {ineligibleText === null && score.status === "risk" && (
-                        <span className="status-badge status-risk">🔴 미달</span>
+                        <StatusBadge modifier="status-risk" label="🔴 미달" rule={borderline} />
                       )}
                       {ineligibleText === null && score.status === "unknown" && (
                         <span className="status-badge status-unknown">
@@ -593,13 +622,21 @@ function TargetBasket({
                       </p>
                     )}
                     {guidelineChange !== null && guidelineChange.verdict === "changed" && (
-                      <p className="guideline-card-notice">
-                        📢 {guidelineTargetYear}학년도에 달라집니다: {guidelineChange.headline}{" "}
-                        {hasScoreAffectingChange(guidelineChange)
-                          ? `이 카드의 점수는 ${referenceRecord.연도}학년도 식으로 계산한 것입니다. `
-                          : ""}
-                        <a href="#guideline-changes">달라진 점 보기</a>
-                      </p>
+                      scoreCautions.length > 0 ? (
+                        <p className="guideline-card-notice guideline-card-notice--caution">
+                          <strong>
+                            ⚠️ 주의 · {guidelineTargetYear}학년도에는 이 학과의 점수 계산이 달라집니다.
+                          </strong>{" "}
+                          {scoreCautions.map((change) => change.title).join(" · ")}. 이 카드의 판정은{" "}
+                          {referenceRecord.연도}학년도 식으로 낸 것이라, 같은 성적이어도 올해는 다르게
+                          나올 수 있습니다. <a href="#guideline-changes">달라진 점 보기</a>
+                        </p>
+                      ) : (
+                        <p className="guideline-card-notice">
+                          📢 {guidelineTargetYear}학년도에 달라집니다: {guidelineChange.headline}{" "}
+                          <a href="#guideline-changes">달라진 점 보기</a>
+                        </p>
+                      )
                     )}
 
                     {/* 한 해만 대조하면 그 해가 유독 빡셌는지 무른 해였는지
@@ -828,24 +865,27 @@ function TargetBasket({
                       </p>
                     )}
 
-                    {borderline !== null && !comparisonUnavailable && (
-                      <p className="status-rule-note">
-                        판정 기준: 합격 평균 이상이면 ‘상회’, 반영 만점 {borderline.fullMarks}점의
-                        5%({borderline.margin}점) 안쪽으로 모자라면 ‘근접’, 그보다 더 모자라면
-                        ‘미달’입니다. 면접·필기 점수는 넣지 않은 비교입니다.
-                      </p>
-                    )}
-
-                    {analysis !== null && (
+                    {analysis !== null && (analysis.usesEnglish || analysis.usesGpa) && (
                       <div className="efficiency-section">
-                        <div className="efficiency-row">
-                          <span>• TOEIC 10점 상승 시:</span>
-                          <strong>+{analysis.toeicEfficiency}점</strong>
-                        </div>
-                        <div className="efficiency-row efficiency-row-last">
-                          <span>• 전적대 백분위 1점 상승 시:</span>
-                          <strong>+{analysis.gpaEfficiencyPer100}점</strong>
-                        </div>
+                        {analysis.usesEnglish && (
+                          <div className={`efficiency-row${analysis.usesGpa ? "" : " efficiency-row-last"}`}>
+                            <span>• TOEIC 10점 상승 시:</span>
+                            <strong>+{analysis.toeicEfficiency}점</strong>
+                          </div>
+                        )}
+                        {analysis.usesGpa && (
+                          <div className="efficiency-row efficiency-row-last">
+                            <span>• 전적대 백분위 1점 상승 시:</span>
+                            <strong>+{analysis.gpaEfficiencyPer100}점</strong>
+                          </div>
+                        )}
+                        {!(analysis.usesEnglish && analysis.usesGpa) && (
+                          <p className="efficiency-recommendation">
+                            이 전형은{" "}
+                            <strong>{analysis.usesEnglish ? "전적대 성적" : "공인영어 성적"}</strong>
+                            을 점수에 넣지 않습니다.
+                          </p>
+                        )}
                         {analysis.recommendedMetric !== "none"
                           && !(analysis.recommendedMetric === "toeic" && toeic !== null && toeic >= 990)
                           && !(analysis.recommendedMetric === "gpa" && gpaRaw !== null && gpaRaw >= getGpaMax(gpaType)) && (

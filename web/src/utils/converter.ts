@@ -379,6 +379,9 @@ export function analyzeScoreDeficit(
   gpaEfficiency: number;   // conversion points per 0.1 raw GPA points
   /** 전적대 백분위(100점 만점) 1점이 올리는 환산점수. 입력 척도와 무관하다. */
   gpaEfficiencyPer100: number;
+  /** 이 전형이 공인영어 / 전적대 성적을 점수에 넣는가. 안 넣는 쪽은 화면에 «+0점»으로 적지 않는다. */
+  usesEnglish: boolean;
+  usesGpa: boolean;
   recommendedMetric: "toeic" | "gpa" | "none";
 } {
   const formula = getConversionFormula(univ, year, department);
@@ -403,8 +406,12 @@ export function analyzeScoreDeficit(
   // 백분위 1점(둘 다 만점의 약 1%). 예전에는 「학점 0.1」과 견줘서 4.5 로 넣으면
   // 전적대, 100 으로 넣으면 TOEIC 이라고 답이 뒤집혔다(2026-11-14 검토 9번).
   const gpaEfficiencyPer100 = gpaSlope100;
+  // 한쪽만 반영하는 전형(예: 영어 + 필기)은 견줄 상대가 없으니 «어느 쪽이 유리»를
+  // 말하지 않는다. 예전에는 반영하지 않는 전적대를 «+0점»으로 적고 영어가 유리하다고 했다.
+  const usesEnglish = formula !== null && formula.convertEnglish !== null;
+  const usesGpa = formula !== null && formula.convertGpa !== null;
   let recommendedMetric: "toeic" | "gpa" | "none" = "none";
-  if (toeicEfficiency > 0 || gpaEfficiencyPer100 > 0) {
+  if (usesEnglish && usesGpa && (toeicEfficiency > 0 || gpaEfficiencyPer100 > 0)) {
     if (gpaEfficiencyPer100 === 0) {
       recommendedMetric = "toeic";
     } else {
@@ -457,6 +464,8 @@ export function analyzeScoreDeficit(
     toeicEfficiency: Math.round(toeicEfficiency * 100) / 100,
     gpaEfficiency: Math.round(gpaEfficiency * 100) / 100,
     gpaEfficiencyPer100: Math.round(gpaEfficiencyPer100 * 100) / 100,
+    usesEnglish,
+    usesGpa,
     recommendedMetric
   };
 }
