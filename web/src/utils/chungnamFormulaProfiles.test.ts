@@ -52,7 +52,7 @@ describe("충남대학교 연도·학과별 전형 프로필", () => {
 
   it("classifies every 2025 result row", () => {
     expect(profileCounts("2025")).toEqual({
-      standard: 68,
+      standard: 69,
       "coding-practical": 2,
       "food-written": 1,
       "vet-pharmacy-written": 2,
@@ -120,9 +120,9 @@ describe("충남대학교 연도·학과별 전형 프로필", () => {
     expect(recordAt("2026", "약학과")?.최종합격_토익원점수).toBe(990);
   });
 
-  it("keeps all 260 Chungnam rows selectable", () => {
+  it("keeps all 261 Chungnam rows selectable", () => {
     expect(standard.filter((record) => record.대학명 === "충남대학교"))
-      .toHaveLength(260);
+      .toHaveLength(261);
     expect(exceptions.filter((record) => record.대학명 === "충남대학교"))
       .toHaveLength(0);
   });

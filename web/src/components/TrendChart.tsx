@@ -39,7 +39,16 @@ type MetricValues = {
 };
 
 type ChartDataKey = keyof MetricValues;
-type ChartAxisDomain = readonly [number, number] | readonly ["auto", "auto"];
+type ChartAxis = {
+  domain: readonly [number, number] | readonly ["auto", "auto"];
+  ticks: number[] | undefined;
+};
+
+/** 지표마다 넘을 수 없는 위 끝. TOEIC 은 990, 백분위는 100 이다. */
+const METRIC_CEILING: Partial<Record<string, number>> = {
+  "영어 원점수 (TOEIC)": 990,
+  "전적대 백분위 (GPA)": 100,
+};
 
 /** 한 해 한 줄. 지망마다 열이 하나씩 붙는다(계열명 → 값). */
 type ChartDataPoint = { year: string } & Record<string, number | null | string>;
@@ -131,10 +140,27 @@ function getMetricValues(record: DepartmentRecord): MetricValues {
   };
 }
 
-function calculateChartDomain(
+/** 눈금 간격을 1·2·5·10·20·50… 가운데 눈금이 5개쯤 나오는 값으로 고른다. */
+function pickTickStep(span: number): number {
+  const rough = Math.max(span, 1e-9) / 4;
+  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const normalized = rough / magnitude;
+  const nice = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return nice * magnitude;
+}
+
+/**
+ * 세로축 범위와 눈금.
+ *
+ * 예전에는 값에 여유만 더해 「999.2 · 926.63 · 841.63」처럼 어정쩡한 눈금이
+ * 나왔고 TOEIC 만점(990)을 넘었다(2026-11-14 검토 22번). 딱 떨어지는 간격으로
+ * 맞추고, 만점이 있는 지표는 만점에서 멈춘다.
+ */
+function calculateChartAxis(
   data: ChartDataPoint[],
   seriesNames: string[],
-): ChartAxisDomain {
+  ceiling: number | undefined,
+): ChartAxis {
   const values = data.flatMap((point) => (
     seriesNames
       .map((name) => point[name])
@@ -144,18 +170,28 @@ function calculateChartDomain(
   ));
 
   if (values.length === 0) {
-    return ["auto", "auto"];
+    return { domain: ["auto", "auto"], ticks: undefined };
   }
 
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const span = max - min;
-  const padding = Math.max(span * 0.12, Math.abs(max) * 0.03, 1);
+  const step = pickTickStep(Math.max(max - min, Math.abs(max) * 0.05));
+  const low = Math.max(0, Math.floor((min - step * 0.25) / step) * step);
+  let high = Math.ceil((max + step * 0.25) / step) * step;
+  if (ceiling !== undefined && high > ceiling) {
+    high = ceiling;
+  }
 
-  return [
-    roundToTwoDecimals(Math.max(0, min - padding)),
-    roundToTwoDecimals(max + padding),
-  ];
+  const ticks: number[] = [];
+  for (let tick = low; tick < high - step * 0.4; tick += step) {
+    ticks.push(roundToTwoDecimals(tick));
+  }
+  ticks.push(roundToTwoDecimals(high));
+
+  return {
+    domain: [roundToTwoDecimals(low), roundToTwoDecimals(high)],
+    ticks,
+  };
 }
 
 function TrendChart({
@@ -228,9 +264,13 @@ function TrendChart({
     () => series.map((entry) => entry.name),
     [series],
   );
-  const yAxisDomain = useMemo(
-    () => calculateChartDomain(chartData, seriesNames),
-    [chartData, seriesNames],
+  const yAxis = useMemo(
+    () => calculateChartAxis(
+      chartData,
+      seriesNames,
+      METRIC_CEILING[selectedMetric.dataKey],
+    ),
+    [chartData, selectedMetric.dataKey, seriesNames],
   );
 
   /**
@@ -391,7 +431,8 @@ function TrendChart({
             />
             <YAxis
               width={54}
-              domain={yAxisDomain}
+              domain={yAxis.domain}
+              ticks={yAxis.ticks}
               tick={{ fill: "var(--text-secondary)", fontSize: 11, fontWeight: "600" }}
               stroke="var(--border-color)"
             />

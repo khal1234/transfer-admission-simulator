@@ -21,6 +21,18 @@ export type DecisionCandidate = {
   dataConfidence: DataConfidence;
 };
 
+/**
+ * 모집요강 원문이 자료 폴더에 없어 2026-11-14 검토 때 환산식을 다시 맞대 보지
+ * 못한 대학·연도. 틀렸다는 뜻이 아니라 「지금은 다시 확인할 수 없다」는 뜻이다.
+ * 원문을 구해 대조하면 여기서 뺀다.
+ */
+const GUIDELINE_NOT_RECHECKED = new Set([
+  "부산대학교|2024",
+  "강원대학교|2024",
+  "전북대학교|2024",
+  "전북대학교|2025",
+]);
+
 export function getDataConfidence(record: DepartmentRecord): DataConfidence {
   const formula = getConversionFormula(record.대학명, record.연도, record.학과);
   const toeicDisclosure = getToeicDisclosure(record.대학명).disclosure;
@@ -50,6 +62,10 @@ export function getDataConfidence(record: DepartmentRecord): DataConfidence {
     reasons.push("GPA 원점수는 구간 환산표에서 역산한 근사값입니다.");
   } else if (gpaDisclosure === "derived-exact") {
     reasons.push("GPA 원점수는 공개 환산점수에서 역산했습니다.");
+  }
+
+  if (GUIDELINE_NOT_RECHECKED.has(`${record.대학명}|${record.연도}`)) {
+    reasons.push("이 연도의 모집요강 원문을 다시 확보하지 못해 환산식을 재확인하지 못했습니다.");
   }
 
   if (record.합격자기준 === "확인불가" || record.합격자기준 === undefined) {

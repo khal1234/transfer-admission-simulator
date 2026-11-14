@@ -30,6 +30,10 @@ from extract_spreadsheets import (  # noqa: E402
 )
 from extract_pdfs import SPECS as PDF_SPECS  # noqa: E402
 from extract_pdfs import extract_one as extract_pdf_one  # noqa: E402
+from apply_review_fixes_2026_11 import (  # noqa: E402
+    bundled_units,
+    count_file_only_keys,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT / "results"
@@ -83,6 +87,24 @@ KNOWN_OTHER_SHEET = {
 KNOWN_UNEXTRACTED = {
     ("경북대학교", "2024",
      normalize_name("농업토목·생물산업공학부(생물산업기계공학전공)")),
+}
+
+
+# 성적 파일에는 줄이 없고 선발현황·합격자 현황 파일에서만 인원이 확인되는 레코드
+# (충북대 «최초 합격자 2명 이하» 모집단위, 충남대 2025 기계공학교육과).
+# 이 추출기는 성적 파일만 읽으므로 대조 경로가 닿지 않는다. 값은
+# tools/apply_review_fixes_2026_11.py 의 verify_sources 가 원문과 견준다.
+KNOWN_COUNT_FILE_ONLY = {
+    (univ, year, normalize_name(name))
+    for univ, year, name in count_file_only_keys()
+}
+
+# 원본이 한 모집단위를 하위 전공 여러 줄로 나눠 싣고(모집인원 칸 병합) results 는
+# 묶음 전체를 첫 줄 이름의 한 행에 담는 경우. 지원·합격 인원은 하위 줄의 합과
+# 견준다 — 첫 줄 숫자와 견주면 옳게 고친 값이 [C] 로 뜬다.
+BUNDLED_UNITS = {
+    (univ, year, normalize_name(anchor)): {normalize_name(n) for n in members}
+    for (univ, year, anchor), members in bundled_units().items()
 }
 
 
@@ -187,6 +209,19 @@ def main():
     matched_by_category = defaultdict(int)
     matched_positions = set()
 
+    for (univ, year, anchor), members in BUNDLED_UNITS.items():
+        parts = [
+            row for row in extracted
+            if row["대학명"] == univ and row["연도"] == year
+            and row["학과_정규화"] in members
+        ]
+        for row in parts:
+            if row["학과_정규화"] != anchor:
+                continue
+            for field in ("지원인원", "합격인원"):
+                values = [part[field] for part in parts if part[field] is not None]
+                row[field] = sum(values) if values else None
+
     seen_keys = set()
     for row in extracted:
         alias = NAME_ALIASES.get((row["대학명"], row["학과_원본명"].strip()))
@@ -237,7 +272,8 @@ def main():
             continue
         known = (record["대학명"], record["연도"],
                  normalize_name(record.get("학과")))
-        if known in KNOWN_UNEXTRACTED or known in KNOWN_OTHER_SHEET:
+        if (known in KNOWN_UNEXTRACTED or known in KNOWN_OTHER_SHEET
+                or known in KNOWN_COUNT_FILE_ONLY):
             continue
         orphans.append(
             (identity[0], record["대학명"], record["연도"], record.get("학과")))

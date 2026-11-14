@@ -11,8 +11,10 @@
   - 2026: 일반편입학(일반전형) 합격 현황 및 평균성적, file_no=4245
 
 학과별 공식이 코드에서 지원되므로, 기존에 배점 차이만으로 격리했던 부산대
-레코드는 모두 표준 데이터로 복원한다. 2026 공식 결과의 ``-`` 합격인원은
-합격자 없음(0명)으로 저장하고, 공개 성적의 기준은 최종합격자로 확정한다.
+레코드는 모두 표준 데이터로 복원한다. 2026 공식 결과의 ``-`` 합격인원·지원인원은
+값 없음(null)으로 둔다 — 원문이 0 이라 적지 않았고, 0 은 «0명»이라는 주장이다
+(2026-11-14 검토, tools/apply_review_fixes_2026_11.py [5]). 공개 성적의 기준은
+최종합격자로 확정한다.
 """
 
 from __future__ import annotations
@@ -33,7 +35,8 @@ OFFICIAL_DEPARTMENT = "디자인학과(디자인앤테크놀로지전공)"
 EXPECTED_ROWS_BY_YEAR = {"2024": 89, "2025": 59, "2026": 88}
 EXPECTED_PUBLIC_SCORES_BY_YEAR = {"2024": 62, "2025": 59, "2026": 41}
 
-PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS = frozenset({
+# 26_부산대_성적.pdf 에서 합격인원 칸이 «-» 인 모집단위(18개).
+PUSAN_2026_DASH_ADMISSION_DEPARTMENTS = frozenset({
     "불어불문학과",
     "노어노문학과",
     "특수교육과",
@@ -54,7 +57,8 @@ PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS = frozenset({
     "무용학과 한국무용전공",
 })
 
-PUSAN_2026_ZERO_APPLICATION_DEPARTMENTS = frozenset({
+# 같은 파일에서 지원인원 칸도 «-» 인 모집단위(2개).
+PUSAN_2026_DASH_APPLICATION_DEPARTMENTS = frozenset({
     "한국음악학과 관악.타악전공",
     "한국음악학과 이론.작곡전공",
 })
@@ -171,33 +175,33 @@ def fix_result_metadata(standard: list[dict], changes: list[str]) -> None:
             record["합격자기준"] = "최종"
             corrected_criteria += 1
 
-        if record.get("학과") in PUSAN_2026_ZERO_APPLICATION_DEPARTMENTS:
+        if record.get("학과") in PUSAN_2026_DASH_APPLICATION_DEPARTMENTS:
             applied = record.get("지원인원")
             if applied not in (None, 0):
                 raise RuntimeError(
-                    f"2026 {record['학과']} 공식 미지원 행에 양수 지원인원이 있음: {applied}"
+                    f"2026 {record['학과']} 지원인원 «-» 행에 양수 지원인원이 있음: {applied}"
                 )
-            if applied is None:
-                record["지원인원"] = 0
+            if applied == 0:
+                record["지원인원"] = None
                 corrected_application_counts += 1
 
-        if record.get("학과") not in PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS:
+        if record.get("학과") not in PUSAN_2026_DASH_ADMISSION_DEPARTMENTS:
             continue
         admitted = record.get("합격인원")
         if admitted not in (None, 0):
             raise RuntimeError(
-                f"2026 {record['학과']} 공식 무합격 행에 양수 합격인원이 있음: {admitted}"
+                f"2026 {record['학과']} 합격인원 «-» 행에 양수 합격인원이 있음: {admitted}"
             )
-        if admitted is None:
-            record["합격인원"] = 0
+        if admitted == 0:
+            record["합격인원"] = None
             corrected_admission_counts += 1
 
     if corrected_criteria:
         changes.append(f"2026 최종합격자 평균 기준 {corrected_criteria}행 확정")
     if corrected_application_counts:
-        changes.append(f"2026 공식 '-' 지원인원 {corrected_application_counts}행을 0명으로 확정")
+        changes.append(f"2026 공식 '-' 지원인원 {corrected_application_counts}행을 null 로 되돌림")
     if corrected_admission_counts:
-        changes.append(f"2026 공식 '-' 합격인원 {corrected_admission_counts}행을 0명으로 확정")
+        changes.append(f"2026 공식 '-' 합격인원 {corrected_admission_counts}행을 null 로 되돌림")
 
 
 def validate(standard: list[dict], exceptions: list[dict]) -> None:
@@ -224,28 +228,29 @@ def validate(standard: list[dict], exceptions: list[dict]) -> None:
     if non_final:
         raise RuntimeError(f"부산대 최종합격자 기준 미확정 행: {non_final[:5]}")
 
-    zero_departments = {
+    # 원문 «-» 칸은 null 이어야 하고, 그 밖의 2026 행에는 인원이 적혀 있어야 한다.
+    dash_departments = {
         record["학과"]
         for record in rows_by_year["2026"]
-        if record.get("합격인원") == 0
+        if record.get("합격인원") is None
     }
-    if zero_departments != PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS:
+    if dash_departments != PUSAN_2026_DASH_ADMISSION_DEPARTMENTS:
         raise RuntimeError(
-            "부산대 2026 무합격 모집단위 불일치: "
-            f"누락={sorted(PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS - zero_departments)}, "
-            f"초과={sorted(zero_departments - PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS)}"
+            "부산대 2026 합격인원 «-» 모집단위 불일치: "
+            f"누락={sorted(PUSAN_2026_DASH_ADMISSION_DEPARTMENTS - dash_departments)}, "
+            f"초과={sorted(dash_departments - PUSAN_2026_DASH_ADMISSION_DEPARTMENTS)}"
         )
 
-    zero_application_departments = {
+    dash_application_departments = {
         record["학과"]
         for record in rows_by_year["2026"]
-        if record.get("지원인원") == 0
+        if record.get("지원인원") is None
     }
-    if zero_application_departments != PUSAN_2026_ZERO_APPLICATION_DEPARTMENTS:
+    if dash_application_departments != PUSAN_2026_DASH_APPLICATION_DEPARTMENTS:
         raise RuntimeError(
-            "부산대 2026 미지원 모집단위 불일치: "
-            f"누락={sorted(PUSAN_2026_ZERO_APPLICATION_DEPARTMENTS - zero_application_departments)}, "
-            f"초과={sorted(zero_application_departments - PUSAN_2026_ZERO_APPLICATION_DEPARTMENTS)}"
+            "부산대 2026 지원인원 «-» 모집단위 불일치: "
+            f"누락={sorted(PUSAN_2026_DASH_APPLICATION_DEPARTMENTS - dash_application_departments)}, "
+            f"초과={sorted(dash_application_departments - PUSAN_2026_DASH_APPLICATION_DEPARTMENTS)}"
         )
 
     score_fields = (
@@ -255,10 +260,10 @@ def validate(standard: list[dict], exceptions: list[dict]) -> None:
         "최종합격_학점원점수_100점만점",
     )
     for record in rows_by_year["2026"]:
-        if record["학과"] not in PUSAN_2026_ZERO_ADMISSION_DEPARTMENTS:
+        if record["학과"] not in PUSAN_2026_DASH_ADMISSION_DEPARTMENTS:
             continue
         if any(record.get(field) is not None for field in score_fields):
-            raise RuntimeError(f"2026 무합격 행에 평균성적이 있음: {record_key(record)}")
+            raise RuntimeError(f"2026 합격인원 «-» 행에 평균성적이 있음: {record_key(record)}")
 
     public_scores_by_year = {
         year: sum(

@@ -126,16 +126,18 @@ describe("전남대 모집요강·공식 결과 ↔ 저장 데이터", () => {
     }
   });
 
-  it("restores the two registered-student counts omitted during extraction", () => {
+  // 24_전남대_성적.pdf 2쪽 18행 · 25_전남대_성적.pdf 3쪽 20행: 등록자수 칸이 빈칸이고
+  // 1 은 옆 칸(충원합격/예비순위)이다. 한때 1 로 «복원»했던 값을 null 로 되돌렸다.
+  it("keeps the two blank registered-student cells as null, not the waitlist rank", () => {
     expect(getRecord("2024", "역사교육과")).toMatchObject({
       모집인원: 1,
       지원인원: 4,
-      합격인원: 1,
+      합격인원: null,
     });
     expect(getRecord("2025", "한국화전공")).toMatchObject({
       모집인원: 1,
       지원인원: 2,
-      합격인원: 1,
+      합격인원: null,
     });
   });
 

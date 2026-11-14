@@ -11,6 +11,11 @@ import DepartmentExplorer from "./components/DepartmentExplorer";
 import { getDisclosureEvidence } from "./utils/disclosureEvidence";
 import { partitionNonRecruitment } from "./utils/nonRecruitment";
 import DecisionSupportPanel from "./components/DecisionSupportPanel";
+import GuidelineChangesPanel from "./components/GuidelineChangesPanel";
+import { UPDATE_NOTICE_DATE } from "./components/updateNoticeContent";
+import { checkEligibility } from "./utils/eligibility";
+import { GUIDELINE_CHANGES, getGuidelineChange } from "./utils/guidelineChanges";
+import { buildShareHash, parseShareHash } from "./utils/shareLink";
 import ChartErrorBoundary from "./components/ChartErrorBoundary";
 import SpecInputPanel from "./components/SpecInputPanel";
 import TargetBasket, { type TargetSummary } from "./components/TargetBasket";
@@ -43,10 +48,7 @@ import {
   isGpaType,
   convertGpa100ToInput,
   getGpa100ForInput,
-  limitGpaInput,
-  limitToeicInput,
   normalizeGpaInput,
-  normalizeToeicInput,
   parseGpaInput,
   parseToeicInput,
   restoreCanonicalGpa100,
@@ -112,10 +114,19 @@ function getInitialTheme(savedTheme: string | null): Theme {
     : "light";
 }
 
-const DEFAULT_TARGETS: Target[] = [
+// 처음 온 사람에게는 아무것도 담아 두지 않는다. 예전에는 이 둘과 850/90 이 미리
+// 들어 있어 남의 점수로 낸 판정이 내 것처럼 보였다(2026-11-14 검토 7번).
+// 지금은 「예시로 보기」를 눌렀을 때만 쓴다.
+const EXAMPLE_TARGETS: Target[] = [
   { univ: "부산대학교", dept: "기계공학부" },
   { univ: "경북대학교", dept: "기계공학과" },
 ];
+const EXAMPLE_TOEIC = "850";
+const EXAMPLE_GPA100 = "90";
+const NO_TARGETS: Target[] = [];
+
+/** 틀린 숫자를 알릴 곳. 공개 저장소의 이슈 게시판이다. */
+const REPORT_URL = "https://github.com/khal1234/transfer-admission-simulator/issues";
 
 function buildValidatedData() {
   const preparedStandardData = prepareDepartmentRecords(rawStandardData);
@@ -222,7 +233,7 @@ export default function App() {
     parseSavedTargets(
       initialStorage.values[STORAGE_KEYS.targets],
       standardTargetKeys,
-      DEFAULT_TARGETS,
+      NO_TARGETS,
     )
   ));
 
@@ -230,6 +241,14 @@ export default function App() {
     const saved = initialStorage.values[STORAGE_KEYS.comparisonBasis];
     return isComparisonBasis(saved) ? saved : "latest";
   });
+
+  // 지망이 하나도 없이 들어온 사람에게는 「학과 찾아 담기」가 먼저 할 일이라
+  // 탐색을 점수 칸 바로 아래에 둔다. 담는 도중에 화면이 뒤바뀌면 길을 잃으므로
+  // 순서는 들어올 때 한 번만 정한다(2026-11-14 검토 18·24번).
+  const [explorerFirst] = useState(() => targets.length === 0);
+  const [sharedSetup, setSharedSetup] = useState(() => (
+    typeof window === "undefined" ? null : parseShareHash(window.location.hash)
+  ));
 
   const toeic = useMemo(() => parseToeicInput(toeicInput), [toeicInput]);
   const gpaRaw = useMemo(
@@ -420,6 +439,25 @@ export default function App() {
         : [...currentTargets, target]
     ));
   }, []);
+  const moveTarget = useCallback((key: string, direction: -1 | 1) => {
+    setTargets((currentTargets) => {
+      const from = currentTargets.findIndex((current) => getTargetKey(current) === key);
+      const to = from + direction;
+      if (from < 0 || to < 0 || to >= currentTargets.length) {
+        return currentTargets;
+      }
+
+      const next = [...currentTargets];
+      const [moved] = next.splice(from, 1);
+      if (moved === undefined) return currentTargets;
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }, []);
+  const clearShareHash = useCallback(() => {
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    setSharedSetup(null);
+  }, []);
   const closeChart = useCallback(() => {
     setChartTarget(null);
     window.requestAnimationFrame(() => focusElement(chartTriggerRef.current));
@@ -470,16 +508,59 @@ export default function App() {
   }, []);
 
   const handleToeicInputChange = useCallback((value: string) => {
-    setToeicInput(limitToeicInput(value));
+    setToeicInput(value);
   }, []);
-  const handleToeicInputBlur = useCallback(() => {
-    setToeicInput((current) => normalizeToeicInput(current));
-  }, []);
-  const handleGpaRawInputChange = useCallback((value: string) => {
-    const limitedInput = limitGpaInput(value, gpaType);
-    setGpaRawInput(limitedInput);
+  const loadExample = useCallback(() => {
+    setToeicInput(EXAMPLE_TOEIC);
+    setGpaType("100");
+    setGpaRawInput(EXAMPLE_GPA100);
+    setCanonicalGpa100(Number(EXAMPLE_GPA100));
+    setTargets((current) => (
+      current.length > 0
+        ? current
+        : EXAMPLE_TARGETS.filter((target) => standardTargetKeys.has(getTargetKey(target)))
+    ));
+  }, [standardTargetKeys]);
+  const copyShareLink = useCallback(async () => {
+    const url = window.location.origin + window.location.pathname + buildShareHash({
+      toeic: toeicInput,
+      gpaRaw: gpaRawInput,
+      gpaType,
+      targets,
+    });
 
-    const parsedGpa = parseGpaInput(limitedInput, gpaType);
+    try {
+      await navigator.clipboard.writeText(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [gpaRawInput, gpaType, targets, toeicInput]);
+  const applySharedSetup = useCallback(() => {
+    if (sharedSetup === null) return;
+
+    const seen = new Set<string>();
+    const sharedTargets = sharedSetup.targets.filter((target) => {
+      const key = getTargetKey(target);
+      if (!standardTargetKeys.has(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    const parsedGpa = parseGpaInput(sharedSetup.gpaRaw, sharedSetup.gpaType);
+
+    setToeicInput(sharedSetup.toeic);
+    setGpaType(sharedSetup.gpaType);
+    setGpaRawInput(sharedSetup.gpaRaw);
+    setCanonicalGpa100(
+      parsedGpa === null ? null : getGpa100ForInput(sharedSetup.gpaType, parsedGpa),
+    );
+    setTargets(sharedTargets);
+    clearShareHash();
+  }, [clearShareHash, sharedSetup, standardTargetKeys]);
+  const handleGpaRawInputChange = useCallback((value: string) => {
+    setGpaRawInput(value);
+
+    const parsedGpa = parseGpaInput(value, gpaType);
     if (parsedGpa !== null) {
       setCanonicalGpa100(getGpa100ForInput(gpaType, parsedGpa));
     }
@@ -608,6 +689,8 @@ export default function App() {
           ? formulaNotices.join(" ")
           : null,
         renamedHistoryText: getRenamedHistoryText(history),
+        eligibility: checkEligibility(target.univ, target.dept, toeic, gpa100),
+        guidelineChange: getGuidelineChange(target.univ),
         yearlyComparisons,
         recentHistoryRows: recentRecordYears.map((year) => ({
           year,
@@ -649,6 +732,23 @@ export default function App() {
     }))
   ), [targetSummaries]);
 
+  const universityShortNames = useMemo(() => (
+    Array.from(new Set(standardRecords.map((record) => record.대학명)))
+      .sort((a, b) => a.localeCompare(b, "ko"))
+      .map((university) => university.replace(/대학교$/, ""))
+  ), [standardRecords]);
+
+  const explorerBlock = (
+    <DepartmentExplorer
+      records={latestExplorerRecords}
+      nonRecruitmentExceptions={nonRecruitmentExceptions}
+      targetKeys={targetKeySet}
+      onToggleTarget={toggleTarget}
+      toeic={toeic}
+      gpa100={gpa100}
+    />
+  );
+
   return (
     <div className="app-container">
       {/* ===================================================================
@@ -656,20 +756,22 @@ export default function App() {
           =================================================================== */}
       <header className="app-header">
         <div className="header-title-block">
+          {/* 「지역거점국립대」「전국 9대 거점국립대학」은 사실과 달랐다 — 부경대·
+              인천대는 거점국립대가 아니고 경상국립대·제주대는 빠져 있다
+              (2026-11-14 검토 19번). 수록한 9곳 이름을 그대로 적는다. */}
           <h1>
-            지역거점국립대 다용도 편입 플랫폼
-            <span className="badge-2026">3개년 통합</span>
+            국립대 9곳 편입 비교
+            <span className="badge-2026">3개년 결과</span>
           </h1>
           <p>
             <span className="header-description-desktop">
-              전국 9대 거점국립대학의 2024~2026학년도 일반편입{" "}
-              {standardRecords.length.toLocaleString("ko-KR")}개 입결 레코드 /{" "}
-              {standardTargetKeys.size.toLocaleString("ko-KR")}개 모집단위 동적 비교 플랫폼
+              {universityShortNames.join("·")} 9개 국립대의 2024~2026학년도 일반편입 결과{" "}
+              {standardRecords.length.toLocaleString("ko-KR")}건 ·{" "}
+              {standardTargetKeys.size.toLocaleString("ko-KR")}개 모집단위를 내 점수와 비교합니다.
             </span>
             <span className="header-description-mobile">
-              2024~2026학년도 ·{" "}
-              {standardRecords.length.toLocaleString("ko-KR")}개 입결 ·{" "}
-              {standardTargetKeys.size.toLocaleString("ko-KR")}개 모집단위
+              {universityShortNames.join("·")} · 2024~2026학년도 결과{" "}
+              {standardRecords.length.toLocaleString("ko-KR")}건
             </span>
           </p>
           <aside className="ai-disclaimer" aria-label="서비스 이용 주의사항">
@@ -730,7 +832,7 @@ export default function App() {
           </button>
           <div className="header-status">
             <School size={20} color="#10b981" />
-            <span>9개 대학교 연동 중</span>
+            <span>9개 대학 자료 수록</span>
           </div>
         </div>
       </header>
@@ -764,7 +866,29 @@ export default function App() {
         </div>
       )}
 
-      <div className="dashboard-grid">
+      <GuidelineChangesPanel />
+
+      {sharedSetup !== null && (
+        <div className="shared-setup-banner" role="status">
+          <p>
+            <strong>공유받은 구성이 있습니다.</strong>{" "}
+            TOEIC {sharedSetup.toeic === "" ? "미입력" : sharedSetup.toeic} · 전적대{" "}
+            {sharedSetup.gpaRaw === "" ? "미입력" : `${sharedSetup.gpaRaw}/${sharedSetup.gpaType}`} · 지망{" "}
+            {sharedSetup.targets.length}개. 적용하면 이 브라우저에 저장된 내 점수와
+            지망이 이 구성으로 바뀝니다.
+          </p>
+          <div className="shared-setup-actions">
+            <button type="button" className="shared-setup-apply" onClick={applySharedSetup}>
+              이 구성으로 보기
+            </button>
+            <button type="button" className="shared-setup-dismiss" onClick={clearShareHash}>
+              무시
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className={`dashboard-grid ${explorerFirst ? "dashboard-grid--explore-first" : ""}`}>
         <div className="spec-area">
           <SpecInputPanel
             toeicInput={toeicInput}
@@ -774,21 +898,16 @@ export default function App() {
             gpaRaw={gpaRaw}
             gpa100={gpa100}
             onToeicInputChange={handleToeicInputChange}
-            onToeicInputBlur={handleToeicInputBlur}
+            onLoadExample={loadExample}
             onGpaRawInputChange={handleGpaRawInputChange}
             onGpaRawInputBlur={handleGpaRawInputBlur}
             onGpaTypeChange={handleGpaTypeChange}
           />
         </div>
 
-        <DepartmentExplorer
-          records={latestExplorerRecords}
-          nonRecruitmentExceptions={nonRecruitmentExceptions}
-          targetKeys={targetKeySet}
-          onToggleTarget={toggleTarget}
-          toeic={toeic}
-          gpa100={gpa100}
-        />
+        {/* 문서 순서를 눈에 보이는 순서와 같게 둔다. 예전에는 탐색이 문서에서는
+            결과 앞, 화면에서는 뒤라 Tab 키가 건너뛰었다(검토 24번). */}
+        {explorerFirst && explorerBlock}
 
         <a
           className={`mobile-target-dock ${isTargetBasketVisible ? "mobile-target-dock--hidden" : ""}`}
@@ -846,11 +965,36 @@ export default function App() {
             onComparisonBasisChange={changeComparisonBasis}
             onToggleTarget={toggleTarget}
             onSelectChart={selectChart}
+            onMoveTarget={moveTarget}
+            onCopyShareLink={copyShareLink}
+            guidelineTargetYear={GUIDELINE_CHANGES.targetYear}
           />
         </section>
+
+        {!explorerFirst && explorerBlock}
       </div>
 
       <TransferReviewLinks />
+
+      <footer className="site-footer">
+        <p>
+          <strong>자료</strong> 각 대학 입학처가 공개한 편입학 결과와 모집요강을 받아
+          정리한 것입니다. 대학과 실시간으로 이어져 있지 않습니다.
+        </p>
+        <p>
+          <strong>마지막 갱신</strong>{" "}
+          <time dateTime={UPDATE_NOTICE_DATE.iso}>{UPDATE_NOTICE_DATE.label}</time> ·{" "}
+          <strong>수록 대학</strong> {universityShortNames.join("·")} (경상국립대·제주대
+          등은 아직 수록하지 않았습니다)
+        </p>
+        <p>
+          <strong>틀린 곳 알리기</strong>{" "}
+          <a href={REPORT_URL} target="_blank" rel="noreferrer">
+            GitHub 이슈 게시판에 남기기
+          </a>{" "}
+          (GitHub 계정이 필요합니다. 대학·학과·연도와 어느 숫자가 다른지 적어 주세요.)
+        </p>
+      </footer>
     </div>
   );
 }

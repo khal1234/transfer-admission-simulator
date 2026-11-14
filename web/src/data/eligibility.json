@@ -1,0 +1,664 @@
+{
+  "generatedAt": "2026-11-14",
+  "rules": [
+    {
+      "univ": "강원대학교",
+      "year": "2026",
+      "departments": [
+        "간호학과",
+        "수의학과",
+        "약학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 850,
+      "minGpa100": null,
+      "text": "간호학과·수의학과·약학과는 TOEIC 850점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_강원대_모집요강.pdf",
+      "page": "14쪽"
+    },
+    {
+      "univ": "강원대학교",
+      "year": "2026",
+      "departments": [
+        "영어교육과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 800,
+      "minGpa100": null,
+      "text": "영어교육과는 TOEIC 800점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_강원대_모집요강.pdf",
+      "page": "14쪽"
+    },
+    {
+      "univ": "강원대학교",
+      "year": "2027",
+      "departments": [
+        "간호학과",
+        "수의학과",
+        "약학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 850,
+      "minGpa100": null,
+      "text": "간호학과·수의학과·약학과는 TOEIC 850점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_강원대_춘천_편입학전형_기본계획.pdf",
+      "page": "9쪽"
+    },
+    {
+      "univ": "강원대학교",
+      "year": "2027",
+      "departments": [
+        "영어교육과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 800,
+      "minGpa100": null,
+      "text": "영어교육과는 TOEIC 800점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_강원대_춘천_편입학전형_기본계획.pdf",
+      "page": "9쪽"
+    },
+    {
+      "univ": "부경대학교",
+      "year": "2026",
+      "departments": null,
+      "exceptDepartments": [
+        "해양스포츠전공",
+        "평생교육·상담학전공",
+        "경찰범죄심리학전공",
+        "기계조선공조공학전공",
+        "전기전자SW공학전공",
+        "스마트기계모빌리티전공",
+        "스마트전기전자공학전공"
+      ],
+      "minToeic": 500,
+      "minGpa100": null,
+      "text": "TOEIC 500점 이상이어야 지원할 수 있으며, 해양스포츠전공과 미래융합학부 전공에는 이 기준을 적용하지 않습니다.",
+      "sourceFile": "26_부경대_모집요강.pdf",
+      "page": "12쪽"
+    },
+    {
+      "univ": "부경대학교",
+      "year": "2027",
+      "departments": null,
+      "exceptDepartments": [
+        "해양스포츠전공",
+        "평생교육·상담학전공",
+        "경찰범죄심리학전공",
+        "기계조선공조공학전공",
+        "전기전자SW공학전공",
+        "스마트기계모빌리티전공",
+        "스마트전기전자공학전공"
+      ],
+      "minToeic": 500,
+      "minGpa100": null,
+      "text": "TOEIC 500점 이상이어야 지원할 수 있으며, 해양스포츠전공과 미래융합학부 전공에는 이 기준을 적용하지 않습니다.",
+      "sourceFile": "27_부경대_편입학전형_기본계획.pdf",
+      "page": "2쪽"
+    },
+    {
+      "univ": "인천대학교",
+      "year": "2026",
+      "departments": null,
+      "exceptDepartments": [
+        "공연예술학과",
+        "스포츠과학부",
+        "체육교육과",
+        "한국화전공",
+        "서양화전공",
+        "체육학부"
+      ],
+      "minToeic": 500,
+      "minGpa100": null,
+      "text": "TOEIC 500점 이상이어야 지원할 수 있으며, 조형예술학부·스포츠과학부·체육교육과·공연예술학과에는 이 기준을 적용하지 않습니다.",
+      "sourceFile": "26_인천대_모집요강.pdf",
+      "page": "12쪽"
+    },
+    {
+      "univ": "인천대학교",
+      "year": "2027",
+      "departments": null,
+      "exceptDepartments": [
+        "공연예술학과",
+        "스포츠과학부",
+        "체육교육과",
+        "한국화전공",
+        "서양화전공",
+        "체육학부"
+      ],
+      "minToeic": 500,
+      "minGpa100": null,
+      "text": "TOEIC 500점 이상이어야 지원할 수 있으며, 조형예술학부·스포츠과학부·체육교육과·공연예술학과에는 이 기준을 적용하지 않습니다.",
+      "sourceFile": "27_인천대_편입학전형_기본계획.pdf",
+      "page": "3쪽"
+    },
+    {
+      "univ": "전남대학교",
+      "year": "2026",
+      "departments": null,
+      "exceptDepartments": [],
+      "minToeic": null,
+      "minGpa100": 80,
+      "text": "전적대 성적이 100점 만점에 80점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_전남대_모집요강.pdf",
+      "page": "10쪽"
+    },
+    {
+      "univ": "전남대학교",
+      "year": "2026",
+      "departments": [
+        "약학부"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 845,
+      "minGpa100": 80,
+      "text": "약학부는 TOEIC 845점 이상이고 전적대 성적이 100점 만점에 80점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_전남대_모집요강.pdf",
+      "page": "9~10쪽"
+    },
+    {
+      "univ": "전남대학교",
+      "year": "2027",
+      "departments": null,
+      "exceptDepartments": [],
+      "minToeic": null,
+      "minGpa100": 80,
+      "text": "전적대 성적이 100점 만점에 80점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_전남대_모집요강.pdf",
+      "page": "10쪽"
+    },
+    {
+      "univ": "전남대학교",
+      "year": "2027",
+      "departments": [
+        "약학부"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 845,
+      "minGpa100": 80,
+      "text": "약학부는 TOEIC 845점 이상이고 전적대 성적이 100점 만점에 80점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_전남대_모집요강.pdf",
+      "page": "8쪽, 10쪽"
+    },
+    {
+      "univ": "전북대학교",
+      "year": "2026",
+      "departments": [
+        "약학과",
+        "치의학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 755,
+      "minGpa100": 80,
+      "text": "약학과·치의학과는 TOEIC 755점 이상이고 전적대 성적이 100점 만점에 80점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_전북대_모집요강.pdf",
+      "page": "11쪽"
+    },
+    {
+      "univ": "전북대학교",
+      "year": "2027",
+      "departments": [
+        "약학과",
+        "치의학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 755,
+      "minGpa100": 80,
+      "text": "약학과·치의학과는 TOEIC 755점 이상이고 전적대 성적이 100점 만점에 80점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_전북대_편입학전형_기본계획.pdf",
+      "page": "6쪽"
+    },
+    {
+      "univ": "충남대학교",
+      "year": "2026",
+      "departments": null,
+      "exceptDepartments": [
+        "음악과(성악)",
+        "음악과(작곡)",
+        "음악과(피아노)",
+        "관현악과(관악)",
+        "관현악과(현악)",
+        "회화과(서양화)",
+        "회화과(한국화)",
+        "조소과",
+        "디자인창의학과(도자.섬유디자인)",
+        "디자인창의학과(시각.제품디자인)",
+        "무용학과(발레)",
+        "무용학과(한국무용)",
+        "무용학과(현대무용)"
+      ],
+      "minToeic": 381,
+      "minGpa100": null,
+      "text": "TOEIC 381점 이상이어야 지원할 수 있으며, 영어 성적을 반영하지 않는 예술대학과 무용학과에는 이 기준을 적용하지 않습니다.",
+      "sourceFile": "26_충남대_모집요강.pdf",
+      "page": "12쪽"
+    },
+    {
+      "univ": "충남대학교",
+      "year": "2027",
+      "departments": null,
+      "exceptDepartments": [
+        "음악과(성악)",
+        "음악과(작곡)",
+        "음악과(피아노)",
+        "관현악과(관악)",
+        "관현악과(현악)",
+        "회화과(서양화)",
+        "회화과(한국화)",
+        "조소과",
+        "디자인창의학과(도자.섬유디자인)",
+        "디자인창의학과(시각.제품디자인)",
+        "무용학과(발레)",
+        "무용학과(한국무용)",
+        "무용학과(현대무용)"
+      ],
+      "minToeic": 381,
+      "minGpa100": null,
+      "text": "TOEIC 381점 이상이어야 지원할 수 있으며, 영어 성적을 반영하지 않는 예술대학과 무용학과에는 이 기준을 적용하지 않습니다.",
+      "sourceFile": "27_충남대_편입학전형_기본계획.pdf",
+      "page": "3쪽"
+    },
+    {
+      "univ": "부산대학교",
+      "year": "2025",
+      "departments": [
+        "국제학부"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 800,
+      "minGpa100": null,
+      "text": "국제학부는 TOEIC 800점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "25_부산대_모집요강.pdf",
+      "page": "7쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2024",
+      "departments": null,
+      "exceptDepartments": [],
+      "minToeic": null,
+      "minGpa100": 75,
+      "text": "전적대 성적이 100점 만점에 75점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "24_충북대_모집요강.pdf",
+      "page": "17쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2024",
+      "departments": [
+        "수의학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 720,
+      "minGpa100": 85,
+      "text": "수의학과는 TOEIC 720점 이상이고 전적대 성적이 100점 만점에 85점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "24_충북대_모집요강.pdf",
+      "page": "18쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2024",
+      "departments": [
+        "약학과",
+        "제약학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 800,
+      "minGpa100": 85,
+      "text": "약학과·제약학과는 TOEIC 800점 이상이고 전적대 성적이 100점 만점에 85점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "24_충북대_모집요강.pdf",
+      "page": "18쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2024",
+      "departments": [
+        "의학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 805,
+      "minGpa100": 85,
+      "text": "의학과는 TOEIC 805점 이상이고 전적대 성적이 100점 만점에 85점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "24_충북대_모집요강.pdf",
+      "page": "18쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2025",
+      "departments": null,
+      "exceptDepartments": [],
+      "minToeic": null,
+      "minGpa100": 75,
+      "text": "전적대 성적이 100점 만점에 75점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "25_충북대_모집요강.pdf",
+      "page": "12쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2025",
+      "departments": [
+        "수의학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 900,
+      "minGpa100": 90,
+      "text": "수의학과는 TOEIC 900점 이상이고 전적대 성적이 100점 만점에 90점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "25_충북대_모집요강.pdf",
+      "page": "13쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2025",
+      "departments": [
+        "약학과",
+        "제약학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 900,
+      "minGpa100": 90,
+      "text": "약학과·제약학과는 TOEIC 900점 이상이고 전적대 성적이 100점 만점에 90점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "25_충북대_모집요강.pdf",
+      "page": "13쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2025",
+      "departments": [
+        "간호학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 840,
+      "minGpa100": 85,
+      "text": "간호학과는 TOEIC 840점 이상이고 전적대 성적이 100점 만점에 85점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "25_충북대_모집요강.pdf",
+      "page": "13쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2026",
+      "departments": [
+        "수의학과",
+        "약학과",
+        "제약학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 900,
+      "minGpa100": null,
+      "text": "수의학과·약학과·제약학과는 TOEIC 900점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_충북대_모집요강.pdf",
+      "page": "5~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2026",
+      "departments": [
+        "간호학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 840,
+      "minGpa100": null,
+      "text": "간호학과는 TOEIC 840점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_충북대_모집요강.pdf",
+      "page": "5~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2026",
+      "departments": [
+        "경영학부"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 760,
+      "minGpa100": null,
+      "text": "경영학부는 TOEIC 760점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_충북대_모집요강.pdf",
+      "page": "5~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2026",
+      "departments": [
+        "국제경영학과",
+        "경영정보학과",
+        "인공지능전공",
+        "소프트웨어전공",
+        "지능로봇공학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 700,
+      "minGpa100": null,
+      "text": "국제경영학과·경영정보학과·인공지능전공·소프트웨어전공·지능로봇공학과는 TOEIC 700점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_충북대_모집요강.pdf",
+      "page": "5~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2026",
+      "departments": [
+        "화학과",
+        "생물학과",
+        "미생물학과",
+        "생화학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 680,
+      "minGpa100": null,
+      "text": "화학과·생물학과·미생물학과·생화학과는 TOEIC 680점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_충북대_모집요강.pdf",
+      "page": "5~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2026",
+      "departments": [
+        "안전공학과",
+        "컴퓨터공학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 660,
+      "minGpa100": null,
+      "text": "안전공학과·컴퓨터공학과는 TOEIC 660점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_충북대_모집요강.pdf",
+      "page": "5~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2026",
+      "departments": [
+        "토목공학부",
+        "기계공학부"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 640,
+      "minGpa100": null,
+      "text": "토목공학부·기계공학부는 TOEIC 640점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_충북대_모집요강.pdf",
+      "page": "5~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2026",
+      "departments": [
+        "물리학과",
+        "화학공학과",
+        "신소재공학과",
+        "건축공학과",
+        "공업화학과",
+        "도시공학과",
+        "전기공학부",
+        "전자공학과",
+        "반도체공학부",
+        "정보통신공학부",
+        "식물자원학과",
+        "산림학과",
+        "지역건설공학과",
+        "목재·종이과학과",
+        "아동복지학과",
+        "의류학과",
+        "주거환경학과",
+        "바이오헬스산업전공"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 600,
+      "minGpa100": null,
+      "text": "물리학과·화학공학과 등 18개 모집단위는 TOEIC 600점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_충북대_모집요강.pdf",
+      "page": "5~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2026",
+      "departments": [
+        "농업경제학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 500,
+      "minGpa100": null,
+      "text": "농업경제학과는 TOEIC 500점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "26_충북대_모집요강.pdf",
+      "page": "5~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2027",
+      "departments": [
+        "간호학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 840,
+      "minGpa100": null,
+      "text": "간호학과는 TOEIC 840점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_충북대_편입학전형_기본계획.pdf",
+      "page": "6~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2027",
+      "departments": [
+        "경영학부"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 765,
+      "minGpa100": null,
+      "text": "경영학부는 TOEIC 765점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_충북대_편입학전형_기본계획.pdf",
+      "page": "6~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2027",
+      "departments": [
+        "안전공학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 750,
+      "minGpa100": null,
+      "text": "안전공학과는 TOEIC 750점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_충북대_편입학전형_기본계획.pdf",
+      "page": "6~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2027",
+      "departments": [
+        "국제경영학과",
+        "경영정보학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 705,
+      "minGpa100": null,
+      "text": "국제경영학과·경영정보학과는 TOEIC 705점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_충북대_편입학전형_기본계획.pdf",
+      "page": "6~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2027",
+      "departments": [
+        "화학과",
+        "생물학과",
+        "미생물학과",
+        "생화학과",
+        "인공지능전공",
+        "소프트웨어전공",
+        "지능로봇공학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 690,
+      "minGpa100": null,
+      "text": "화학과·생물학과 등 7개 모집단위는 TOEIC 690점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_충북대_편입학전형_기본계획.pdf",
+      "page": "6~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2027",
+      "departments": [
+        "컴퓨터공학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 660,
+      "minGpa100": null,
+      "text": "컴퓨터공학과는 TOEIC 660점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_충북대_편입학전형_기본계획.pdf",
+      "page": "6~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2027",
+      "departments": [
+        "토목공학부",
+        "기계공학부"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 645,
+      "minGpa100": null,
+      "text": "토목공학부·기계공학부는 TOEIC 645점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_충북대_편입학전형_기본계획.pdf",
+      "page": "6~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2027",
+      "departments": [
+        "심리학과",
+        "물리학과",
+        "화학공학과",
+        "신소재공학과",
+        "건축공학과",
+        "공업화학과",
+        "도시공학과",
+        "전기공학부",
+        "전자공학과",
+        "반도체공학부",
+        "정보통신공학부",
+        "식물자원학과",
+        "산림학과",
+        "지역건설공학과",
+        "목재·종이과학과",
+        "아동복지학과",
+        "의류학과",
+        "주거환경학과",
+        "바이오헬스산업전공"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 600,
+      "minGpa100": null,
+      "text": "심리학과·물리학과 등 19개 모집단위는 TOEIC 600점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_충북대_편입학전형_기본계획.pdf",
+      "page": "6~8쪽"
+    },
+    {
+      "univ": "충북대학교",
+      "year": "2027",
+      "departments": [
+        "농업경제학과"
+      ],
+      "exceptDepartments": [],
+      "minToeic": 510,
+      "minGpa100": null,
+      "text": "농업경제학과는 TOEIC 510점 이상이어야 지원할 수 있습니다.",
+      "sourceFile": "27_충북대_편입학전형_기본계획.pdf",
+      "page": "6~8쪽"
+    }
+  ]
+}

@@ -23,6 +23,19 @@ function getGroupTitle(review: TransferReview, selectedFilter: string) {
   return `${university} · ${review.departmentGroup}`;
 }
 
+/**
+ * 이 사이트가 다루는 9개 대학 밖의 글(UNIST 1건)은 목록에서 뺀다. 자료 파일은
+ * 그대로 두고 화면에서만 거른다(2026-11-14 검토 23번).
+ */
+const OUT_OF_SCOPE_UNIVERSITY = "울산과학기술원(UNIST)";
+const SITE_REVIEW_UNIVERSITIES = REVIEW_UNIVERSITIES.filter(
+  (university) => university !== OUT_OF_SCOPE_UNIVERSITY,
+);
+const SITE_REVIEWS = TRANSFER_REVIEWS.filter((review) => (
+  review.universities.length === 0
+    || review.universities.some((university) => university !== OUT_OF_SCOPE_UNIVERSITY)
+));
+
 function getShortUniversityName(university: string) {
   if (university === "울산과학기술원(UNIST)") {
     return "UNIST";
@@ -39,26 +52,26 @@ function TransferReviewLinks() {
     {
       id: ALL_FILTER,
       label: "전체 후기",
-      count: TRANSFER_REVIEWS.length,
+      count: SITE_REVIEWS.length,
     },
-    ...REVIEW_UNIVERSITIES.map((university) => ({
+    ...SITE_REVIEW_UNIVERSITIES.map((university) => ({
       id: university,
       label: getShortUniversityName(university),
-      count: TRANSFER_REVIEWS.filter((review) => (
+      count: SITE_REVIEWS.filter((review) => (
         review.universities.includes(university)
       )).length,
     })),
     {
       id: COMPARISON_FILTER,
       label: COMPARISON_FILTER,
-      count: TRANSFER_REVIEWS.filter((review) => review.comparison).length,
+      count: SITE_REVIEWS.filter((review) => review.comparison).length,
     },
   ], []);
 
   const filteredReviews = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLocaleLowerCase("ko-KR");
 
-    return TRANSFER_REVIEWS.filter((review) => {
+    return SITE_REVIEWS.filter((review) => {
       const matchesFilter = selectedFilter === ALL_FILTER
         || (selectedFilter === COMPARISON_FILTER && review.comparison)
         || review.universities.includes(selectedFilter);
@@ -102,16 +115,16 @@ function TransferReviewLinks() {
               aria-level={2}
             >
               <BookOpenCheck size={20} color="var(--secondary-color)" aria-hidden="true" />
-              실전 편입·면접 후기
+              편입·면접 후기 모음 (커뮤니티 글)
             </span>
             <span className="transfer-reviews-description">
-              실제 전공 공부법·시험 복원·면접 질문이 있는 글만 선별했습니다.
-              펼치면 후기 검색과 원문 링크를 확인할 수 있습니다.
+              전공 공부법·시험 복원·면접 질문이 적힌 커뮤니티 글을 골라 링크만 모았습니다.
+              글이 실제로 있는지만 확인했고, 내용이 맞는지는 확인하지 않았습니다.
             </span>
           </span>
           <span className="transfer-reviews-summary-meta">
             <strong className="transfer-reviews-total">
-              검증된 원문 {TRANSFER_REVIEWS.length}개
+              커뮤니티 후기 {SITE_REVIEWS.length}건 · 비공식
             </strong>
             <ChevronDown
               className="transfer-reviews-chevron"
@@ -132,7 +145,7 @@ function TransferReviewLinks() {
                   className={`transfer-review-tab ${selectedFilter === option.id ? "active" : ""}`}
                   onClick={() => setSelectedFilter(option.id)}
                 >
-                  {REVIEW_UNIVERSITIES.includes(option.id as typeof REVIEW_UNIVERSITIES[number]) ? (
+                  {SITE_REVIEW_UNIVERSITIES.includes(option.id as typeof SITE_REVIEW_UNIVERSITIES[number]) ? (
                     <UniversityName university={option.id} logoSize="small" />
                   ) : (
                     <span>{option.label}</span>
@@ -214,7 +227,9 @@ function TransferReviewLinks() {
           )}
 
           <p className="transfer-review-source-note">
-            디시인사이드 국립대 편입갤러리 공개 글을 본문·댓글 기준으로 선별한 비공식 자료입니다.
+            디시인사이드 국립대 편입갤러리 공개 글을 본문·댓글 기준으로 고른 비공식 자료입니다.
+            대학 공식 자료가 아니며 내용의 사실 여부는 확인하지 않았습니다. 한 글이 여러
+            대학을 다루면 대학 버튼마다 한 번씩 세므로 버튼 숫자의 합은 전체 건수보다 큽니다.
             연도별 전형과 질문은 달라질 수 있습니다.
           </p>
         </div>

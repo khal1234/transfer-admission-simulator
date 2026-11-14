@@ -80,10 +80,19 @@ export function getUnavailableScoreDescription(record: DepartmentRecord, metric:
       + (evidence ? ` 이 모집단위의 별도 입결 비고: ${evidence.description}` : "");
   }
 
-  const rule = getOfficialDisclosureRule(record);
+  // 부산대 2026 결과표는 18개 모집단위의 합격 인원·평균 칸이 «-» 뿐이고 사유를 적지 않았다.
+  // 「0명」도 「1명이라 비공개」도 원문에 없는 말이라 붙이지 않는다(2026-11-14 검토 11번).
+  if (record.대학명 === "부산대학교" && record.합격인원 === null && !evidence) {
+    return `${record.연도}학년도 ${shortName} 공식 입결 자료에 이 모집단위의 합격 인원과 ${label} 평균이 「-」로만 적혀 있습니다. 사유는 적혀 있지 않습니다. 0명이나 0점이라는 뜻은 아닙니다.`;
+  }
+  // 충남대는 평균을 숨긴 모집단위마다 비고(A·B)를 달아 둔다. 비고가 없는데 평균도 없는 줄에
+  // 「합격자 2명 이하」 규칙을 붙이면 합격 5명인 줄에도 그 말이 붙는다.
+  const rule = record.대학명 === "충남대학교" && !evidence
+    ? null : getOfficialDisclosureRule(record);
   const source = `근거: ${record.연도}학년도 ${shortName} 공식 편입학 입시결과의 성적 공개 안내.`;
-  // 강원대는 최종등록인원과 최초합격자 평균의 모집단이 달라 0명 판정을 금지한다.
-  if (record.합격인원 === 0 && record.대학명 !== "강원대학교") {
+  // 강원대·충북대는 인원 칸이 최종등록이고 평균은 최초합격자 기준이라 모집단이 다르다.
+  // 등록 0명이어도 최초합격자가 있었을 수 있어 0명 판정을 하지 않는다.
+  if (record.합격인원 === 0 && record.대학명 !== "강원대학교" && record.대학명 !== "충북대학교") {
     return `${record.연도}학년도 합격(등록) 인원이 0명으로 공개되어 ${label} 평균이 없습니다. ${rule ?? ""} ${source}`;
   }
   if (rule !== null) {

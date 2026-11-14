@@ -39,8 +39,16 @@ describe("source-backed recruitment count", () => {
       expect(getUnavailableScoreDescription(record, "gpa")).toContain("미모집");
     });
   it("does not treat an absent count or a small-cohort footnote as no recruitment", () => {
-    const record = find("2026", "무용학과(한국무용)");
-    expect(record.모집인원).toBeNull();
+    // 2026 무용학과(한국무용)은 26_충남대_모집요강.pdf 모집인원 표로 2명이 확인돼 저장
+    // 값이 채워졌다. 지금 자료에는 모집인원이 빈 행이 없어, «모집 미확인» 표시는
+    // 같은 행에서 모집인원만 비워 본다.
+    const stored = find("2026", "무용학과(한국무용)");
+    expect(stored.모집인원).toBe(2);
+    expect(stored.모집인원_근거).toContain("26_충남대_모집요강.pdf");
+    const storedHtml = renderToStaticMarkup(<RecruitmentCount record={stored} mobile />);
+    expect(storedHtml).toContain("모집 2명");
+    expect(storedHtml).not.toContain("미모집");
+    const record: DepartmentRecord = { ...stored, 모집인원: null, 모집인원_근거: undefined };
     const html = renderToStaticMarkup(<RecruitmentCount record={record} mobile />);
     expect(html).toContain("모집 미확인");
     expect(html).toContain("비공개나 미모집으로 확정한 것이 아니며");

@@ -25,14 +25,15 @@ function recordAt(year: string, department: string): ScoreRecord {
 }
 
 describe("충남대 공식 편입학 결과 ↔ 저장 데이터", () => {
-  it("keeps all 260 comparable stored rows by year", () => {
-    expect(records).toHaveLength(260);
+  // 2025 는 성적표 83행 + 합격자 현황 83행에서만 확인되는 기계공학교육과 1행.
+  it("keeps all 261 comparable stored rows by year", () => {
+    expect(records).toHaveLength(261);
     expect(Object.fromEntries(
       ["2024", "2025", "2026"].map((year) => [
         year,
         records.filter((record) => record.연도 === year).length,
       ]),
-    )).toEqual({ "2024": 82, "2025": 83, "2026": 95 });
+    )).toEqual({ "2024": 82, "2025": 84, "2026": 95 });
   });
 
   it("marks every published average as a first-admit average", () => {

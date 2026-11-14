@@ -7,12 +7,6 @@ export const GPA_SCALE_MAX: Record<Exclude<GpaType, "100">, 4.5 | 4.3> = {
   "4.3": 4.3,
 };
 
-const DEFAULT_GPA_INPUT: Record<GpaType, string> = {
-  "100": "90",
-  "4.5": "3.65",
-  "4.3": "3.5",
-};
-
 export function isGpaType(value: string | null): value is GpaType {
   return value === "100" || value === "4.5" || value === "4.3";
 }
@@ -36,47 +30,37 @@ export function parseToeicInput(input: string): number | null {
   return value;
 }
 
-function clampNumericInput(
+/**
+ * 범위 밖 숫자는 고치지 않고 그대로 둔다.
+ *
+ * 예전에는 991 → 990, 4.5 만점 칸의 90 → 4.5 처럼 말없이 잘라 넣었다. 척도를
+ * 잘못 고른 채 백분위를 친 사람이 만점자로 계산되고도 알 길이 없었다(2026-11-14
+ * 검토 6번). 값을 그대로 두면 parse*Input 이 null 을 돌려 계산이 멈추고, 칸
+ * 아래에 무엇이 틀렸는지가 뜬다.
+ */
+export type ToeicInputProblem = "empty" | "not-number" | "out-of-range" | "not-step";
+
+export function getToeicInputProblem(input: string): ToeicInputProblem | null {
+  if (input.trim() === "") return "empty";
+  const value = Number(input);
+  if (!Number.isFinite(value)) return "not-number";
+  if (value < 100 || value > 990) return "out-of-range";
+  if (!Number.isInteger(value) || value % 5 !== 0) return "not-step";
+  return null;
+}
+
+export type GpaInputProblem = "empty" | "not-number" | "above-max" | "below-min";
+
+export function getGpaInputProblem(
   input: string,
-  min: number,
-  max: number,
-): string {
-  if (input.trim() === "") {
-    return input;
-  }
-
+  gpaType: GpaType,
+): GpaInputProblem | null {
+  if (input.trim() === "") return "empty";
   const value = Number(input);
-  if (!Number.isFinite(value)) {
-    return input;
-  }
-
-  if (value > max) {
-    return max.toString();
-  }
-
-  if (value < 0) {
-    return min.toString();
-  }
-
-  return input;
-}
-
-export function limitToeicInput(input: string): string {
-  return clampNumericInput(input, 100, 990);
-}
-
-export function normalizeToeicInput(input: string): string {
-  if (input.trim() === "") {
-    return input;
-  }
-
-  const value = Number(input);
-  if (!Number.isFinite(value)) {
-    return input;
-  }
-
-  const clamped = Math.max(100, Math.min(990, value));
-  return (Math.round(clamped / 5) * 5).toString();
+  if (!Number.isFinite(value)) return "not-number";
+  if (value > getGpaMax(gpaType)) return "above-max";
+  if (value < (gpaType === "100" ? 0 : Number.EPSILON)) return "below-min";
+  return null;
 }
 
 export function parseGpaInput(
@@ -98,29 +82,20 @@ export function parseGpaInput(
   return value;
 }
 
-export function limitGpaInput(input: string, gpaType: GpaType): string {
-  const min = gpaType === "100" ? 0 : 0.01;
-  return clampNumericInput(input, min, getGpaMax(gpaType));
-}
-
+/** 칸을 벗어날 때 소수 둘째 자리로만 다듬는다. 범위 밖 값은 건드리지 않는다. */
 export function normalizeGpaInput(input: string, gpaType: GpaType): string {
-  if (input.trim() === "") {
+  if (parseGpaInput(input, gpaType) === null) {
     return input;
   }
 
-  const value = Number(input);
-  if (!Number.isFinite(value)) {
-    return input;
-  }
-
-  const min = gpaType === "100" ? 0 : 0.01;
-  const normalized = Math.max(min, Math.min(getGpaMax(gpaType), value));
-  return (Math.round(normalized * 100) / 100).toString();
+  return (Math.round(Number(input) * 100) / 100).toString();
 }
 
 export function restoreToeicInput(saved: string | null): string {
+  // 저장된 값이 없으면 빈칸으로 시작한다. 예전 기본값 850 은 처음 온 사람에게
+  // 남의 점수로 낸 판정을 먼저 보여 줬다(2026-11-14 검토 7번).
   const parsed = saved === null ? null : parseToeicInput(saved);
-  return parsed === null ? "850" : parsed.toString();
+  return parsed === null ? "" : parsed.toString();
 }
 
 export function restoreGpaInput(
@@ -128,7 +103,7 @@ export function restoreGpaInput(
   gpaType: GpaType
 ): string {
   const parsed = saved === null ? null : parseGpaInput(saved, gpaType);
-  return parsed === null ? DEFAULT_GPA_INPUT[gpaType] : parsed.toString();
+  return parsed === null ? "" : parsed.toString();
 }
 
 export function getGpaMax(gpaType: GpaType): number {

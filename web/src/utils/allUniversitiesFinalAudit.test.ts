@@ -34,8 +34,11 @@ const EXPECTED_ROWS: Record<string, Record<string, number>> = {
   인천대학교: { "2024": 53, "2025": 49, "2026": 52 },
   전남대학교: { "2024": 129, "2025": 129, "2026": 125 },
   전북대학교: { "2024": 87, "2025": 89, "2026": 89 },
-  충남대학교: { "2024": 82, "2025": 83, "2026": 95 },
-  충북대학교: { "2024": 57, "2025": 45, "2026": 48 },
+  // 2025 충남: 성적표 83행 + 합격자 현황에서만 확인되는 기계공학교육과 1행.
+  충남대학교: { "2024": 82, "2025": 84, "2026": 95 },
+  // 충북: 성적표 57/45/48행 + 선발현황에서만 인원이 확인되는 «최초 합격자 2명 이하»
+  // 모집단위 18/31/26행(tools/apply_review_fixes_2026_11.py [3]).
+  충북대학교: { "2024": 75, "2025": 76, "2026": 74 },
 };
 
 const EXPECTED_CRITERION: Record<string, "최초" | "최종"> = {
@@ -59,7 +62,7 @@ describe("9개 대학 2024~2026 최종 데이터 감사", () => {
         )).length, `${university} ${year}`).toBe(expected);
       }
     }
-    expect(records).toHaveLength(2_194);
+    expect(records).toHaveLength(2_270);
   });
 
   it("has one formula per university-year and no unresolved result row", () => {

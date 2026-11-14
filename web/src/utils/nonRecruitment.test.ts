@@ -28,7 +28,8 @@ describe("confirmed non-recruitment exceptions", () => {
     expect(getDisclosureEvidence("충남대학교", "2025", "무용학과(한국무용)")?.kind).toBe("not-recruited");
   });
   it("shows only today's grouped changes while retaining older history", () => {
-    expect(UPDATE_ITEMS).toHaveLength(3);
+    // 그날 바뀐 것을 묶어 적는다. 2026-11-14 검토 반영분은 8묶음이다.
+    expect(UPDATE_ITEMS).toHaveLength(8);
     expect(UPDATE_ARCHIVE[0].date).toBe("2026-10-05");
     expect(UPDATE_ARCHIVE[0].items).toHaveLength(4);
     expect(UPDATE_ARCHIVE[1].date).toBe("2026-08-12");

@@ -28,14 +28,47 @@ function recordAt(year: string, department: string): ScoreRecord {
 }
 
 describe("충북대 공식 편입학 결과 ↔ 저장 데이터", () => {
-  it("keeps all 150 official public-score rows by year", () => {
-    expect(records).toHaveLength(150);
+  // 성적표에 평균이 실린 150행(57/45/48)에, «최초 합격자 2명 이하»라 성적표에는
+  // 없고 선발현황(NN_충북대_합격자.pdf)에만 인원이 실린 75행(18/31/26)을 더한 수다.
+  it("keeps all 225 official result rows by year", () => {
+    expect(records).toHaveLength(225);
     expect(Object.fromEntries(
       ["2024", "2025", "2026"].map((year) => [
         year,
         records.filter((record) => record.연도 === year).length,
       ]),
-    )).toEqual({ "2024": 57, "2025": 45, "2026": 48 });
+    )).toEqual({ "2024": 75, "2025": 76, "2026": 74 });
+  });
+
+  it("stores small-cohort units with counts only and no averages", () => {
+    const withoutAverage = records.filter((record) => (
+      record.최종합격_토익환산점수 === null
+    ));
+    expect(Object.fromEntries(
+      ["2024", "2025", "2026"].map((year) => [
+        year,
+        withoutAverage.filter((record) => record.연도 === year).length,
+      ]),
+    )).toEqual({ "2024": 18, "2025": 31, "2026": 26 });
+    expect(withoutAverage.every((record) => (
+      record.모집인원 !== null
+      && record.모집인원 > 0
+      && record.최종합격_토익원점수 === null
+      && record.최종합격_학점환산점수 === null
+      && record.최종합격_학점원점수_100점만점 === null
+    ))).toBe(true);
+    // 24_충북대_합격자.pdf 1쪽 6행: 모집 2 · 지원 5 · 최초합격 2 · 최종등록 1
+    expect(recordAt("2024", "독일언어문화학과")).toMatchObject({
+      모집인원: 2, 지원인원: 5, 합격인원: 1,
+    });
+    // 25_충북대_합격자.pdf 2쪽 39행: 모집 1, 나머지 칸은 빈칸
+    expect(recordAt("2025", "조형예술학과(동양화전공)")).toMatchObject({
+      모집인원: 1, 지원인원: null, 합격인원: null,
+    });
+    // 26_충북대_합격자.pdf 2쪽 23행: 모집 1 · 지원 3 · 최초합격 1 · 입학인원 «-»
+    expect(recordAt("2026", "산림학과")).toMatchObject({
+      모집인원: 1, 지원인원: 3, 합격인원: null,
+    });
   });
 
   it("marks every published average as a first-admit average", () => {

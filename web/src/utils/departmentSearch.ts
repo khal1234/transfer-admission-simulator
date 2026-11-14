@@ -161,7 +161,9 @@ function isWithinOneEdit(a: string, b: string): boolean {
  * 정확히 친 사람의 결과를 흐리지 않도록, 정확 일치가 하나도 없을 때만 쓴다.
  */
 export function fuzzyJamoIncludes(haystack: string, needle: string): boolean {
-  if (needle.length < 3) {
+  // 자모 5개(두 글자 반)보다 짧으면 한 자모만 달라도 딴 낱말이다. 「의예」(4개)가
+  // 「공예」에, 「여수」가 「예술」에 걸렸다(2026-11-14 검토 15번). 「기곜」은 5개.
+  if (needle.length < 5) {
     return false;
   }
 
@@ -211,6 +213,29 @@ export function isSameDepartmentLabel(a: string, b: string): boolean {
   return flatten(a) === flatten(b);
 }
 
+// 원문이 한 모집단위를 전공 여러 줄로 나눠 실어, 합계를 모집단위 이름으로 옮긴 줄.
+// 이 줄의 `학과_원본명` 은 묶음의 첫 줄 이름일 뿐 옛 이름이 아니다.
+const BUNDLED_SOURCE_ROWS = new Set([
+  "경북대학교|2026|음악학과",
+  "경북대학교|2026|미술학과",
+]);
+
+/**
+ * 표시명과 원문 이름이 다를 때 옆에 붙일 말. 같으면 null.
+ *
+ * 무엇을 재나: 표기만 다른지, 묶음 줄인지, 정말 다른 이름인지.
+ * 못 보는 것: 위 목록에 없는 묶음 줄 — 그런 줄은 「이전 명칭」으로 나온다.
+ */
+export function getSourceNameNote(record: {
+  대학명: string; 연도: string; 학과: string; 학과_원본명: string;
+}): string | null {
+  if (isSameDepartmentLabel(record.학과, record.학과_원본명)) return null;
+  if (BUNDLED_SOURCE_ROWS.has(`${record.대학명}|${record.연도}|${record.학과}`)) {
+    return `원문에는 ${record.학과_원본명} 등 전공별 여러 줄 · 인원은 합계`;
+  }
+  return `이전 명칭: ${record.학과_원본명}`;
+}
+
 /**
  * 정렬용 표준명 — 같은 과인데 대학마다 다르게 부르는 꼬리를 뗀다.
  *
@@ -257,6 +282,36 @@ function getChosung(text: string): string {
   }
 
   return result;
+}
+
+/**
+ * 검색어에서 대학 이름을 떼어 낸다 — 「부산대 기계」 → 부산대학교 + 「기계」.
+ *
+ * 무엇을 재나: 띄어 쓴 낱말이 대학 이름(부산대학교·부산대·부산)과 같은지.
+ * 못 보는 것: 붙여 쓴 것(「부산대기계」), 캠퍼스 이름(「여수」).
+ */
+export function splitUniversityFromQuery(
+  query: string,
+  universities: readonly string[],
+): { universities: string[]; rest: string } {
+  const matched: string[] = [];
+  const rest: string[] = [];
+
+  query.trim().split(/\s+/).forEach((token) => {
+    if (token === "") return;
+    const hit = universities.find((university) => {
+      const stem = university.replace(/대학교$/, "");
+      return token === university || token === `${stem}대` || token === stem;
+    });
+
+    if (hit === undefined) {
+      rest.push(token);
+    } else if (!matched.includes(hit)) {
+      matched.push(hit);
+    }
+  });
+
+  return { universities: matched, rest: rest.join(" ") };
 }
 
 export function buildDepartmentSearchIndex(

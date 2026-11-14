@@ -186,6 +186,38 @@ export function calculateAcceptedScoreBreakdown(
   };
 }
 
+/** 「근접」으로 보는 폭: 그 전형이 반영하는 영어·전적대 환산 만점의 이 비율까지. */
+export const BORDERLINE_RATIO = 0.05;
+
+/**
+ * 「근접」 판정에 쓰는 반영 만점과 허용 폭.
+ *
+ * 무엇을 재나: TOEIC 990·백분위 100 을 그 대학·연도·모집단위 식에 넣은 값의 합
+ *   (= 이 사이트가 계산하는 영어·전적대 환산 만점).
+ * 문턱과 근거: 만점의 5%. 예전에 대학별로 적어 둔 값(전남 30·부경 15·전북 7·
+ *   인천 6·부산 3)이 모두 주된 전형 만점의 5% 였다. 「그 밖은 5점」만 만점과
+ *   무관해서, 영어 30점 만점 전형에서 6분의 1 이 모자라도 근접이 됐다
+ *   (2026-11-14 검토 13번).
+ * 못 보는 것: 면접·필기·실기 배점, 최초·최종 합격자 기준의 차이.
+ */
+export function getBorderlineMargin(
+  univ: string,
+  year: string,
+  department?: string,
+): { fullMarks: number; margin: number } | null {
+  const formula = getConversionFormula(univ, year, department);
+  if (formula === null) return null;
+
+  const fullMarks = (formula.convertEnglish?.(990) ?? 0)
+    + (formula.convertGpa?.(100) ?? 0);
+  if (!(fullMarks > 0)) return null;
+
+  return {
+    fullMarks: Math.round(fullMarks * 100) / 100,
+    margin: Math.round(fullMarks * BORDERLINE_RATIO * 100) / 100,
+  };
+}
+
 /**
  * Calculates and compares user score vs accepted average in a purely flat,
  * non-recursive manner to prevent stack overflow RangeError.
@@ -220,29 +252,10 @@ export function calculateScore(
   if (myRes.indexSum !== null && acceptedIndexSum !== null) {
     diff = Math.round((myRes.indexSum - acceptedIndexSum) * 100) / 100;
     
-    // Scale standard deviation range thresholds programmatically based on university totals
-    let safeThreshold = 0;
-    let borderlineThreshold = -5;
-
-    if (univ === "전남대학교") {
-      safeThreshold = 0;
-      borderlineThreshold = -30;
-    } else if (univ === "부산대학교") {
-      safeThreshold = 0;
-      borderlineThreshold = -3.0;
-    } else if (univ === "전북대학교") {
-      safeThreshold = 0;
-      borderlineThreshold = -7.0;
-    } else if (univ === "부경대학교") {
-      safeThreshold = 0;
-      borderlineThreshold = -15;
-    } else if (univ === "인천대학교") {
-      safeThreshold = 0;
-      borderlineThreshold = -6;
-    } else if (univ === "충북대학교" && year === "2026") {
-      safeThreshold = 0;
-      borderlineThreshold = -3.0;
-    }
+    const safeThreshold = 0;
+    const borderlineThreshold = -(
+      getBorderlineMargin(univ, year, effectiveDepartment)?.margin ?? 5
+    );
 
     if (diff >= safeThreshold) {
       status = "safe";
@@ -364,6 +377,8 @@ export function analyzeScoreDeficit(
   gpaNeeded: number | null;
   toeicEfficiency: number; // conversion points per 10 raw TOEIC points
   gpaEfficiency: number;   // conversion points per 0.1 raw GPA points
+  /** 전적대 백분위(100점 만점) 1점이 올리는 환산점수. 입력 척도와 무관하다. */
+  gpaEfficiencyPer100: number;
   recommendedMetric: "toeic" | "gpa" | "none";
 } {
   const formula = getConversionFormula(univ, year, department);
@@ -384,13 +399,16 @@ export function analyzeScoreDeficit(
   const toeicEfficiency = toeicSlope * 10; // score change per 10 points in TOEIC
   const gpaEfficiency = gpaSlopeRaw * 0.1; // score change per 0.1 points in GPA
 
-  // Recommended Metric
+  // 어느 쪽이 유리한지는 입력 척도와 무관한 한 단위로 견준다 — TOEIC 10점과
+  // 백분위 1점(둘 다 만점의 약 1%). 예전에는 「학점 0.1」과 견줘서 4.5 로 넣으면
+  // 전적대, 100 으로 넣으면 TOEIC 이라고 답이 뒤집혔다(2026-11-14 검토 9번).
+  const gpaEfficiencyPer100 = gpaSlope100;
   let recommendedMetric: "toeic" | "gpa" | "none" = "none";
-  if (toeicEfficiency > 0 || gpaEfficiency > 0) {
-    if (gpaSlopeRaw === 0) {
+  if (toeicEfficiency > 0 || gpaEfficiencyPer100 > 0) {
+    if (gpaEfficiencyPer100 === 0) {
       recommendedMetric = "toeic";
     } else {
-      recommendedMetric = toeicEfficiency >= gpaEfficiency ? "toeic" : "gpa";
+      recommendedMetric = toeicEfficiency >= gpaEfficiencyPer100 ? "toeic" : "gpa";
     }
   }
 
@@ -438,6 +456,7 @@ export function analyzeScoreDeficit(
     gpaNeeded,
     toeicEfficiency: Math.round(toeicEfficiency * 100) / 100,
     gpaEfficiency: Math.round(gpaEfficiency * 100) / 100,
+    gpaEfficiencyPer100: Math.round(gpaEfficiencyPer100 * 100) / 100,
     recommendedMetric
   };
 }

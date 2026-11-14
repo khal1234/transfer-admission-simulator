@@ -38,7 +38,9 @@ ART_DEPARTMENT_PREFIXES = (
     "디자인창의학과",
 )
 
-EXPECTED_ROWS_BY_YEAR = {"2024": 82, "2025": 83, "2026": 95}
+# 2025 는 성적표 83행에 합격자 현황에서만 확인되는 기계공학교육과 1행을 더한 수다
+# (tools/apply_review_fixes_2026_11.py [4]).
+EXPECTED_ROWS_BY_YEAR = {"2024": 82, "2025": 84, "2026": 95}
 EXPECTED_PUBLIC_ENGLISH_BY_YEAR = {"2024": 58, "2025": 57, "2026": 54}
 EXPECTED_PUBLIC_GPA_BY_YEAR = {"2024": 59, "2025": 0, "2026": 0}
 

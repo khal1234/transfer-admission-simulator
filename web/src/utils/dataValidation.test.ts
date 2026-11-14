@@ -56,7 +56,7 @@ describe("department data validation", () => {
   // 강원대는 일반·간호·수의·약학·예체능·농업·생태조경 프로필을 지원해
   // 남아 있던 예외 22건을 모두 계산 대상으로 복원했다.
   it("accepts the current generated datasets", () => {
-    expect(validateDepartmentRecords(rawStandardData)).toHaveLength(2194);
+    expect(validateDepartmentRecords(rawStandardData)).toHaveLength(2270);
     expect(validateExceptionDepartmentRecords(rawExceptionData)).toHaveLength(0);
   });
 
@@ -64,7 +64,7 @@ describe("department data validation", () => {
     const standard = prepareDepartmentRecords(rawStandardData);
     const exceptions = prepareExceptionDepartmentRecords(rawExceptionData);
 
-    expect(standard.records).toHaveLength(2194);
+    expect(standard.records).toHaveLength(2270);
     expect(standard.affectedRecordCount).toBe(0);
     expect(exceptions.records).toHaveLength(0);
     expect(exceptions.affectedRecordCount).toBe(0);

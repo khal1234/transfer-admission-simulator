@@ -66,25 +66,27 @@ describe("부산대 공식 편입학 결과 ↔ 저장 데이터", () => {
     expect(records.every((record) => record.합격자기준 === "최종")).toBe(true);
   });
 
-  it("stores the 18 official 2026 no-admit rows as zero", () => {
-    const zeroRows = records.filter((record) => (
-      record.연도 === "2026" && record.합격인원 === 0
-    ));
-    expect(zeroRows.map((record) => record.학과).sort())
+  // 26_부산대_성적.pdf 의 «-» 칸은 0 이 아니라 값 없음(null)이다 — 원문이 0 이라
+  // 적지 않았다. 2026 행에 합격인원·지원인원 0 은 없어야 한다.
+  it("stores the 18 official 2026 dash admit cells as null, not zero", () => {
+    const rows2026 = records.filter((record) => record.연도 === "2026");
+    const dashRows = rows2026.filter((record) => record.합격인원 === null);
+    expect(dashRows.map((record) => record.학과).sort())
       .toEqual(zeroAdmissionDepartments2026);
-    for (const record of zeroRows) {
+    expect(rows2026.filter((record) => record.합격인원 === 0)).toHaveLength(0);
+    for (const record of dashRows) {
       expect(record.최종합격_토익원점수).toBeNull();
       expect(record.최종합격_학점원점수_100점만점).toBeNull();
     }
   });
 
-  it("stores the two official 2026 no-application rows as zero", () => {
-    const zeroRows = records.filter((record) => (
-      record.연도 === "2026" && record.지원인원 === 0
-    ));
-    expect(zeroRows.map((record) => record.학과).sort())
+  it("stores the two official 2026 dash application cells as null, not zero", () => {
+    const rows2026 = records.filter((record) => record.연도 === "2026");
+    const dashRows = rows2026.filter((record) => record.지원인원 === null);
+    expect(dashRows.map((record) => record.학과).sort())
       .toEqual(zeroApplicationDepartments2026);
-    expect(zeroRows.every((record) => record.합격인원 === 0)).toBe(true);
+    expect(rows2026.filter((record) => record.지원인원 === 0)).toHaveLength(0);
+    expect(dashRows.every((record) => record.합격인원 === null)).toBe(true);
   });
 
   it("keeps representative official counts and averages", () => {

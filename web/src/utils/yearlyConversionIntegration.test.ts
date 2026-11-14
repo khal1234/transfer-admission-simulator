@@ -80,7 +80,7 @@ const expectedForEnteredScore = [
 describe("전체 대학 연도별 환산 경로", () => {
   it("resolves a year-specific documented profile for every selectable row", () => {
     const rows = standard.filter((record) => supported.has(record.대학명));
-    expect(rows).toHaveLength(2194);
+    expect(rows).toHaveLength(2270);
     for (const record of rows) {
       const formula = getConversionFormula(record.대학명, record.연도, record.학과);
       expect(formula, `${record.대학명} ${record.연도} ${record.학과}`).not.toBeNull();

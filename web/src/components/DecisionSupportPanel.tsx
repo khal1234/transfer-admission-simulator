@@ -12,6 +12,7 @@ import {
   getGpaMax,
   type GpaType,
 } from "../utils/scoreInput";
+import { checkEligibility } from "../utils/eligibility";
 import UniversityName from "./UniversityName";
 import DataConfidenceBadge from "./DataConfidenceBadge";
 
@@ -27,7 +28,7 @@ type DecisionSupportPanelProps = {
 const CATEGORY_META: Record<DecisionCategory, { shortLabel: string }> = {
   safe: { shortLabel: "상회" },
   borderline: { shortLabel: "근접" },
-  risk: { shortLabel: "도전" },
+  risk: { shortLabel: "미달" },
   unknown: { shortLabel: "자료 없음" },
 };
 
@@ -45,11 +46,111 @@ function formatDiff(diff: number | null): string {
   return `${diff >= 0 ? "+" : ""}${diff.toFixed(2)}점`;
 }
 
-function getStatusRank(status: DecisionCategory): number {
+function getStatusRank(status: DecisionCategory, ineligible = false): number {
+  if (ineligible) return 0;
   if (status === "safe") return 3;
   if (status === "borderline") return 2;
   if (status === "risk") return 1;
   return 0;
+}
+
+function isIneligible(
+  candidate: DecisionCandidate,
+  toeic: number | null,
+  gpa100: number | null,
+): boolean {
+  return checkEligibility(
+    candidate.target.univ,
+    candidate.target.dept,
+    toeic,
+    gpa100,
+  ).failures.length > 0;
+}
+
+function StatusChip({
+  status,
+  ineligible,
+}: {
+  status: DecisionCategory;
+  ineligible: boolean;
+}) {
+  if (ineligible) {
+    return <span className="decision-status decision-status-ineligible">자격 미달</span>;
+  }
+
+  return (
+    <span className={`decision-status decision-status-${status}`}>
+      {CATEGORY_META[status].shortLabel}
+    </span>
+  );
+}
+
+/**
+ * 목표 점수 숫자 칸.
+ *
+ * 예전에는 한 글자 칠 때마다 범위로 눌러서 「950」을 칠 수가 없었다 — 「9」는
+ * 현재 점수보다 낮아 무시되고 「5」에서 8505 로 읽혀 990 이 됐다(2026-11-14
+ * 검토 10번). 치는 동안에는 손대지 않고, 범위 안의 값이 되면 바로 반영하며,
+ * 칸을 벗어날 때 한 번만 범위와 단위에 맞춘다.
+ */
+function GoalNumberInput({
+  ariaLabel,
+  value,
+  min,
+  max,
+  step,
+  snap,
+  onCommit,
+}: {
+  ariaLabel: string;
+  value: string;
+  min: number;
+  max: number;
+  step: number;
+  snap: (value: number) => number;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const parse = (text: string): number | null => {
+    const parsed = Number(text);
+    return text.trim() === "" || !Number.isFinite(parsed) ? null : parsed;
+  };
+
+  return (
+    <input
+      type="number"
+      inputMode="decimal"
+      aria-label={ariaLabel}
+      min={min}
+      max={max}
+      step={step}
+      value={draft ?? value}
+      onFocus={(event) => {
+        setDraft(event.currentTarget.value);
+        event.currentTarget.select();
+      }}
+      onChange={(event) => {
+        const text = event.target.value;
+        const parsed = parse(text);
+        setDraft(text);
+        if (parsed !== null && parsed >= min && parsed <= max) {
+          onCommit(parsed);
+        }
+      }}
+      onBlur={() => {
+        const parsed = draft === null ? null : parse(draft);
+        if (parsed !== null) {
+          onCommit(snap(Math.max(min, Math.min(max, parsed))));
+        }
+        setDraft(null);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.currentTarget.blur();
+        }
+      }}
+    />
+  );
 }
 
 function ScenarioSimulator({
@@ -83,11 +184,25 @@ function ScenarioSimulator({
       candidate.target.dept,
     ),
   })), [candidates, projectedGpa100, projectedToeic]);
-  const currentCounts = countDecisionCategories(candidates);
-  const projectedCounts = countDecisionCategories(projectedCandidates);
+  const currentGpa100 = gpaRaw === null ? null : getGpa100ForInput(gpaType, gpaRaw);
+  const currentIneligible = candidates.map((candidate) => (
+    isIneligible(candidate, toeic, currentGpa100)
+  ));
+  const projectedIneligible = candidates.map((candidate) => (
+    isIneligible(candidate, projectedToeic, projectedGpa100)
+  ));
+  const currentCounts = countDecisionCategories(
+    candidates.filter((_, index) => !currentIneligible[index]),
+  );
+  const projectedCounts = countDecisionCategories(
+    projectedCandidates.filter((_, index) => !projectedIneligible[index]),
+  );
   const improvedCount = projectedCandidates.filter((candidate, index) => (
-    getStatusRank(candidate.score.status)
-      > getStatusRank(candidates[index]?.score.status ?? "unknown")
+    getStatusRank(candidate.score.status, projectedIneligible[index])
+      > getStatusRank(
+        candidates[index]?.score.status ?? "unknown",
+        currentIneligible[index],
+      )
   )).length;
   const toeicMaxGain = toeic === null ? 0 : 990 - toeic;
   const gpaMaxGain = gpaRaw === null ? 0 : Math.max(0, maxGpa - gpaRaw);
@@ -109,19 +224,14 @@ function ScenarioSimulator({
             TOEIC 목표
             <span className="scenario-goal-value">
               {toeic} →
-              <input
-                type="number"
-                aria-label="TOEIC 목표 점수"
+              <GoalNumberInput
+                ariaLabel="TOEIC 목표 점수"
                 min={toeic}
-                max="990"
-                step="5"
-                value={projectedToeic ?? toeic}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  if (Number.isFinite(value)) {
-                    setToeicGain(Math.max(0, Math.min(990, value) - toeic));
-                  }
-                }}
+                max={990}
+                step={5}
+                value={String(projectedToeic ?? toeic)}
+                snap={(value) => Math.max(toeic, Math.min(990, Math.round(value / 5) * 5))}
+                onCommit={(value) => setToeicGain(Math.max(0, value - toeic))}
               />
             </span>
           </span>
@@ -130,6 +240,7 @@ function ScenarioSimulator({
             min="0"
             max={toeicMaxGain}
             step="5"
+            aria-label="TOEIC 목표 점수 슬라이더"
             value={toeicGain}
             onChange={(event) => setToeicGain(Number(event.target.value))}
           />
@@ -140,19 +251,16 @@ function ScenarioSimulator({
             GPA 목표
             <span className="scenario-goal-value">
               {gpaRaw} →
-              <input
-                type="number"
-                aria-label={`GPA 목표 점수 (${gpaType} 기준)`}
+              <GoalNumberInput
+                ariaLabel={`GPA 목표 점수 (${gpaType} 기준)`}
                 min={gpaRaw}
                 max={maxGpa}
                 step={gpaStep}
-                value={projectedGpaRaw?.toFixed(2) ?? gpaRaw}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  if (Number.isFinite(value)) {
-                    setGpaGain(Math.max(0, Math.min(maxGpa, value) - gpaRaw));
-                  }
-                }}
+                value={projectedGpaRaw?.toFixed(2) ?? String(gpaRaw)}
+                snap={(value) => Math.round(value * 100) / 100}
+                onCommit={(value) => setGpaGain(
+                  Math.max(0, Math.round((value - gpaRaw) * 100) / 100),
+                )}
               />
             </span>
           </span>
@@ -161,7 +269,8 @@ function ScenarioSimulator({
             min="0"
             max={gpaMaxGain}
             step={gpaStep}
-            value={gpaGain}
+            aria-label="GPA 목표 점수 슬라이더"
+            value={Math.min(gpaGain, gpaMaxGain)}
             onChange={(event) => setGpaGain(Number(event.target.value))}
           />
           <small>현재보다 +{gpaGain.toFixed(2)} ({gpaType} 기준)</small>
@@ -197,13 +306,15 @@ function ScenarioSimulator({
                 <span>
                   {candidate.target.univ.replace("대학교", "대")} · {candidate.target.dept}
                 </span>
-                <span className={`decision-status decision-status-${current.score.status}`}>
-                  {CATEGORY_META[current.score.status].shortLabel}
-                </span>
+                <StatusChip
+                  status={current.score.status}
+                  ineligible={currentIneligible[index] ?? false}
+                />
                 <span aria-hidden="true">→</span>
-                <span className={`decision-status decision-status-${candidate.score.status}`}>
-                  {CATEGORY_META[candidate.score.status].shortLabel}
-                </span>
+                <StatusChip
+                  status={candidate.score.status}
+                  ineligible={projectedIneligible[index] ?? false}
+                />
                 <strong>{formatDiff(candidate.score.diff)}</strong>
               </div>
             );
@@ -289,9 +400,14 @@ function DecisionSupportPanel({
                       <span>{candidate.target.dept}</span>
                     </th>
                     <td>
-                      <span className={`decision-status decision-status-${candidate.score.status}`}>
-                        {CATEGORY_META[candidate.score.status].shortLabel}
-                      </span>
+                      <StatusChip
+                        status={candidate.score.status}
+                        ineligible={isIneligible(
+                          candidate,
+                          toeic,
+                          gpaRaw === null ? null : getGpa100ForInput(gpaType, gpaRaw),
+                        )}
+                      />
                     </td>
                     <td className="decision-compare-diff">{formatDiff(candidate.score.diff)}</td>
                     <td>{candidate.referenceRecord.연도}</td>

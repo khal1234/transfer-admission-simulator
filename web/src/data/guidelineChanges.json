@@ -1,0 +1,566 @@
+{
+  "targetYear": "2027",
+  "baseYear": "2026",
+  "generatedAt": "2026-11-14",
+  "universities": [
+    {
+      "univ": "강원대학교",
+      "documentKind": "기본계획",
+      "documentTitle": "(춘천캠퍼스) 2027학년도 강원대학교 편입학 전형 기본계획(안)",
+      "sourceFile": "27_강원대_춘천_편입학전형_기본계획.pdf",
+      "verdict": "changed",
+      "headline": "배점과 영어 환산식은 같지만, 전적대 성적 반영 범위와 영어 성적 인정 기간이 달라졌습니다.",
+      "changes": [
+        {
+          "area": "전적대성적",
+          "scope": "전적대 성적을 반영하는 모집단위",
+          "before": "지원 자격을 채우는 성적증명서의 백분율을 반영(편입·학점은행 등으로 이어진 경우 이전·이후 성적을 모두 반영)",
+          "after": "가장 최근에 다닌 대학을 포함해 최대 2개 대학까지만 백분율 점수로 반영",
+          "impact": "대학을 세 곳 이상 다닌 지원자는 반영되는 성적이 달라질 수 있습니다.",
+          "affectsScore": false,
+          "pageBefore": "15쪽",
+          "pageAfter": "14쪽"
+        },
+        {
+          "area": "공인영어",
+          "scope": "전체 모집단위",
+          "before": "2024년 1월 이후 응시한 성적부터 원서접수 마감일(2025.12.19)까지의 성적 인정(TOEIC 506회~558회)",
+          "after": "2025년 1월 1일 이후 응시한 성적부터 원서접수 마감일까지의 성적 인정",
+          "impact": "2024년에 본 시험 성적은 쓸 수 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "14쪽",
+          "pageAfter": "9쪽, 14쪽"
+        },
+        {
+          "area": "기타",
+          "scope": "간호학과",
+          "before": "1단계 선발인원: 모집 1~2명이면 40명, 3~5명이면 50명, 6명 이상이면 모집인원의 10배",
+          "after": "1단계 선발인원: 모집 1~2명이면 20명, 3~4명이면 30명, 5~6명이면 50명, 7명 이상이면 60명",
+          "impact": "모집인원이 4명 이하이면 1단계를 통과하는 인원이 20명 줄어듭니다.",
+          "affectsScore": false,
+          "pageBefore": "13쪽",
+          "pageAfter": "13쪽"
+        },
+        {
+          "area": "면접",
+          "scope": "수의학과",
+          "before": "3단계 전형(2단계에서 모집인원의 300%를 뽑고 3단계 면접으로 합격·불합격 판정)",
+          "after": "전형요소 표에 1·2단계만 있음(2단계에서 모집인원만큼 선발)",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "13쪽",
+          "pageAfter": "13쪽"
+        },
+        {
+          "area": "필기·실기",
+          "scope": "수의학과·약학과",
+          "before": "필기고사 문제당 4점",
+          "after": "필기고사 문항별 배점이 서로 다름",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "15쪽",
+          "pageAfter": "14쪽"
+        },
+        {
+          "area": "공인영어",
+          "scope": "TOEFL·TEPS 성적 제출자",
+          "before": "TOEFL→TOEIC 환산표: TOEFL 118점 = TOEIC 985점, TOEFL 90점 = TOEIC 785점",
+          "after": "환산표 교체: TOEFL 117점 = TOEIC 985점, TOEFL 89점 = TOEIC 785점",
+          "impact": "TOEIC 성적을 내는 지원자는 영향이 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "40쪽",
+          "pageAfter": "22쪽"
+        },
+        {
+          "area": "모집단위",
+          "scope": "바이오산업공학부·에너지자원·산업공학부",
+          "before": "바이오산업공학부(바이오시스템기계공학전공·식품생명공학전공), 에너지자원·산업공학부(산업공학전공·에너지자원공학전공)로 모집",
+          "after": "모집단위 목록에 스마트팜융합바이오시스템공학과·식품생명공학과·스마트산업공학과·에너지자원공학과가 있고 2026학년도 이름은 없음",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "7쪽",
+          "pageAfter": "7쪽"
+        }
+      ],
+      "ownerConfirmed": false
+    },
+    {
+      "univ": "경북대학교",
+      "documentKind": "기본계획",
+      "documentTitle": "2027학년도 대학 편입학 전형 기본계획(안)",
+      "sourceFile": "27_경북대_편입학전형_기본계획.pdf",
+      "verdict": "changed",
+      "headline": "배점과 환산식은 같고, 영어 성적 인정 기간이 2025년 2월 이후 응시분으로 바뀌었습니다.",
+      "changes": [
+        {
+          "area": "공인영어",
+          "scope": "전체 모집단위",
+          "before": "2024년 2월 1일 이후 응시한 성적만 인정(국내 TOEIC 2024.2.4 ~ 2025.12.7 시험)",
+          "after": "2025년 2월 1일 이후 응시한 성적만 인정(국내 TOEIC 2025.2.4 ~ 2026.11.29 정기시험)",
+          "impact": "2025년 1월까지 본 시험 성적은 쓸 수 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "17쪽",
+          "pageAfter": "2쪽, 6쪽"
+        },
+        {
+          "area": "모집단위",
+          "scope": "융합학부·유럽어교육학부",
+          "before": "융합학부(의생명융합공학전공), 융합학부(로봇 및 스마트시스템공학전공), 유럽어교육학부(불어교육전공)",
+          "after": "의생명융합공학과, 로봇공학과로 이름이 바뀌고 유럽어교육학부(불어교육전공)는 폐지",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": null,
+          "pageAfter": "15쪽"
+        },
+        {
+          "area": "모집단위",
+          "scope": "의학과·치의학과·약학과·농산업학과·자율전공부·유럽어교육학부(불어교육 전공)",
+          "before": "일반편입 모집인원 표에 없음(2026학년도에도 일반편입으로 뽑지 않음)",
+          "after": "일반편입으로 모집하지 않는다고 명시",
+          "impact": "2026학년도와 마찬가지로 일반편입으로 지원할 수 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "12~14쪽",
+          "pageAfter": "5쪽, 12쪽"
+        }
+      ],
+      "ownerConfirmed": false
+    },
+    {
+      "univ": "부경대학교",
+      "documentKind": "기본계획",
+      "documentTitle": "2027학년도 편입생 모집 기본계획(안)",
+      "sourceFile": "27_부경대_편입학전형_기본계획.pdf",
+      "verdict": "unknown",
+      "headline": "배점·환산식·TOEIC 500점 기준은 2026학년도와 같고, 면접을 보는 학과와 영어 성적 인정 기간은 모집요강에서 정해집니다.",
+      "changes": [
+        {
+          "area": "면접",
+          "scope": "전체 모집단위",
+          "before": "면접을 보는 모집단위는 500점 만점(영어 200 + 전적대 100 + 면접 200), 면접을 보지 않는 19개 모집단위는 300점 만점(영어 200 + 전적대 100)",
+          "after": "배점은 같고, 면접을 볼지는 모집단위별로 따로 확정해 공지할 예정",
+          "impact": "지원하려는 학과가 면접을 보는지는 모집요강에서 확인해야 합니다.",
+          "affectsScore": false,
+          "pageBefore": "10쪽, 29쪽",
+          "pageAfter": "3쪽, 4쪽"
+        },
+        {
+          "area": "공인영어",
+          "scope": "전체 모집단위",
+          "before": "2024년 2월 1일 이후 응시한 성적 인정(국내 TOEIC 2024.2.4 ~ 2025.12.7 시험)",
+          "after": "인정 기간이 있으니 모집요강을 확인하라고만 안내(날짜 없음)",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "12쪽",
+          "pageAfter": "2쪽"
+        },
+        {
+          "area": "지원자격",
+          "scope": "일어일문학부·중국학과",
+          "before": "일어일문학부는 JLPT N2 또는 JPT 700점 이상, 중국학과는 新HSK 성적이 추가로 필요",
+          "after": "영어 외 어학 성적 요건은 모집요강에서 따로 안내할 예정",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "12쪽",
+          "pageAfter": "2쪽"
+        }
+      ],
+      "ownerConfirmed": false
+    },
+    {
+      "univ": "부산대학교",
+      "documentKind": "주요사항",
+      "documentTitle": "2027학년도 편입학 전형 주요사항",
+      "sourceFile": "27_부산대_편입학전형_주요사항.pdf",
+      "verdict": "changed",
+      "headline": "영어·전적대 배점과 환산식은 같고, 학과 개편으로 세 학과의 서류·면접 배점이 달라졌습니다.",
+      "changes": [
+        {
+          "area": "면접",
+          "scope": "산업공학과(2027학년도 AI대학 산업공학부)",
+          "before": "영어 30 + 전적대 30 + 면접 40",
+          "after": "영어 30 + 전적대 30 + 서류평가 20 + 면접 20",
+          "impact": "면접 비중이 절반으로 줄고 서류평가가 새로 들어갑니다.",
+          "affectsScore": false,
+          "pageBefore": "14쪽",
+          "pageAfter": "7쪽, 22쪽"
+        },
+        {
+          "area": "면접",
+          "scope": "통계학과(2027학년도 AI대학 통계학과)",
+          "before": "영어 30 + 전적대 30 + 면접 40",
+          "after": "영어 30 + 전적대 30 + 서류평가 20 + 면접 20",
+          "impact": "면접 비중이 절반으로 줄고 서류평가가 새로 들어갑니다.",
+          "affectsScore": false,
+          "pageBefore": "14쪽",
+          "pageAfter": "7쪽, 22쪽"
+        },
+        {
+          "area": "면접",
+          "scope": "의생명융합공학부(의생명공학전공)(2027학년도 공과대학 바이오메디컬공학과)",
+          "before": "영어 30 + 전적대 30 + 서류평가 20 + 면접 20",
+          "after": "영어 30 + 전적대 30 + 면접 40",
+          "impact": "서류평가가 없어지고 면접 비중이 두 배가 됩니다.",
+          "affectsScore": false,
+          "pageBefore": "14쪽",
+          "pageAfter": "7쪽, 14쪽"
+        },
+        {
+          "area": "모집단위",
+          "scope": "정보컴퓨터공학부·의생명융합공학부(데이터사이언스전공)·나노과학기술대학 3개 학과",
+          "before": "정보컴퓨터공학부, 의생명융합공학부(데이터사이언스전공), 나노에너지공학과, 나노메카트로닉스공학과, 광메카트로닉스공학과",
+          "after": "AI대학 AI컴퓨터공학부, AI대학 데이터사이언스학부, 학부대학 첨단융합학부 미래에너지전공·나노소자첨단제조전공·광메카트로닉스공학전공으로 이름과 소속 변경",
+          "impact": "이름과 소속만 바뀌고 배점은 같습니다.",
+          "affectsScore": false,
+          "pageBefore": "4~6쪽",
+          "pageAfter": "7쪽, 22쪽"
+        },
+        {
+          "area": "면접",
+          "scope": "약학대학",
+          "before": "면접에서 전공기초 영역과 인성 및 사고 영역을 평가(약학대학은 인성 및 사고 영역에서 과락이면 불합격)",
+          "after": "약학대학은 인성 및 사고 영역만 평가한다고 명시",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "15쪽",
+          "pageAfter": "8쪽"
+        }
+      ],
+      "ownerConfirmed": false
+    },
+    {
+      "univ": "인천대학교",
+      "documentKind": "기본계획",
+      "documentTitle": "2027학년도 편입학전형 기본 계획",
+      "sourceFile": "27_인천대_편입학전형_기본계획.pdf",
+      "verdict": "changed",
+      "headline": "조형예술학부가 면접 100%에서 전적대 성적 60% + 면접 40%로 바뀌었고, 다른 학과의 배점과 환산식은 같습니다.",
+      "changes": [
+        {
+          "area": "전적대성적",
+          "scope": "조형예술학부(한국화전공·서양화전공)",
+          "before": "면접 100%(200점)",
+          "after": "전적대 성적 60%(120점) + 면접 40%(80점), 전적대 점수 = 전적대 백분율 ÷ 2 + 70",
+          "impact": "전적대 백분율 90점이면 115점, 80점이면 110점을 받습니다.",
+          "affectsScore": true,
+          "pageBefore": "17쪽",
+          "pageAfter": "4쪽"
+        },
+        {
+          "area": "공인영어",
+          "scope": "영어 성적을 반영하는 전체 모집단위",
+          "before": "2024년 3월 1일 이후 응시한 성적 인정",
+          "after": "2025년 3월 1일 이후 응시한 성적 인정",
+          "impact": "2025년 2월까지 본 시험 성적은 쓸 수 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "12쪽, 17쪽",
+          "pageAfter": "3쪽, 7쪽"
+        },
+        {
+          "area": "공인영어",
+          "scope": "TOEFL iBT 성적 제출자",
+          "before": "TOEFL iBT 57점 이상",
+          "after": "2026년 1월 21일 전에 본 시험은 57점 이상, 그 뒤에 본 시험은 3.0점 이상(6.0점 만점)이고 환산표에 6.0점 만점 기준 추가",
+          "impact": "TOEIC 성적을 내는 지원자는 영향이 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "12쪽",
+          "pageAfter": "3쪽, 9쪽"
+        }
+      ],
+      "ownerConfirmed": false
+    },
+    {
+      "univ": "전남대학교",
+      "documentKind": "모집요강",
+      "documentTitle": "2027학년도 편입학(일반/학사)전형 모집요강",
+      "sourceFile": "27_전남대_모집요강.pdf",
+      "verdict": "changed",
+      "headline": "배점과 환산식은 같고, 6개 학과가 일반편입을 모집하지 않으며 총점 700점 미만 불합격 기준이 모든 학과로 넓어졌습니다.",
+      "changes": [
+        {
+          "area": "모집단위",
+          "scope": "임산공학과·분자생명공학과·국어교육과·가정교육과·유아교육과·초등특수교육전공",
+          "before": "임산공학과 7명, 분자생명공학과 4명, 국어교육과 6명, 가정교육과 2명, 유아교육과 1명, 초등특수교육전공 1명 모집",
+          "after": "일반편입 모집 없음",
+          "impact": "이 여섯 학과는 2027학년도 일반편입으로 지원할 수 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "5~6쪽",
+          "pageAfter": "5~6쪽"
+        },
+        {
+          "area": "기타",
+          "scope": "전체 모집단위",
+          "before": "일부 모집단위에서만 전형 총점 700점 미만이면 불합격",
+          "after": "모든 모집단위에서 전형 총점 700점 미만이면 불합격",
+          "impact": "어느 학과든 전형 총점이 700점에 못 미치면 불합격입니다.",
+          "affectsScore": false,
+          "pageBefore": "23쪽",
+          "pageAfter": "32쪽"
+        },
+        {
+          "area": "모집단위",
+          "scope": "일반편입 모집인원",
+          "before": "광주 448명 + 여수 205명 = 653명(경영학부 21명, 경제학부 6명, 산업공학과 6명, 수의학과 13명, 약학부 10명)",
+          "after": "광주 453명 + 여수 194명 = 647명(경영학부 29명, 경제학부 14명, 산업공학과 9명, 수의학과 11명, 약학부 10명)",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "4~8쪽",
+          "pageAfter": "4~7쪽"
+        },
+        {
+          "area": "기타",
+          "scope": "1단계 선발 배수",
+          "before": "3배수: 건축학부·토목공학과·환경에너지공학과·기계공학부·전기공학과 / 2배수: 전자컴퓨터공학부·인공지능학부·지능형모빌리티융합학과",
+          "after": "3배수: 건축학부·토목공학과·기계공학부·식품공학과 / 2배수: 산업공학과·전자컴퓨터공학부·인공지능학부·미래모빌리티학과",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "12쪽",
+          "pageAfter": "18쪽, 30쪽"
+        },
+        {
+          "area": "기타",
+          "scope": "약학부",
+          "before": "1단계에서 204명 선발",
+          "after": "1단계에서 모집인원의 20배수 선발",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "12쪽",
+          "pageAfter": "18쪽"
+        },
+        {
+          "area": "공인영어",
+          "scope": "전체 모집단위",
+          "before": "2024년 2월 1일 이후 응시한 성적 인정(TOEIC 2025.12.7 시험까지)",
+          "after": "2025년 2월 1일 이후 응시한 성적 인정(TOEIC 2026.11.29 시험까지)",
+          "impact": "2025년 1월까지 본 시험 성적은 쓸 수 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "9쪽",
+          "pageAfter": "8쪽"
+        },
+        {
+          "area": "모집단위",
+          "scope": "헬스케어메디컬공학부",
+          "before": "헬스케어메디컬공학부 13명",
+          "after": "의공학부 15명으로 표기(세부 전공 이름은 같음)",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "5쪽",
+          "pageAfter": "4쪽"
+        }
+      ],
+      "ownerConfirmed": false
+    },
+    {
+      "univ": "전북대학교",
+      "documentKind": "기본계획",
+      "documentTitle": "2027학년도 대학 편입학 모집 기본계획(안)",
+      "sourceFile": "27_전북대_편입학전형_기본계획.pdf",
+      "verdict": "changed",
+      "headline": "배점과 환산식은 같고, 영어 성적 인정 기간이 2025년 1월 1일 이후 응시분으로 바뀌었습니다.",
+      "changes": [
+        {
+          "area": "공인영어",
+          "scope": "전체 모집단위",
+          "before": "원서접수 마감일 기준 2년 이내 성적 인정(2023.12.19 ~ 2025.12.18)",
+          "after": "2025년 1월 1일 이후 응시한 성적부터 원서접수 마감일까지의 성적 인정",
+          "impact": "2024년에 본 시험 성적은 쓸 수 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "11쪽",
+          "pageAfter": "6쪽"
+        },
+        {
+          "area": "지원자격",
+          "scope": "수의학과",
+          "before": "편입 학년: 본과 1학년",
+          "after": "편입 학년: 본과 2학년(학제가 예과 1년 + 본과 5년으로 개편)",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "10쪽",
+          "pageAfter": "5쪽, 6쪽"
+        },
+        {
+          "area": "공인영어",
+          "scope": "TOEFL iBT 성적 제출자",
+          "before": "환산표: TOEFL iBT 22~24점 = 35.865점, 25~29점 = 36.370점",
+          "after": "환산표: TOEFL iBT 22~23점 = 35.865점, 24~29점 = 36.370점, 새 채점 척도(1~6) 기준 추가",
+          "impact": "TOEIC 성적을 내는 지원자는 영향이 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "52쪽",
+          "pageAfter": "30쪽"
+        },
+        {
+          "area": "모집단위",
+          "scope": "간호학과·의학과",
+          "before": "모집인원 표의 일반편입 칸이 비어 있음(2026학년도에도 일반편입으로 뽑지 않음)",
+          "after": "교육과정 개편으로 일반편입 모집 불가(결원이 생겨도 모집하지 않음)라고 명시",
+          "impact": "2026학년도와 마찬가지로 일반편입으로 지원할 수 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "7쪽, 9쪽",
+          "pageAfter": "4쪽"
+        }
+      ],
+      "ownerConfirmed": false
+    },
+    {
+      "univ": "충남대학교",
+      "documentKind": "기본계획",
+      "documentTitle": "2027학년도 편입학전형 기본계획",
+      "sourceFile": "27_충남대_편입학전형_기본계획.pdf",
+      "verdict": "changed",
+      "headline": "약학과의 영어 배점이 50점에서 40점으로 줄고 면접 10점이 새로 생겼습니다.",
+      "changes": [
+        {
+          "area": "공인영어",
+          "scope": "약학과",
+          "before": "1단계 영어 50점(환산표 점수 × 0.5) + 2단계 필답고사 50점, 3단계 면접은 합격·불합격만 판정",
+          "after": "1단계 영어 40점(환산표 점수 × 0.4) + 2단계 필답고사 50점 + 3단계 면접 10점",
+          "impact": "영어 만점이 50점에서 40점으로 줄고 면접이 점수로 들어갑니다.",
+          "affectsScore": true,
+          "pageBefore": "20쪽",
+          "pageAfter": "6쪽, 7쪽"
+        },
+        {
+          "area": "기타",
+          "scope": "전체 모집단위",
+          "before": "점수는 소수 셋째 자리에서 반올림(둘째 자리까지 표시)",
+          "after": "점수는 소수 넷째 자리에서 반올림(셋째 자리까지 표시)",
+          "impact": "환산점수가 소수 셋째 자리까지 계산됩니다.",
+          "affectsScore": true,
+          "pageBefore": "20쪽",
+          "pageAfter": "7쪽"
+        },
+        {
+          "area": "공인영어",
+          "scope": "영어 성적을 반영하는 전체 모집단위",
+          "before": "2024년 1월 이후 응시한 성적 인정(TOEIC 506회(2024.1.13) ~ 558회(2025.12.7))",
+          "after": "2025년 1월 이후 응시한 성적 인정(TOEIC 533회(2025.1.12) ~ 584회(2026.11.29), TEPS 375회(2025.1.11) ~ 412회(2026.11.21))",
+          "impact": "2024년에 본 시험 성적은 쓸 수 없습니다. 대학이 11월 5일에 기본계획을 고쳐 올리면서 TEPS 마지막 인정 시험이 12월 5일에서 11월 21일로 당겨졌습니다.",
+          "affectsScore": false,
+          "pageBefore": "12쪽",
+          "pageAfter": "3쪽"
+        },
+        {
+          "area": "필기·실기",
+          "scope": "컴퓨터융합학부·인공지능학과",
+          "before": "실기 언어: Python, Java, C, C++ 중 하나 선택",
+          "after": "실기 언어: Python, Java, C 중 하나 선택",
+          "impact": "실기에서 C++을 고를 수 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "21쪽",
+          "pageAfter": "7쪽"
+        },
+        {
+          "area": "기타",
+          "scope": "1단계 선발 배수",
+          "before": "모집단위별 선발 배수 명시(화학과·기계공학부·생물과학과·전자공학과·토목공학과·간호학과는 300%)",
+          "after": "선발 배수는 의견 조회를 거쳐 정할 예정(미정)",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "20쪽",
+          "pageAfter": "6쪽"
+        }
+      ],
+      "ownerConfirmed": false
+    },
+    {
+      "univ": "충북대학교",
+      "documentKind": "기본계획",
+      "documentTitle": "2027학년도 대학 편입학전형 기본계획",
+      "sourceFile": "27_충북대_편입학전형_기본계획.pdf",
+      "verdict": "changed",
+      "headline": "영어 반영식과 TOEIC 환산표가 바뀌었고, 수의학과·약학과·제약학과는 TOEIC 성적을 받지 않습니다.",
+      "changes": [
+        {
+          "area": "공인영어",
+          "scope": "전체 모집단위",
+          "before": "영어 60점 = 40 + 환산점수 × 0.2",
+          "after": "영어 60점 = 30 + 환산점수 × 0.3",
+          "impact": "같은 TOEIC 850점이 56.5점에서 51.6점으로 내려갑니다.",
+          "affectsScore": true,
+          "pageBefore": "25쪽",
+          "pageAfter": "12쪽, 14쪽"
+        },
+        {
+          "area": "공인영어",
+          "scope": "전체 모집단위",
+          "before": "TOEIC 환산표: 20점 구간마다 2.5점 차이(980~990점 100점, 960~975점 97.5점, 840~855점 82.5점, 500~515점 40점, 375점 이하 22.5점)",
+          "after": "TOEIC 환산표: 990점 100점에서 5점마다 1점씩 내려가 795점 61점, 780~790점 60점부터 15점 구간마다 1점씩 내려가 495~505점 41점, 380~490점 40점, 379점 이하 0점",
+          "impact": "TOEIC 850점의 환산점수가 82.5점에서 72점으로 내려가고 990점은 100점 그대로입니다.",
+          "affectsScore": true,
+          "pageBefore": "25쪽",
+          "pageAfter": "14쪽"
+        },
+        {
+          "area": "공인영어",
+          "scope": "수의학과·약학과·제약학과",
+          "before": "TOEIC 900점 이상이어야 지원 가능",
+          "after": "TOEIC 성적을 반영하지 않고 TEPS 370점 또는 TOEFL 92점 이상 중 하나가 필요",
+          "impact": "TOEIC 성적만으로는 이 세 학과에 지원할 수 없습니다.",
+          "affectsScore": true,
+          "pageBefore": "8쪽",
+          "pageAfter": "6쪽, 8쪽, 14쪽"
+        },
+        {
+          "area": "지원자격",
+          "scope": "TOEIC 최저 점수가 바뀐 모집단위",
+          "before": "안전공학과 660점, 화학과·생물학과·미생물학과·생화학과 680점, 경영학부 760점, 국제경영학과·경영정보학과 700점, 토목공학부·기계공학부 640점, 인공지능전공·소프트웨어전공·지능로봇공학과 700점, 농업경제학과 500점",
+          "after": "안전공학과 750점, 화학과·생물학과·미생물학과·생화학과 690점, 경영학부 765점, 국제경영학과·경영정보학과 705점, 토목공학부·기계공학부 645점, 인공지능전공·소프트웨어전공·지능로봇공학과 690점, 농업경제학과 510점",
+          "impact": "안전공학과는 최저 점수가 90점 오르고, 인공지능전공·소프트웨어전공·지능로봇공학과는 10점 내려갑니다.",
+          "affectsScore": false,
+          "pageBefore": "5~8쪽",
+          "pageAfter": "6~8쪽"
+        },
+        {
+          "area": "필기·실기",
+          "scope": "실기고사를 보는 모집단위",
+          "before": "면접 10 + 실기 30: 건축학과·미술학과(서양화전공)·디자인학과",
+          "after": "면접 10 + 실기 30: 건축학과·체육교육과·조형예술학과<미술학과>(동양화·서양화·조소)·디자인학과",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "25쪽",
+          "pageAfter": "12쪽"
+        },
+        {
+          "area": "기타",
+          "scope": "수의학과·약학과·제약학과·간호학과",
+          "before": "1단계에서 영어 점수 순으로 40명까지 선발",
+          "after": "1단계에서 모집인원이 1명이면 20명, 2명 이상이면 40명 선발",
+          "impact": "모집인원이 1명인 학과는 1단계를 통과하는 인원이 절반으로 줄어듭니다.",
+          "affectsScore": false,
+          "pageBefore": "29쪽",
+          "pageAfter": "13쪽"
+        },
+        {
+          "area": "공인영어",
+          "scope": "전체 모집단위",
+          "before": "2024년 3월 1일 이후 응시한 성적 인정",
+          "after": "2025년 3월 1일 이후 응시한 성적 인정",
+          "impact": "2025년 2월까지 본 시험 성적은 쓸 수 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "8쪽, 9쪽",
+          "pageAfter": "6쪽"
+        },
+        {
+          "area": "지원자격",
+          "scope": "수의학과",
+          "before": "편입 학년: 1학년 1학기",
+          "after": "편입 학년: 2학년",
+          "impact": null,
+          "affectsScore": false,
+          "pageBefore": "14쪽",
+          "pageAfter": "2쪽"
+        },
+        {
+          "area": "모집단위",
+          "scope": "의학과",
+          "before": "모집단위 표에 의학과 없음(2026학년도에도 뽑지 않음)",
+          "after": "2027학년도 의과대학 의학과는 모집하지 않는다고 명시",
+          "impact": "2026학년도와 마찬가지로 지원할 수 없습니다.",
+          "affectsScore": false,
+          "pageBefore": "5~8쪽",
+          "pageAfter": "2쪽"
+        }
+      ],
+      "ownerConfirmed": false
+    }
+  ]
+}

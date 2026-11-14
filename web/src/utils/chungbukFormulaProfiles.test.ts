@@ -30,21 +30,21 @@ function profileCounts(year: string): Record<string, number> {
 describe("충북대학교 연도·학과별 전형 프로필", () => {
   it("classifies every 2024 result row", () => {
     expect(profileCounts("2024")).toEqual({
-      standard: 53,
+      standard: 69,
       written: 3,
-      practical: 1,
+      practical: 3,
     });
   });
 
   it("classifies every 2025 result row", () => {
-    expect(profileCounts("2025")).toEqual({ standard: 41, written: 4 });
+    expect(profileCounts("2025")).toEqual({ standard: 67, written: 4, practical: 5 });
   });
 
   it("classifies every 2026 result row", () => {
     expect(profileCounts("2026")).toEqual({
-      standard: 45,
+      standard: 70,
       written: 2,
-      practical: 1,
+      practical: 2,
     });
   });
 
@@ -73,9 +73,9 @@ describe("충북대학교 연도·학과별 전형 프로필", () => {
       .toEqual({ englishConv: 44.5, gpaConv: null, indexSum: 44.5 });
   });
 
-  it("keeps all 150 Chungbuk result rows selectable", () => {
+  it("keeps all 225 Chungbuk result rows selectable", () => {
     expect(standard.filter((record) => record.대학명 === "충북대학교"))
-      .toHaveLength(150);
+      .toHaveLength(225);
     expect(exceptions.filter((record) => record.대학명 === "충북대학교"))
       .toHaveLength(0);
   });

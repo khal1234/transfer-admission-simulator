@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   convertGpa100ToInput,
-  limitGpaInput,
-  limitToeicInput,
+  getGpaInputProblem,
+  getToeicInputProblem,
   normalizeGpaInput,
-  normalizeToeicInput,
   parseGpaInput,
   parseToeicInput,
   restoreCanonicalGpa100,
@@ -45,20 +44,25 @@ describe("parseGpaInput", () => {
 });
 
 describe("score input boundaries", () => {
-  it("clamps clearly out-of-range values while preserving partial input", () => {
-    expect(limitToeicInput("1000")).toBe("990");
-    expect(limitToeicInput("-5")).toBe("100");
-    expect(limitToeicInput("85")).toBe("85");
-    expect(limitGpaInput("101", "100")).toBe("100");
-    expect(limitGpaInput("-1", "4.5")).toBe("0.01");
+  it("범위 밖 숫자를 고치지 않고 무엇이 틀렸는지 알려 준다", () => {
+    expect(getToeicInputProblem("1000")).toBe("out-of-range");
+    expect(getToeicInputProblem("-5")).toBe("out-of-range");
+    expect(getToeicInputProblem("853")).toBe("not-step");
+    expect(getToeicInputProblem("")).toBe("empty");
+    expect(getToeicInputProblem("850")).toBeNull();
+    expect(getGpaInputProblem("101", "100")).toBe("above-max");
+    // 4.5 만점 칸에 백분위 90 을 친 경우 — 만점으로 바꾸지 않는다.
+    expect(getGpaInputProblem("90", "4.5")).toBe("above-max");
+    expect(parseGpaInput("90", "4.5")).toBeNull();
+    expect(getGpaInputProblem("-1", "4.5")).toBe("below-min");
+    expect(getGpaInputProblem("3.8", "4.5")).toBeNull();
   });
 
-  it("normalizes values to a valid score when editing finishes", () => {
-    expect(normalizeToeicInput("99")).toBe("100");
-    expect(normalizeToeicInput("851")).toBe("850");
-    expect(normalizeToeicInput("989")).toBe("990");
-    expect(normalizeGpaInput("101", "100")).toBe("100");
-    expect(normalizeGpaInput("4.75", "4.5")).toBe("4.5");
+  it("칸을 벗어날 때 범위 안 값만 소수 둘째 자리로 다듬는다", () => {
+    expect(normalizeGpaInput("3.456", "4.5")).toBe("3.46");
+    expect(normalizeGpaInput("101", "100")).toBe("101");
+    expect(normalizeGpaInput("4.75", "4.5")).toBe("4.75");
+    expect(normalizeGpaInput("90", "4.5")).toBe("90");
   });
 });
 
@@ -69,9 +73,10 @@ describe("stored score restoration", () => {
   });
 
   it("falls back safely when stored values are missing or invalid", () => {
-    expect(restoreToeicInput("2000")).toBe("850");
-    expect(restoreGpaInput("90", "4.5")).toBe("3.65");
-    expect(restoreGpaInput(null, "4.3")).toBe("3.5");
+    // 저장값이 없거나 깨졌으면 남의 점수 대신 빈칸으로 시작한다.
+    expect(restoreToeicInput("2000")).toBe("");
+    expect(restoreGpaInput("90", "4.5")).toBe("");
+    expect(restoreGpaInput(null, "4.3")).toBe("");
   });
 });
 

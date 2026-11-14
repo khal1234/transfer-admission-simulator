@@ -210,6 +210,7 @@ describe("analyzeScoreDeficit characteristics", () => {
       gpaNeeded: 9.99,
       toeicEfficiency: 0.3,
       gpaEfficiency: 0.03,
+      gpaEfficiencyPer100: 0.3,
       recommendedMetric: "toeic",
     });
   });

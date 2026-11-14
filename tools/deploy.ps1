@@ -20,7 +20,10 @@ param(
     [switch]$Production,
     [string]$Message = "local prebuilt deploy",
     # 테스트를 건너뛴다. 급할 때만 쓰고, 평소에는 쓰지 말 것.
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    # 커밋 안 된 변경이 있어도 실제 게시를 한다. 쓰면 운영 판의 원본이 저장소에
+    # 남지 않으므로, 게시 직후 반드시 커밋할 것.
+    [switch]$AllowDirty
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,6 +47,21 @@ if (-not (Test-Path (Join-Path $WebDir "node_modules"))) {
 Write-Host "[deploy] 업데이트 알림 확인..." -ForegroundColor Cyan
 & python (Join-Path $PSScriptRoot "check_update_notice.py")
 if ($LASTEXITCODE -ne 0) { throw "업데이트 알림이 뒤처졌다 — 배포를 중단한다." }
+
+# 커밋 안 된 변경이 사이트에 들어가는지 본다.
+# 무엇을 재나: 사이트에 실리는 폴더(web · results)에 커밋 안 된 변경이 있는지.
+# 문턱과 근거: 한 줄이라도 있으면 실제 게시를 멈춘다. 2026-10-05 무렵 작업 폴더가
+#   커밋 없이 그대로 게시돼, 운영 판을 다시 만들 원본이 이 PC 한 곳에만 있었다
+#   (2026-11-14 검토 1번). 프리뷰는 고치는 중에 보는 것이라 알리기만 한다.
+# 못 보는 것: 커밋은 했지만 원격에 안 올린 것.
+$Dirty = @(& git -C $ProjectRoot status --porcelain -- web results)
+if ($Dirty.Count -gt 0) {
+    Write-Host "[deploy] 커밋 안 된 변경 $($Dirty.Count)개가 이번 빌드에 들어갑니다:" -ForegroundColor Yellow
+    $Dirty | Select-Object -First 10 | ForEach-Object { Write-Host "         $_" -ForegroundColor Yellow }
+    if ($Production -and -not $AllowDirty) {
+        throw "커밋 안 된 변경이 있어 실제 게시를 중단한다. 먼저 커밋하거나, 알고 진행하려면 -AllowDirty."
+    }
+}
 
 Set-Location $WebDir
 

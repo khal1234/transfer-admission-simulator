@@ -1,16 +1,29 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   BookOpen,
   ChevronDown,
+  Link2,
   Star,
   Trash2,
   TrendingUp,
 } from "lucide-react";
-import type {
-  analyzeScoreDeficit,
-  calculateScore,
-  DepartmentRecord,
+import {
+  getBorderlineMargin,
+  type analyzeScoreDeficit,
+  type calculateScore,
+  type DepartmentRecord,
 } from "../utils/converter";
+import {
+  describeEligibilityFailure,
+  type EligibilityCheck,
+} from "../utils/eligibility";
+import { formatScore, formatSignedScore } from "../utils/formatScore";
+import {
+  hasScoreAffectingChange,
+  type UniversityGuidelineChange,
+} from "../utils/guidelineChanges";
 import { formatCompetitionRatio } from "../utils/competition";
 import { getGpaMax, type GpaType } from "../utils/scoreInput";
 import {
@@ -62,6 +75,10 @@ export type TargetSummary = {
   formulaNotice: string | null;
   renamedHistoryText: string;
   recentHistoryRows: RecentHistoryRow[];
+  /** 모집요강의 지원 자격 최저 기준에 걸리는지. */
+  eligibility: EligibilityCheck;
+  /** 새 학년도 문서에서 이 대학에 달라진 점. 자료가 없으면 null. */
+  guidelineChange: UniversityGuidelineChange | null;
 };
 
 type TargetBasketProps = {
@@ -74,6 +91,12 @@ type TargetBasketProps = {
   onComparisonBasisChange: (basis: ComparisonBasis) => void;
   onToggleTarget: (univ: string, dept: string) => void;
   onSelectChart: (univ: string, dept: string, trigger: HTMLButtonElement) => void;
+  /** 지망 순서를 한 칸 위(-1)·아래(+1)로 옮긴다. */
+  onMoveTarget: (key: string, direction: -1 | 1) => void;
+  /** 지금 구성을 담은 주소를 클립보드에 복사한다. 성공 여부를 돌려준다. */
+  onCopyShareLink: () => Promise<boolean>;
+  /** 새 학년도 이름(예: "2027"). 달라진 점 안내에 쓴다. */
+  guidelineTargetYear: string;
 };
 
 /**
@@ -199,16 +222,24 @@ function getAnalysisPanelState(
   return needsImprovement ? "risk" : "safe";
 }
 
+// 카드의 딱지(상회·근접·미달)와 같은 낱말을 쓴다. 예전에는 여기만 「도전」이라
+// 카드의 「미달 1개」를 분포에서 찾을 수 없었다(2026-11-14 검토 21번).
 const STRATEGY_LABELS: Record<DecisionCategory, string> = {
   safe: "평균 상회",
   borderline: "평균 근접",
-  risk: "도전",
+  risk: "평균 미달",
   unknown: "비교 불가",
 };
 
 function TargetStrategyBoard({ summaries }: { summaries: TargetSummary[] }) {
-  const counts = countDecisionCategories(summaries);
-  const knownCount = summaries.length - counts.unknown;
+  // 지원 자격에 못 미치는 지망은 상회·근접·미달 어디에도 넣지 않고 따로 센다.
+  const ineligibleCount = summaries.filter(
+    (summary) => summary.eligibility.failures.length > 0,
+  ).length;
+  const counts = countDecisionCategories(summaries.filter(
+    (summary) => summary.eligibility.failures.length === 0,
+  ));
+  const knownCount = summaries.length - ineligibleCount - counts.unknown;
   const dominantEntry = (Object.entries(counts) as [DecisionCategory, number][])
     .filter(([status]) => status !== "unknown")
     .sort((left, right) => right[1] - left[1])[0];
@@ -224,7 +255,11 @@ function TargetStrategyBoard({ summaries }: { summaries: TargetSummary[] }) {
   } else if (counts.safe === 0) {
     guidance = "평균 상회 지망이 없습니다. 모집단위 탐색에서 선택지를 넓혀 보세요.";
   } else if (counts.borderline === 0) {
-    guidance = "평균 근접 지망이 없습니다. 상회와 도전 사이의 선택지를 보완해 보세요.";
+    guidance = "평균 근접 지망이 없습니다. 상회와 미달 사이의 선택지를 보완해 보세요.";
+  }
+
+  if (ineligibleCount > 0) {
+    guidance = `지망 ${ineligibleCount}개는 지금 점수로는 지원 자격에 못 미칩니다. ${guidance}`;
   }
 
   return (
@@ -240,6 +275,12 @@ function TargetStrategyBoard({ summaries }: { summaries: TargetSummary[] }) {
             <strong>{counts[status]}</strong>
           </div>
         ))}
+        {ineligibleCount > 0 && (
+          <div className="basket-strategy-count strategy-count-ineligible">
+            <span>지원 자격 미달</span>
+            <strong>{ineligibleCount}</strong>
+          </div>
+        )}
       </div>
       <p>{guidance}</p>
     </section>
@@ -256,7 +297,18 @@ function TargetBasket({
   onComparisonBasisChange,
   onToggleTarget,
   onSelectChart,
+  onMoveTarget,
+  onCopyShareLink,
+  guidelineTargetYear,
 }: TargetBasketProps) {
+  const [shareState, setShareState] = useState<"idle" | "copied" | "failed">("idle");
+  const copyShareLink = () => {
+    void onCopyShareLink().then((copied) => {
+      setShareState(copied ? "copied" : "failed");
+      window.setTimeout(() => setShareState("idle"), 4000);
+    });
+  };
+
   return (
     <div className="card basket-card" id="target-basket">
       <div className="basket-title-row">
@@ -268,6 +320,27 @@ function TargetBasket({
           />
           내 지망 대학 장바구니 (동시 환산 비교)
         </h2>
+
+        {targetCount > 0 && (
+          <div className="basket-share">
+            <button
+              type="button"
+              className="basket-share-button"
+              onClick={copyShareLink}
+              title="지금 넣은 점수와 지망 목록을 담은 주소를 복사합니다. 받은 사람이 열면 같은 구성을 볼 수 있습니다."
+            >
+              <Link2 size={15} aria-hidden="true" />
+              이 구성 주소 복사
+            </button>
+            <span className="basket-share-status" role="status">
+              {shareState === "copied"
+                ? "복사했습니다. 점수와 지망이 주소에 들어 있으니 보낼 곳을 확인하세요."
+                : shareState === "failed"
+                  ? "복사하지 못했습니다. 브라우저가 복사를 막았습니다."
+                  : ""}
+            </span>
+          </div>
+        )}
 
         {targetCount > 0 && (
           <div
@@ -319,7 +392,15 @@ function TargetBasket({
             formulaNotice,
             renamedHistoryText,
             recentHistoryRows,
-          }) => {
+            eligibility,
+            guidelineChange,
+          }, cardIndex) => {
+            const ineligibleText = describeEligibilityFailure(eligibility);
+            const borderline = getBorderlineMargin(
+              target.univ,
+              referenceRecord.연도,
+              target.dept,
+            );
             // 입력 필수 여부는 선택한 대학·연도 공식이 결정한다. 영어만 반영하는
             // 전형은 GPA가 비어 있어도 지표합을 정상 계산할 수 있다.
             const scoreInputInvalid = score.myIndexSum === null;
@@ -374,16 +455,45 @@ function TargetBasket({
                         confidence={getDataConfidence(referenceRecord)}
                         compact
                       />
+                      {gpaType !== "100" && score.gpaConv !== null && (
+                        <span
+                          className="gpa-estimate-chip"
+                          title={`${gpaType} 만점 학점을 직선식으로 백분위로 바꿔 계산했습니다. 대학은 성적증명서의 백분위를 그대로 받습니다. 증명서에 백분위가 있으면 ‘백분위 (100)’으로 넣는 것이 정확합니다.`}
+                        >
+                          학점→백분위 추정 사용
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="btn-remove-target"
-                    aria-label={`${target.univ} ${target.dept} 지망 삭제`}
-                    onClick={() => onToggleTarget(target.univ, target.dept)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="target-card-controls">
+                    <span className="target-order-label">{cardIndex + 1}지망</span>
+                    <button
+                      type="button"
+                      className="btn-move-target"
+                      aria-label={`${target.univ} ${target.dept} 한 칸 위로`}
+                      disabled={cardIndex === 0}
+                      onClick={() => onMoveTarget(key, -1)}
+                    >
+                      <ArrowUp size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-move-target"
+                      aria-label={`${target.univ} ${target.dept} 한 칸 아래로`}
+                      disabled={cardIndex === summaries.length - 1}
+                      onClick={() => onMoveTarget(key, 1)}
+                    >
+                      <ArrowDown size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-remove-target"
+                      aria-label={`${target.univ} ${target.dept} 지망 삭제`}
+                      onClick={() => onToggleTarget(target.univ, target.dept)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="target-card-body">
@@ -392,16 +502,21 @@ function TargetBasket({
                         지표합-합격선-차이가 각각 한 줄씩 차지해 카드 하나가
                         419px 였고, 지망 여럿을 동시에 볼 수가 없었다. */}
                     <div className="compare-summary">
-                      {score.status === "safe" && (
+                      {ineligibleText !== null && (
+                        <span className="status-badge status-ineligible">
+                          ⛔ 지원 자격 미달
+                        </span>
+                      )}
+                      {ineligibleText === null && score.status === "safe" && (
                         <span className="status-badge status-safe">🟢 상회</span>
                       )}
-                      {score.status === "borderline" && (
+                      {ineligibleText === null && score.status === "borderline" && (
                         <span className="status-badge status-borderline">🟡 근접</span>
                       )}
-                      {score.status === "risk" && (
+                      {ineligibleText === null && score.status === "risk" && (
                         <span className="status-badge status-risk">🔴 미달</span>
                       )}
-                      {score.status === "unknown" && (
+                      {ineligibleText === null && score.status === "unknown" && (
                         <span className="status-badge status-unknown">
                           {scoreInputInvalid ? "⚪ 입력 확인" : "⚪ 자료 부족"}
                         </span>
@@ -413,7 +528,7 @@ function TargetBasket({
                           title="지표합 = 공인영어 환산점수 + 전적대 환산점수. 대학마다 배점이 달라 절대값 비교는 의미 없으며, 같은 대학 내 합격선과의 격차만 참고하세요"
                         >
                           {score.myIndexSum !== null
-                            ? score.myIndexSum
+                            ? formatScore(score.myIndexSum)
                             : scoreInputInvalid
                               ? "입력 확인 필요"
                               : "계산 불가"}
@@ -422,7 +537,7 @@ function TargetBasket({
                         <span className="compare-versus">vs</span>
                         <span className="compare-score compare-score-secondary">
                           {score.acceptedIndexSum !== null
-                            ? score.acceptedIndexSum
+                            ? formatScore(score.acceptedIndexSum)
                             : "비공개"}
                         </span>
                         <span className="compare-accepted-label">
@@ -432,35 +547,60 @@ function TargetBasket({
 
                       {score.diff !== null && (
                         <span className={`score-diff ${score.diff >= 0 ? "positive" : "negative"}`}>
-                          {score.diff >= 0 ? `+${score.diff}` : score.diff}점
+                          {formatSignedScore(score.diff)}점
                         </span>
                       )}
 
                       {/* 사용자가 실제로 하는 판단은 '뭘 얼마나 올려야 하나'다.
                           그게 상세 분석 안에 접혀 있고, 참고용인 과거 평균이
                           앞자리를 차지하고 있었다. 접힌 상태에서도 보이게 올린다. */}
-                      {analysis !== null && (
+                      {analysis !== null && needsImprovement && ineligibleText === null && (
                         <span
                           className="compare-action"
-                          title={needsImprovement && analysis.isLookupBased
+                          title={analysis.isLookupBased
                             ? LOOKUP_APPROXIMATION_HINT
                             : undefined}
                         >
-                          {needsImprovement
-                            ? buildImprovementText(
-                              analysis,
-                              toeic,
-                              gpaRaw,
-                              gpaType,
-                            )
-                            : analysis.recommendedMetric === "toeic"
-                              ? `TOEIC이 유리 (+10 → +${analysis.toeicEfficiency}점)`
-                              : analysis.recommendedMetric === "gpa"
-                                ? `전적대가 유리 (+0.1 → +${analysis.gpaEfficiency}점)`
-                                : ""}
+                          {buildImprovementText(
+                            analysis,
+                            toeic,
+                            gpaRaw,
+                            gpaType,
+                          )}
                         </span>
                       )}
                     </div>
+
+                    {ineligibleText !== null && (
+                      <p className="eligibility-notice" role="note">
+                        <strong>요강의 지원 자격: {ineligibleText}.</strong>{" "}
+                        지금 넣은 점수로는 원서를 낼 수 없어 합격 평균과의 비교를
+                        판정에 쓰지 않았습니다.{" "}
+                        <span className="eligibility-source">
+                          ({eligibility.failures.map((failure) => (
+                            `${failure.rule.year}학년도 요강 ${failure.rule.page}`
+                          )).filter((text, index, all) => all.indexOf(text) === index).join(", ")})
+                        </span>
+                      </p>
+                    )}
+                    {ineligibleText === null && eligibility.rules.length > 0 && (
+                      <p className="eligibility-pass-note">
+                        지원 자격 최저 기준: {eligibility.rules.map((rule) => [
+                          rule.minToeic !== null ? `TOEIC ${rule.minToeic}점 이상` : null,
+                          rule.minGpa100 !== null ? `전적대 백분위 ${rule.minGpa100} 이상` : null,
+                        ].filter(Boolean).join(" · ")).filter(Boolean).join(" / ")}
+                        {" "}({eligibility.year}학년도 요강)
+                      </p>
+                    )}
+                    {guidelineChange !== null && guidelineChange.verdict === "changed" && (
+                      <p className="guideline-card-notice">
+                        📢 {guidelineTargetYear}학년도에 달라집니다: {guidelineChange.headline}{" "}
+                        {hasScoreAffectingChange(guidelineChange)
+                          ? `이 카드의 점수는 ${referenceRecord.연도}학년도 식으로 계산한 것입니다. `
+                          : ""}
+                        <a href="#guideline-changes">달라진 점 보기</a>
+                      </p>
+                    )}
 
                     {/* 한 해만 대조하면 그 해가 유독 빡셌는지 무른 해였는지
                         알 수 없다. 배점이 바뀐 해는 내 지표합도 같이 움직이므로
@@ -510,9 +650,11 @@ function TargetBasket({
                           ) : (
                             <>
                               <span className="compare-year-scores">
-                                {yearScore.myIndexSum ?? "-"}
+                                {yearScore.myIndexSum === null
+                                  ? "-"
+                                  : formatScore(yearScore.myIndexSum)}
                                 <span className="compare-year-versus">vs</span>
-                                {yearScore.acceptedIndexSum}
+                                {formatScore(yearScore.acceptedIndexSum)}
                               </span>
                               <span
                                 className={`compare-year-diff ${
@@ -523,9 +665,7 @@ function TargetBasket({
                               >
                                 {yearScore.diff === null
                                   ? "-"
-                                  : yearScore.diff >= 0
-                                    ? `+${yearScore.diff}`
-                                    : yearScore.diff}
+                                  : formatSignedScore(yearScore.diff)}
                               </span>
                             </>
                           )}
@@ -688,6 +828,14 @@ function TargetBasket({
                       </p>
                     )}
 
+                    {borderline !== null && !comparisonUnavailable && (
+                      <p className="status-rule-note">
+                        판정 기준: 합격 평균 이상이면 ‘상회’, 반영 만점 {borderline.fullMarks}점의
+                        5%({borderline.margin}점) 안쪽으로 모자라면 ‘근접’, 그보다 더 모자라면
+                        ‘미달’입니다. 면접·필기 점수는 넣지 않은 비교입니다.
+                      </p>
+                    )}
+
                     {analysis !== null && (
                       <div className="efficiency-section">
                         <div className="efficiency-row">
@@ -695,18 +843,20 @@ function TargetBasket({
                           <strong>+{analysis.toeicEfficiency}점</strong>
                         </div>
                         <div className="efficiency-row efficiency-row-last">
-                          <span>• GPA 0.1점 상승 시:</span>
-                          <strong>+{analysis.gpaEfficiency}점</strong>
+                          <span>• 전적대 백분위 1점 상승 시:</span>
+                          <strong>+{analysis.gpaEfficiencyPer100}점</strong>
                         </div>
-                        {analysis.recommendedMetric !== "none" && (
+                        {analysis.recommendedMetric !== "none"
+                          && !(analysis.recommendedMetric === "toeic" && toeic !== null && toeic >= 990)
+                          && !(analysis.recommendedMetric === "gpa" && gpaRaw !== null && gpaRaw >= getGpaMax(gpaType)) && (
                           <p className="efficiency-recommendation">
-                            💡 수식상 획득 효율: 이 대학은{" "}
+                            💡 수식상 획득 효율: 이 대학은 TOEIC 10점과 백분위 1점 가운데{" "}
                             <strong>
-                              [{analysis.recommendedMetric === "toeic"
-                                ? "공인영어"
-                                : "전적대학 성적"}]
-                            </strong>
-                            을 올릴 때 환산점수가 상대적으로 더 많이 상승합니다.{" "}
+                              {analysis.recommendedMetric === "toeic"
+                                ? "공인영어(TOEIC)"
+                                : "전적대학 성적"}
+                            </strong>{" "}
+                            쪽이 환산점수를 더 많이 올립니다.{" "}
                             <span>(실제 공부 난이도 무관)</span>
                           </p>
                         )}

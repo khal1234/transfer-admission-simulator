@@ -12,8 +12,10 @@ import {
   buildDepartmentSearchIndex,
   filterDepartmentSearchIndex,
   getDepartmentGroupKey,
-  isSameDepartmentLabel,
+  getSourceNameNote,
+  splitUniversityFromQuery,
 } from "../utils/departmentSearch";
+import { checkEligibility, describeEligibilityFailure } from "../utils/eligibility";
 import {
   getGpaDisclosure,
   getToeicDisclosure,
@@ -55,8 +57,21 @@ const MARGIN_LABELS: Record<ExplorerMargin["status"], string> = {
   unknown: "판정 불가",
 };
 
-function MarginBadge({ margin }: { margin: ExplorerMargin }) {
+function MarginBadge({
+  margin,
+  ineligibleText,
+}: {
+  margin: ExplorerMargin;
+  ineligibleText: string | null;
+}) {
   const sign = margin.diff !== null && margin.diff > 0 ? "+" : "";
+  if (ineligibleText !== null) {
+    return (
+      <span className="explorer-margin explorer-margin--ineligible">
+        지원 자격 미달 (요강: {ineligibleText})
+      </span>
+    );
+  }
   return (
     <span className={`explorer-margin explorer-margin--${margin.status}`}>
       {MARGIN_LABELS[margin.status]}
@@ -94,13 +109,36 @@ function DepartmentExplorer({
     () => new Set(selectedUnivs),
     [selectedUnivs],
   );
+  // 「부산대 기계」처럼 대학 이름을 같이 치면 그 대학 안에서 찾는다. 예전에는
+  // 학과 이름만 뒤져 0개가 나왔다(2026-11-14 검토 15번).
+  const parsedQuery = useMemo(
+    () => splitUniversityFromQuery(searchQuery, universities),
+    [searchQuery, universities],
+  );
+  const effectiveUnivSet = useMemo(
+    () => (parsedQuery.universities.length > 0
+      ? new Set(parsedQuery.universities)
+      : selectedUnivSet),
+    [parsedQuery.universities, selectedUnivSet],
+  );
   const searchedDepartments = useMemo(
     () => filterDepartmentSearchIndex(
       searchableRecords,
-      searchQuery,
-      selectedUnivSet,
+      parsedQuery.rest,
+      effectiveUnivSet,
     ),
-    [searchQuery, searchableRecords, selectedUnivSet],
+    [effectiveUnivSet, parsedQuery.rest, searchableRecords],
+  );
+  // 목록의 숫자가 몇 학년도 것인지. 가장 최근 학년도 자료가 없는 줄은 흐리게 한다.
+  const latestYear = useMemo(
+    () => records.reduce(
+      (latest, record) => (Number(record.연도) > Number(latest) ? record.연도 : latest),
+      "0",
+    ),
+    [records],
+  );
+  const getIneligibleText = (record: DepartmentRecord) => describeEligibilityFailure(
+    checkEligibility(record.대학명, record.학과, toeic, gpa100),
   );
   // 계열 칩 옆 숫자는 대학·검색어까지 거른 뒤의 개수다. 0인 칩을 눌러 빈 화면을 보는 일을 막는다.
   const categoryCounts = useMemo(() => {
@@ -204,7 +242,7 @@ function DepartmentExplorer({
     <section className="card explorer-card">
       <h2 className="card-title">
         <BookOpen size={20} color="var(--secondary-color)" />
-        거점국립대 모집단위 탐색 및 지망 담기
+        모집단위 탐색 및 지망 담기
       </h2>
 
       {nonRecruitmentExceptions.length > 0 && (
@@ -226,7 +264,7 @@ function DepartmentExplorer({
           <input
             type="text"
             aria-label="학과 검색"
-            placeholder="가고 싶은 학과명이나 초성을 검색해 보세요 (예: 기계, 컴공, ㅅㅁ, ㄱㄱㄱㅎㄱ)"
+            placeholder="학과 이름을 검색해 보세요 (예: 기계, 컴공, 부산대 기계, ㄱㄱㄱㅎ)"
             value={searchQuery}
             onChange={(event) => updateSearchQuery(event.target.value)}
           />
@@ -350,6 +388,12 @@ function DepartmentExplorer({
         ref={resultsStartRef}
       >
         검색 결과 {filteredDepartments.length}개
+        {parsedQuery.universities.length > 0 && (
+          <span className="explorer-query-note">
+            {" "}· {parsedQuery.universities.join(", ")} 안에서
+            {parsedQuery.rest === "" ? " 전체를" : ` ‘${parsedQuery.rest}’을(를)`} 찾았습니다
+          </span>
+        )}
       </p>
 
       <div className="table-wrapper desktop-department-results">
@@ -358,7 +402,7 @@ function DepartmentExplorer({
             <tr>
               <th className="explorer-university-column">대학명</th>
               <th className="explorer-department-column">학과명 (통합 표준과명)</th>
-              <th className="explorer-count-column table-cell-center">최신 등록 / 모집인원</th>
+              <th className="explorer-count-column table-cell-center">등록 / 모집인원 (자료 연도)</th>
               <th className="explorer-score-column table-cell-center">토익합격 평균</th>
               <th className="explorer-score-column table-cell-center">GPA합격 백분위</th>
               <th className="explorer-cart-column table-cell-center">장바구니</th>
@@ -368,7 +412,8 @@ function DepartmentExplorer({
             {paginatedRecords.length === 0 ? (
               <tr>
                 <td colSpan={6} className="explorer-empty">
-                  검색 결과와 일치하는 모집단위가 존재하지 않습니다. 다른 검색어를 입력해 보세요.
+                  검색 결과와 일치하는 모집단위가 없습니다. 학과 이름의 일부만 넣어 보세요.
+                  대학은 위의 대학 버튼으로 고르거나 ‘부산대 기계’처럼 띄어서 같이 칠 수 있습니다.
                 </td>
               </tr>
             ) : (
@@ -384,20 +429,35 @@ function DepartmentExplorer({
                     !== getDepartmentGroupKey(record.학과);
 
                 return (
-                  <tr key={key} className={startsGroup ? "department-group-start" : ""}>
+                  <tr
+                    key={key}
+                    className={[
+                      startsGroup ? "department-group-start" : "",
+                      record.연도 !== latestYear ? "explorer-row-stale" : "",
+                    ].join(" ").trim()}
+                  >
                     <td className="university-name-cell">
                       <UniversityName university={record.대학명} />
                     </td>
                     <td>
                       <div className="dept-name-wrapper">
                         <h4>{record.학과}</h4>
-                        {!isSameDepartmentLabel(record.학과, record.학과_원본명) && (
-                          <span>이전 명칭: {record.학과_원본명}</span>
+                        {getSourceNameNote(record) && (<span>{getSourceNameNote(record)}</span>)}
+                        {record.연도 !== latestYear && (
+                          <span className="explorer-stale-note">
+                            {record.연도}학년도가 마지막 자료 · {latestYear}학년도 자료 없음
+                          </span>
                         )}
-                        {effectiveSort === "myMargin" && <MarginBadge margin={getMargin(record)} />}
+                        {effectiveSort === "myMargin" && (
+                          <MarginBadge
+                            margin={getMargin(record)}
+                            ineligibleText={getIneligibleText(record)}
+                          />
+                        )}
                       </div>
                     </td>
                     <td className="table-cell-center table-cell-semibold">
+                      <span className="explorer-year-tag">{record.연도}</span>
                       <RecruitmentCount record={record} />
                     </td>
                     <td className="table-cell-center table-cell-bold">
@@ -435,7 +495,8 @@ function DepartmentExplorer({
       <div className="mobile-department-results">
         {paginatedRecords.length === 0 ? (
           <p className="explorer-empty-mobile">
-            검색 결과와 일치하는 모집단위가 없습니다. 다른 검색어를 입력해 보세요.
+            검색 결과와 일치하는 모집단위가 없습니다. 학과 이름의 일부만 넣어 보세요.
+            대학은 위의 대학 버튼으로 고르거나 ‘부산대 기계’처럼 띄어서 같이 칠 수 있습니다.
           </p>
         ) : (
           paginatedRecords.map((record) => {
@@ -443,7 +504,10 @@ function DepartmentExplorer({
             const isAdded = targetKeys.has(key);
 
             return (
-              <article className="department-result-card" key={key}>
+              <article
+                className={`department-result-card ${record.연도 !== latestYear ? "explorer-row-stale" : ""}`}
+                key={key}
+              >
                 <div className="department-result-heading">
                   <UniversityName
                     university={record.대학명}
@@ -451,15 +515,24 @@ function DepartmentExplorer({
                     logoSize="small"
                   />
                   <span className="department-count">
+                    <span className="explorer-year-tag">{record.연도}</span>
                     <RecruitmentCount record={record} mobile />
                   </span>
                 </div>
                 <div className="dept-name-wrapper">
                   <h3>{record.학과}</h3>
-                  {!isSameDepartmentLabel(record.학과, record.학과_원본명) && (
-                    <span>이전 명칭: {record.학과_원본명}</span>
+                  {getSourceNameNote(record) && (<span>{getSourceNameNote(record)}</span>)}
+                  {record.연도 !== latestYear && (
+                    <span className="explorer-stale-note">
+                      {record.연도}학년도가 마지막 자료 · {latestYear}학년도 자료 없음
+                    </span>
                   )}
-                  {effectiveSort === "myMargin" && <MarginBadge margin={getMargin(record)} />}
+                  {effectiveSort === "myMargin" && (
+                    <MarginBadge
+                      margin={getMargin(record)}
+                      ineligibleText={getIneligibleText(record)}
+                    />
+                  )}
                 </div>
                 <dl className="department-metrics">
                   <div>
@@ -496,6 +569,12 @@ function DepartmentExplorer({
           })
         )}
       </div>
+
+      <p className="explorer-basis-note">
+        평균 점수와 인원은 대학마다 공개 기준이 다릅니다. 강원대·충남대·충북대의 평균은
+        최초 합격자, 인원은 최종 등록자 기준이라 ‘등록 0명’인데 평균이 있는 줄이 있습니다.
+        인원 칸 앞의 숫자는 그 줄이 몇 학년도 자료인지입니다.
+      </p>
 
       {totalPages > 1 && (
         <div className="pagination-row">
