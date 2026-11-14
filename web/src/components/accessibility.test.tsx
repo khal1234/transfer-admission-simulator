@@ -85,6 +85,7 @@ describe("component accessibility contracts", () => {
         recordsByDepartment={new Map([[getRecordKey(record.대학명, record.학과), [record]]])}
         metric="toeic_orig"
         onMetricChange={vi.fn()}
+        onFocusChange={vi.fn()}
         onClose={vi.fn()}
       />,
     );

@@ -462,10 +462,16 @@ export default function App() {
     setChartTarget(null);
     window.requestAnimationFrame(() => focusElement(chartTriggerRef.current));
   }, []);
-  const selectChart = useCallback((univ: string, dept: string, trigger: HTMLButtonElement) => {
+  const toggleChart = useCallback((trigger: HTMLButtonElement) => {
     chartTriggerRef.current = trigger;
-    setChartTarget({ univ, dept });
-  }, []);
+    setChartTarget((current) => {
+      if (current !== null) {
+        return null;
+      }
+      const first = targets[0];
+      return first === undefined ? null : { univ: first.univ, dept: first.dept };
+    });
+  }, [targets]);
 
   useEffect(() => {
     if (chartTarget !== null && !targetKeySet.has(getTargetKey(chartTarget))) {
@@ -473,8 +479,10 @@ export default function App() {
     }
   }, [chartTarget, targetKeySet]);
 
+  // 차트가 열릴 때만 그리로 옮긴다. 굵게 볼 지망을 바꿀 때마다 옮기면 고르던 칸에서 초점이 달아난다.
+  const chartOpen = chartTarget !== null;
   useEffect(() => {
-    if (chartTarget === null) {
+    if (!chartOpen) {
       return;
     }
 
@@ -489,7 +497,7 @@ export default function App() {
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [chartTarget]);
+  }, [chartOpen]);
 
   useEffect(() => {
     const targetBasket = document.getElementById("target-basket");
@@ -931,10 +939,7 @@ export default function App() {
 
           {chartTarget !== null && (
             <div className="chart-region" ref={chartRegionRef} tabIndex={-1}>
-              <ChartErrorBoundary
-                key={`${chartTarget.univ}::${chartTarget.dept}`}
-                onClose={closeChart}
-              >
+              <ChartErrorBoundary onClose={closeChart}>
                 <Suspense
                   fallback={(
                     <div className="chart-card" role="status">
@@ -948,6 +953,7 @@ export default function App() {
                     recordsByDepartment={recordsByDepartment}
                     metric={chartMetric}
                     onMetricChange={setChartMetric}
+                    onFocusChange={setChartTarget}
                     onClose={closeChart}
                   />
                 </Suspense>
@@ -964,7 +970,8 @@ export default function App() {
             comparisonBasis={comparisonBasis}
             onComparisonBasisChange={changeComparisonBasis}
             onToggleTarget={toggleTarget}
-            onSelectChart={selectChart}
+            onToggleChart={toggleChart}
+            chartOpen={chartOpen}
             onMoveTarget={moveTarget}
             onCopyShareLink={copyShareLink}
             guidelineTargetYear={GUIDELINE_CHANGES.targetYear}

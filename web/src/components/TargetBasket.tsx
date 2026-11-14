@@ -99,7 +99,9 @@ type TargetBasketProps = {
   comparisonBasis: ComparisonBasis;
   onComparisonBasisChange: (basis: ComparisonBasis) => void;
   onToggleTarget: (univ: string, dept: string) => void;
-  onSelectChart: (univ: string, dept: string, trigger: HTMLButtonElement) => void;
+  /** 입결 추이 차트를 여닫는다. 장바구니 전체를 한 차트에 겹쳐 그리므로 단추는 하나면 된다. */
+  onToggleChart: (trigger: HTMLButtonElement) => void;
+  chartOpen: boolean;
   /** 지망 순서를 한 칸 위(-1)·아래(+1)로 옮긴다. */
   onMoveTarget: (key: string, direction: -1 | 1) => void;
   /** 지금 구성을 담은 주소를 클립보드에 복사한다. 성공 여부를 돌려준다. */
@@ -333,7 +335,8 @@ function TargetBasket({
   comparisonBasis,
   onComparisonBasisChange,
   onToggleTarget,
-  onSelectChart,
+  onToggleChart,
+  chartOpen,
   onMoveTarget,
   onCopyShareLink,
   guidelineTargetYear,
@@ -399,6 +402,18 @@ function TargetBasket({
             >
               <Link2 size={15} aria-hidden="true" />
               이 구성 주소 복사
+            </button>
+            {/* 예전에는 카드마다 «입결 추이 차트» 단추가 있었다. 어느 것을 눌러도 같은 차트(지망 전체)가
+                열리고 굵은 선만 달랐다(2026-11-15 사용자 지적). 굵게 볼 지망은 차트 안에서 고른다. */}
+            <button
+              type="button"
+              className={`basket-share-button ${chartOpen ? "active" : ""}`}
+              aria-expanded={chartOpen}
+              onClick={(event) => onToggleChart(event.currentTarget)}
+              title="담아 둔 지망의 최근 입결을 한 차트에 겹쳐 봅니다."
+            >
+              <TrendingUp size={15} aria-hidden="true" />
+              {chartOpen ? "입결 추이 차트 닫기" : "입결 추이 차트"}
             </button>
             <button
               type="button"
@@ -1078,21 +1093,6 @@ function TargetBasket({
                   </details>
                 </div>
 
-                <div className="target-card-footer">
-                  <button
-                    type="button"
-                    className="btn-card-action"
-                    onClick={(event) => onSelectChart(
-                      target.univ,
-                      target.dept,
-                      event.currentTarget,
-                    )}
-                  >
-                    <TrendingUp size={14} />
-                    <span className="summary-label-wide">입결 추이 차트</span>
-                    <span className="summary-label-narrow">추이 차트</span>
-                  </button>
-                </div>
               </div>
             );
           })}

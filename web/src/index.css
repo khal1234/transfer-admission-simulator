@@ -5863,3 +5863,15 @@ html[data-theme="dark"] :is(.btn-reload-chart, .capture-action--primary, .explor
   padding-left: 2px;
   padding-right: 2px;
 }
+
+/* 추이 차트 단추를 장바구니 제목 줄 하나로 옮긴 뒤: 좁은 화면의 카드 아래는 두 칸 */
+@media (max-width: 899px) {
+  .target-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.basket-share-button.active {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}

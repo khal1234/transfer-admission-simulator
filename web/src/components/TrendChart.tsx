@@ -112,6 +112,8 @@ type TrendChartProps = {
   recordsByDepartment: ReadonlyMap<string, DepartmentRecord[]>;
   metric: ChartMetric;
   onMetricChange: (metric: ChartMetric) => void;
+  /** 굵게 볼 지망을 바꾼다. */
+  onFocusChange: (target: ChartTarget) => void;
   onClose: () => void;
 };
 
@@ -200,6 +202,7 @@ function TrendChart({
   recordsByDepartment,
   metric,
   onMetricChange,
+  onFocusChange,
   onClose,
 }: TrendChartProps) {
   const initialControlRef = useRef<HTMLSelectElement | null>(null);
@@ -388,6 +391,30 @@ function TrendChart({
           </p>
         </div>
         <div className="chart-controls">
+          {targets.length > 1 && (
+            <select
+              aria-label="굵게 볼 지망 선택"
+              className="chart-metric-select"
+              value={getRecordKey(focusedTarget.univ, focusedTarget.dept)}
+              onChange={(event) => {
+                const next = targets.find((target) => (
+                  getRecordKey(target.univ, target.dept) === event.target.value
+                ));
+                if (next !== undefined) {
+                  onFocusChange({ univ: next.univ, dept: next.dept });
+                }
+              }}
+            >
+              {targets.map((target) => (
+                <option
+                  key={getRecordKey(target.univ, target.dept)}
+                  value={getRecordKey(target.univ, target.dept)}
+                >
+                  굵게: {getSeriesName(target)}
+                </option>
+              ))}
+            </select>
+          )}
           <select
             ref={initialControlRef}
             data-chart-initial-focus="true"
