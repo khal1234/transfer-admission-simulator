@@ -36,7 +36,7 @@ import {
 import { getRecordKey } from "../utils/targets";
 import RawScoreValue from "./RawScoreValue";
 import RecruitmentCount from "./RecruitmentCount";
-import UniversityName from "./UniversityName";
+import UniversityName, { UniversityLogo } from "./UniversityName";
 
 const ITEMS_PER_PAGE = 10;
 const UNKNOWN_MARGIN: ExplorerMargin = { diff: null, ratio: null, status: "unknown" };
@@ -318,10 +318,16 @@ function DepartmentExplorer({
                 key={university}
                 className={`univ-chip ${isOn ? "active" : ""}`}
                 aria-pressed={isOn}
+                aria-label={`${university} ${count}개`}
                 disabled={count === 0 && !isOn}
                 onClick={() => toggleUniversity(university)}
               >
-                <UniversityName university={university} logoSize="small" />
+                {/* 폰에서는 «대학교»를 떼고 두 글자만 보인다 — 열 곳이 가로로 밀어야 보이지 않고 두 줄에 다 들어온다. */}
+                <UniversityLogo university={university} size="small" />
+                <span className="univ-chip-name">
+                  {university.replace(/대학교$/, "")}
+                  <span className="univ-chip-suffix">대학교</span>
+                </span>
                 <span className="explorer-chip-count">{count}</span>
               </button>
             );
