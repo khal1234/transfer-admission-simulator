@@ -500,7 +500,6 @@ function TargetBasket({
               ? []
               : getRelevantChanges(guidelineChange, target.dept);
             const scoreCautions = relevantChanges.filter((change) => change.affectsScore);
-            const otherChangeCount = relevantChanges.length - scoreCautions.length;
             // 무엇이 바뀌었는지보다 «그래서 내 점수에 유리한가 불리한가»가 먼저다.
             const impact = scoreCautions.length > 0
               ? getGuidelineImpact(target.univ, target.dept, toeic, referenceRecord)
@@ -685,9 +684,10 @@ function TargetBasket({
 
                     {ineligibleText !== null && (
                       <p className="eligibility-notice" role="note">
-                        <strong>요강의 지원 자격: {ineligibleText}.</strong>{" "}
-                        지금 넣은 점수로는 원서를 낼 수 없어 합격 평균과의 비교를
-                        판정에 쓰지 않았습니다.{" "}
+                        <strong>지원 자격: {ineligibleText}</strong>
+                        <span className="eligibility-consequence">
+                          자격 미달이라 합격 평균 비교는 판정에서 뺐습니다.
+                        </span>
                         <span className="eligibility-source">
                           ({eligibility.failures.map((failure) => (
                             `${failure.rule.year}학년도 요강 ${failure.rule.page}`
@@ -708,33 +708,38 @@ function TargetBasket({
                       scoreCautions.length > 0 ? (
                         <div className="guideline-card-notice guideline-card-notice--caution">
                           <p className="guideline-card-notice-lead">
-                            ⚠️ 주의 · {guidelineTargetYear}학년도에는 이 학과의 점수 계산이 달라집니다.
+                            ⚠️ {guidelineTargetYear}학년도 점수 계산이 달라집니다
                           </p>
-                          {impact !== null && (
+                          {/* 긴 설명을 카드에 그대로 깔아 두니 훑어 내릴 때 글이 빽빽했다(2026-11-15 사용자 지적).
+                              보이는 것은 판정 딱지와 숫자 한 줄, 나머지는 아래 펼침 안에 둔다. */}
+                          {impact !== null ? (
                             <p className={`guideline-impact guideline-impact--${impact.tone}`}>
-                              <strong>{impact.headline}</strong>{" "}
-                              <span>{impact.detail}</span>
+                              <span className="guideline-impact-label">{impact.label}</span>
+                              <strong>{impact.headline}</strong>
                             </p>
+                          ) : (
+                            <ul className="guideline-card-notice-list">
+                              {scoreCautions.map((change) => (
+                                <li key={change.title}>
+                                  <span className="guideline-change-area">{getAreaLabel(change)}</span>
+                                  <span>{change.title}</span>
+                                </li>
+                              ))}
+                            </ul>
                           )}
-                          <ul className="guideline-card-notice-list">
-                            {scoreCautions.map((change) => (
-                              <li key={change.title}>
-                                <span className="guideline-change-area">{getAreaLabel(change)}</span>
-                                <span>{change.title}</span>
-                              </li>
-                            ))}
-                          </ul>
                           <p className="guideline-card-notice-foot">
-                            이 카드의 판정은 {referenceRecord.연도}학년도 식으로 낸 것입니다.{" "}
-                            {otherChangeCount > 0 && `그 밖에 달라지는 것 ${otherChangeCount}건.`}
+                            지금 판정은 {referenceRecord.연도}학년도 식 기준입니다.
                           </p>
                           {/* 누르면 첫 화면 위쪽 상자로 옮겨 가던 것을, 그 자리에서 아래로 펼친다(2026-11-15 사용자 지적). */}
                           <details className="guideline-card-more">
                             <summary>
-                              <span className="details-closed-label">달라진 점 보기</span>
+                              <span className="details-closed-label">달라진 점 {relevantChanges.length}건 보기</span>
                               <span className="details-open-label">달라진 점 접기</span>
                               <ChevronDown size={14} aria-hidden="true" />
                             </summary>
+                            {impact !== null && (
+                              <p className="guideline-impact-detail">{impact.detail}</p>
+                            )}
                             <ul>
                               {relevantChanges.map((change) => (
                                 <li key={change.title}>
@@ -963,8 +968,8 @@ function TargetBasket({
                     ) : deficit > 0 ? (
                       <div className="analysis-scenario">
                         <p className="analysis-scenario-intro">
-                          {referenceRecord.연도} 평균선 도달(격차:{" "}
-                          <strong>{deficit.toFixed(2)}점</strong>)을 위한 가상 보완 시나리오:
+                          {referenceRecord.연도} 합격 평균까지{" "}
+                          <strong>{deficit.toFixed(2)}점</strong> 모자랍니다.
                         </p>
                         {analysis.toeicNeeded === null
                           && analysis.gpaNeeded === null ? (
@@ -975,7 +980,7 @@ function TargetBasket({
                           <ul className="improvement-list">
                             {analysis.toeicNeeded !== null && (
                               <li>
-                                • <strong>TOEIC만</strong> 올릴 시:{" "}
+                                • <strong>TOEIC만</strong> 올리면{" "}
                                 <strong className="analysis-target">
                                   {analysis.isLookupBased ? "≈ " : ""}
                                   +{analysis.toeicNeeded}점
@@ -989,7 +994,7 @@ function TargetBasket({
                             )}
                             {analysis.gpaNeeded !== null && (
                               <li>
-                                • <strong>GPA만</strong> 올릴 시:{" "}
+                                • <strong>GPA만</strong> 올리면{" "}
                                 <strong className="analysis-target">
                                   {analysis.isLookupBased ? "≈ " : ""}
                                   +{analysis.gpaNeeded}점
@@ -1005,17 +1010,15 @@ function TargetBasket({
                         )}
                         {analysis.isLookupBased && (
                           <p className="lookup-warning">
-                            ⚠️ 이 대학은 구간 등급제 환산표를 씁니다. 위 값은 환산표를 직선으로
-                            근사해 역산한 <strong>추정치</strong>이며, 실제 환산표에서는 구간
-                            경계에 따라 몇 점 차이가 날 수 있습니다. 원서 접수 전에 모집요강
-                            환산표로 확인해 주세요.
+                            ⚠️ <strong>추정치</strong>입니다. 구간 환산표라 실제와 몇 점 다를 수
+                            있으니 요강 환산표로 확인하세요.
                           </p>
                         )}
                       </div>
                     ) : (
                       <p className="analysis-success-message">
-                        🎉 {referenceRecord.연도} 합격자 평균 성적을 상회하고 있습니다. (단,
-                        실제 합격 여부는 면접 및 대학별 고사가 주요 변수로 작용합니다.)
+                        🎉 {referenceRecord.연도} 합격 평균보다 높습니다.
+                        <span>면접·대학별 고사는 여기에 들어 있지 않습니다.</span>
                       </p>
                     )}
 
@@ -1044,14 +1047,14 @@ function TargetBasket({
                           && !(analysis.recommendedMetric === "toeic" && toeic !== null && toeic >= 990)
                           && !(analysis.recommendedMetric === "gpa" && gpaRaw !== null && gpaRaw >= getGpaMax(gpaType)) && (
                           <p className="efficiency-recommendation">
-                            💡 수식상 획득 효율: 이 대학은 TOEIC 10점과 백분위 1점 가운데{" "}
+                            💡 TOEIC 10점과 백분위 1점 가운데{" "}
                             <strong>
                               {analysis.recommendedMetric === "toeic"
                                 ? "공인영어(TOEIC)"
                                 : "전적대학 성적"}
                             </strong>{" "}
-                            쪽이 환산점수를 더 많이 올립니다.{" "}
-                            <span>(실제 공부 난이도 무관)</span>
+                            쪽이 점수를 더 올립니다.{" "}
+                            <span>(공부 난이도는 별개)</span>
                           </p>
                         )}
                       </div>
@@ -1090,7 +1093,11 @@ function TargetBasket({
                               if (record === null) {
                                 return (
                                   <tr key={year}>
-                                    <td>{year}년</td>
+                                    <td className="mini-year">
+                                      <span className="mini-year-extra">{String(year).slice(0, -2)}</span>
+                                      {String(year).slice(-2)}
+                                      <span className="mini-year-extra">년</span>
+                                    </td>
                                     <td
                                       colSpan={5}
                                       className={`history-unavailable history-${status.kind}`}
@@ -1104,8 +1111,10 @@ function TargetBasket({
 
                               return (
                                 <tr key={record.연도}>
-                                  <td>
-                                    {record.연도}년
+                                  <td className="mini-year">
+                                    <span className="mini-year-extra">{record.연도.slice(0, -2)}</span>
+                                    {record.연도.slice(-2)}
+                                    <span className="mini-year-extra">년</span>
                                     <span className="sr-only"> · {status.label}</span>
                                   </td>
                                   <td><RecruitmentCount record={record} /></td>
@@ -1117,6 +1126,7 @@ function TargetBasket({
                                       note={getToeicDisclosure(record.대학명)}
                                       unavailableDescription={getUnavailableScoreDescription(record, "toeic")}
                                       suffix=""
+                                      aligned
                                     />
                                   </td>
                                   <td>
@@ -1125,6 +1135,7 @@ function TargetBasket({
                                       note={getGpaDisclosure(record.대학명)}
                                       unavailableDescription={getUnavailableScoreDescription(record, "gpa")}
                                       suffix=""
+                                      aligned
                                     />
                                   </td>
                                 </tr>

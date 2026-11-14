@@ -50,7 +50,7 @@ describe("점수 계산이 바뀌는 학과의 유불리", () => {
     const impact = getGuidelineImpact("충북대학교", "경영학부", 850, chungbuk());
 
     expect(impact?.tone).toBe("worse");
-    expect(impact?.headline).toContain("불리해집니다");
+    expect(impact?.label).toBe("내 점수엔 불리");
     expect(impact?.headline).toContain("-1.59점 → 약 -3.6점");
     expect(impact?.detail).toContain("56.5점 → 51.6점");
   });
@@ -59,7 +59,7 @@ describe("점수 계산이 바뀌는 학과의 유불리", () => {
     const impact = getGuidelineImpact("충북대학교", "경영학부", 970, chungbuk());
 
     expect(impact?.tone).toBe("better");
-    expect(impact?.headline).toContain("유리해집니다");
+    expect(impact?.label).toBe("내 점수엔 유리");
   });
 
   it("TOEIC을 받지 않게 된 학과는 유불리 대신 지원할 수 없다는 것을 말한다", () => {
