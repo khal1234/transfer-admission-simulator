@@ -5839,3 +5839,27 @@ html[data-theme="dark"] :is(.btn-reload-chart, .capture-action--primary, .explor
     background: transparent;
   }
 }
+
+/* 검색 목록의 인원 칸: 자료 연도는 늘 왼쪽, 인원은 그 옆 한 줄 */
+.explorer-count-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.explorer-count-cell .explorer-year-tag {
+  flex: none;
+  margin-right: 0;
+}
+
+.explorer-count-cell :is(.recruitment-count-button, .recruitment-count-inline) {
+  max-width: none;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.explorer-count-cell .recruitment-count-button {
+  padding-left: 2px;
+  padding-right: 2px;
+}

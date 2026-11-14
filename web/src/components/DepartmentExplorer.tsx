@@ -492,8 +492,12 @@ function DepartmentExplorer({
                       </div>
                     </td>
                     <td className="table-cell-center table-cell-semibold">
-                      <span className="explorer-year-tag">{record.연도}</span>
-                      <RecruitmentCount record={record} />
+                      {/* 자료 연도는 늘 왼쪽, 인원은 그 옆 한 줄. 설명 단추가 붙는 줄만 연도 아래로
+                          떨어져 줄마다 연도 자리가 달랐다(2026-11-15 사용자 지적). */}
+                      <span className="explorer-count-cell">
+                        <span className="explorer-year-tag">{record.연도}</span>
+                        <RecruitmentCount record={record} />
+                      </span>
                     </td>
                     <td className="table-cell-center table-cell-bold">
                       <RawScoreValue
@@ -549,7 +553,7 @@ function DepartmentExplorer({
                     className="department-university"
                     logoSize="small"
                   />
-                  <span className="department-count">
+                  <span className="department-count explorer-count-cell">
                     <span className="explorer-year-tag">{record.연도}</span>
                     <RecruitmentCount record={record} mobile />
                   </span>
