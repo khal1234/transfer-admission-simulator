@@ -94,7 +94,7 @@ export async function captureElement(node: HTMLElement): Promise<Blob> {
 }
 
 /**
- * 폰에서 «공유» 창으로 사진을 넘길 수 있나. 넘길 수 있으면 공유 창의 ‘이미지 저장’으로 갤러리에 들어간다.
+ * 폰에서 «공유» 창으로 사진을 넘길 수 있나. 넘길 수 있으면 사진 저장 창에 «공유» 단추를 보인다.
  * PC 도 파일 공유를 지원하지만 거기서는 내려받기가 익숙하므로, 손가락으로 쓰는 기기에서만 켠다.
  */
 export function canShareImageFile(file: File): boolean {

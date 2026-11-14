@@ -497,8 +497,9 @@ function TargetBasket({
               : getRelevantChanges(guidelineChange, target.dept);
             const scoreCautions = relevantChanges.filter((change) => change.affectsScore);
             // 무엇이 바뀌었는지보다 «그래서 내 점수에 유리한가 불리한가»가 먼저다.
+            // 유불리는 2026학년도 식과 새 식을 견주는 것이라 «판정 기준»이 어느 해를 골랐든 2026학년도 자료로 낸다.
             const impact = scoreCautions.length > 0
-              ? getGuidelineImpact(target.univ, target.dept, toeic, referenceRecord)
+              ? getGuidelineImpact(target.univ, target.dept, toeic, recentHistoryRows.map(({ record }) => record))
               : null;
             const borderline = getBorderlineMargin(
               target.univ,

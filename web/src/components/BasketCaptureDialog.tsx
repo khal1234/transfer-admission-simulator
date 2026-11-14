@@ -74,7 +74,7 @@ export default function BasketCaptureDialog({ imageUrl, file, onClose }: BasketC
 
         <p className="capture-hint">
           {canShare
-            ? "‘갤러리에 저장·공유’를 누른 뒤 ‘이미지 저장’을 고르면 갤러리에 들어갑니다. 사진을 길게 눌러 저장할 수도 있습니다."
+            ? "‘공유’를 누르면 공유 창이 열립니다. 사진을 길게 눌러 저장할 수도 있습니다."
             : "‘사진 내려받기’를 누르면 내려받기 폴더에 저장됩니다."}
           {" "}사진에는 넣어 둔 점수가 함께 들어갑니다.
         </p>
@@ -88,7 +88,7 @@ export default function BasketCaptureDialog({ imageUrl, file, onClose }: BasketC
           {canShare && (
             <button type="button" className="capture-action capture-action--primary" onClick={share}>
               <Share2 size={16} aria-hidden="true" />
-              갤러리에 저장·공유
+              공유
             </button>
           )}
           <a

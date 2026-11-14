@@ -61,13 +61,15 @@ const round2 = (value: number) => Math.round(value * 100) / 100;
 const SAME_THRESHOLD = 0.05;
 
 /**
- * @param referenceRecord 카드가 판정에 쓰는 해의 합격 자료. 2026학년도 것일 때만 합격 평균과 견준다.
+ * @param records 이 학과의 연도별 합격 자료(없는 해는 null). 여기서 2026학년도 것을 직접 고른다.
+ *   카드의 «판정 기준»이 고른 해를 받았더니, 그 기준이 2025학년도를 고른 기기에서만 «유불리 비교 불가»가
+ *   떴다(2026-11-15 사용자 지적). 유불리는 2026학년도 식과 새 식을 견주는 것이라 판정 기준과 무관하다.
  */
 export function getGuidelineImpact(
   university: string,
   department: string,
   toeic: number | null,
-  referenceRecord: DepartmentRecord | null,
+  records: readonly (DepartmentRecord | null)[],
 ): GuidelineImpact | null {
   if (university !== "충북대학교") {
     return null;
@@ -100,12 +102,9 @@ export function getGuidelineImpact(
   const mineAfter = round2(getChungbuk2027EnglishScore(toeic));
   const mineRow = { label: `내 점수 (TOEIC ${toeic})`, before: formatScore(mineBefore), after: formatScore(mineAfter) };
 
-  const acceptedBefore = referenceRecord?.연도 === "2026"
-    ? referenceRecord.최종합격_토익환산점수 ?? null
-    : null;
-  const acceptedToeic = referenceRecord?.연도 === "2026"
-    ? referenceRecord.최종합격_토익원점수 ?? null
-    : null;
+  const baseYearRecord = records.find((record) => record?.연도 === "2026") ?? null;
+  const acceptedBefore = baseYearRecord?.최종합격_토익환산점수 ?? null;
+  const acceptedToeic = baseYearRecord?.최종합격_토익원점수 ?? null;
 
   if (acceptedBefore === null || acceptedToeic === null) {
     return {

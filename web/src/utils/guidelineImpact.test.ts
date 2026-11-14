@@ -47,7 +47,7 @@ describe("충북대 2027학년도 TOEIC 환산", () => {
 // 2026-11-15 사용자 지적: «주의»가 무엇이 바뀌었는지만 말하고, 내 점수에 유리한지 불리한지를 말하지 않았다.
 describe("점수 계산이 바뀌는 학과의 유불리", () => {
   it("합격 평균보다 TOEIC이 낮으면 불리해진다고 말한다", () => {
-    const impact = getGuidelineImpact("충북대학교", "경영학부", 850, chungbuk());
+    const impact = getGuidelineImpact("충북대학교", "경영학부", 850, [chungbuk()]);
 
     expect(impact?.tone).toBe("worse");
     expect(impact?.label).toBe("내 점수엔 불리");
@@ -57,30 +57,45 @@ describe("점수 계산이 바뀌는 학과의 유불리", () => {
   });
 
   it("합격 평균보다 TOEIC이 높으면 유리해진다고 말한다", () => {
-    const impact = getGuidelineImpact("충북대학교", "경영학부", 970, chungbuk());
+    const impact = getGuidelineImpact("충북대학교", "경영학부", 970, [chungbuk()]);
 
     expect(impact?.tone).toBe("better");
     expect(impact?.label).toBe("내 점수엔 유리");
   });
 
   it("TOEIC을 받지 않게 된 학과는 유불리 대신 지원할 수 없다는 것을 말한다", () => {
-    const impact = getGuidelineImpact("충북대학교", "약학과", 990, chungbuk({ 학과: "약학과" }));
+    const impact = getGuidelineImpact("충북대학교", "약학과", 990, [chungbuk({ 학과: "약학과" })]);
 
     expect(impact?.tone).toBe("blocked");
     expect(impact?.headline).toContain("지원할 수 없습니다");
   });
 
   it("합격 평균이 없으면 유불리를 지어내지 않는다", () => {
-    const impact = getGuidelineImpact("충북대학교", "독일언어문화학과", 850, chungbuk({
+    const impact = getGuidelineImpact("충북대학교", "독일언어문화학과", 850, [chungbuk({
       최종합격_토익환산점수: null,
       최종합격_토익원점수: null,
-    }));
+    })]);
 
     expect(impact?.tone).toBe("unknown");
     expect(impact?.headline).toContain("56.5점 → 51.6점");
   });
 
   it("식이 바뀌지 않은 대학에는 아무것도 내지 않는다", () => {
-    expect(getGuidelineImpact("부산대학교", "기계공학부", 850, null)).toBeNull();
+    expect(getGuidelineImpact("부산대학교", "기계공학부", 850, [])).toBeNull();
+  });
+
+  // 2026-11-15 사용자 지적: «판정 기준»이 2025학년도를 고른 기기에서만 «유불리 비교 불가»가 떴다.
+  it("다른 해 자료가 섞여 있어도 2026학년도 합격 평균과 견준다", () => {
+    const older = chungbuk({ 연도: "2025", 최종합격_토익환산점수: 57.1, 최종합격_토익원점수: 880 });
+    const impact = getGuidelineImpact("충북대학교", "경영학부", 850, [null, older, chungbuk()]);
+
+    expect(impact?.label).toBe("내 점수엔 불리");
+    expect(impact?.headline).toContain("-1.59점 → 약 -3.6점");
+  });
+
+  it("2026학년도 자료가 없으면 다른 해 평균으로 유불리를 지어내지 않는다", () => {
+    const older = chungbuk({ 연도: "2025" });
+
+    expect(getGuidelineImpact("충북대학교", "경영학부", 850, [older])?.label).toBe("유불리 비교 불가");
   });
 });
