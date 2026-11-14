@@ -18,8 +18,16 @@ export type GuidelineImpact = {
   label: string;
   /** 딱지 옆 한 줄. 판정을 만든 숫자만. */
   headline: string;
-  /** 숫자가 어디서 나왔는지. 카드에서는 펼침 안에 둔다. */
+  /** 영어 반영점수의 전 → 후. 카드의 펼침 안에 작은 표로 보인다. 견줄 숫자가 없으면 빈 배열. */
+  rows: GuidelineImpactRow[];
+  /** 표로 못 적는 것 한두 문장. 카드에서는 펼침 안에 둔다. */
   detail: string;
+};
+
+export type GuidelineImpactRow = {
+  label: string;
+  before: string;
+  after: string;
 };
 
 /** 2027학년도 충북대 기본계획 14쪽(파일 쪽수): 수의학과·약학과·제약학과는 TOEIC 성적 미반영. */
@@ -70,6 +78,7 @@ export function getGuidelineImpact(
       tone: "blocked",
       label: "TOEIC 지원 불가",
       headline: "TOEIC만으로는 2027학년도에 지원할 수 없습니다.",
+      rows: [],
       detail: "TEPS 370점 이상 또는 TOEFL 92점 이상이 있어야 합니다. 이 카드의 숫자는 TOEIC으로 낸 2026학년도 기준이라 올해 판정으로 쓸 수 없습니다.",
     };
   }
@@ -79,13 +88,17 @@ export function getGuidelineImpact(
       tone: "unknown",
       label: "TOEIC 입력 필요",
       headline: "TOEIC을 넣으면 유불리를 계산합니다.",
-      detail: "TOEIC이 높을수록 덜 깎이고 낮을수록 더 깎입니다. 990점은 60점 그대로이고 850점은 56.5점에서 51.6점으로 내려갑니다.",
+      rows: [
+        { label: "TOEIC 990", before: "60", after: "60" },
+        { label: "TOEIC 850", before: "56.5", after: "51.6" },
+      ],
+      detail: "TOEIC이 높을수록 덜 깎이고 낮을수록 더 깎입니다.",
     };
   }
 
   const mineBefore = round2(getChungbukEnglishScore("2026", toeic));
   const mineAfter = round2(getChungbuk2027EnglishScore(toeic));
-  const mineText = `내 TOEIC ${toeic}점의 영어 점수는 ${formatScore(mineBefore)}점 → ${formatScore(mineAfter)}점`;
+  const mineRow = { label: `내 점수 (TOEIC ${toeic})`, before: formatScore(mineBefore), after: formatScore(mineAfter) };
 
   const acceptedBefore = referenceRecord?.연도 === "2026"
     ? referenceRecord.최종합격_토익환산점수 ?? null
@@ -99,7 +112,8 @@ export function getGuidelineImpact(
       tone: "unknown",
       label: "유불리 비교 불가",
       headline: `내 영어 점수 ${formatScore(mineBefore)}점 → ${formatScore(mineAfter)}점`,
-      detail: "2026학년도 합격 평균이 공개되지 않아 유불리는 견줄 수 없습니다. TOEIC이 높을수록 덜 깎이고(만점 990점은 60점 그대로), 면접 40점은 그대로입니다.",
+      rows: [mineRow],
+      detail: "2026학년도 합격 평균이 공개되지 않아 유불리는 견줄 수 없습니다. 면접 40점은 그대로입니다.",
     };
   }
 
@@ -110,14 +124,22 @@ export function getGuidelineImpact(
   const gapAfter = round2(mineAfter - acceptedAfter);
   const change = round2(gapAfter - gapBefore);
   const gapText = `합격 평균과의 영어 점수 차 ${formatSignedScore(gapBefore)}점 → 약 ${formatSignedScore(gapAfter)}점`;
-  const detail = `${mineText}, 합격 평균(TOEIC 약 ${Math.round(acceptedToeic / 5) * 5}점)은 ${formatScore(acceptedBefore)}점 → 약 ${formatScore(acceptedAfter)}점이 됩니다. `
-    + "새 식은 TOEIC 점수 차이를 더 크게 반영해, 합격 평균보다 TOEIC이 낮으면 불리하고 높으면 유리합니다. 면접 40점은 그대로입니다.";
+  const rows = [
+    mineRow,
+    {
+      label: `합격 평균 (TOEIC 약 ${Math.round(acceptedToeic / 5) * 5})`,
+      before: formatScore(acceptedBefore),
+      after: `약 ${formatScore(acceptedAfter)}`,
+    },
+  ];
+  const detail = "합격 평균보다 TOEIC이 낮으면 불리하고 높으면 유리합니다. 면접 40점은 그대로입니다.";
 
   if (Math.abs(change) < SAME_THRESHOLD) {
     return {
       tone: "same",
       label: "유불리 비슷",
       headline: gapText,
+      rows,
       detail,
     };
   }
@@ -126,6 +148,7 @@ export function getGuidelineImpact(
     tone: change > 0 ? "better" : "worse",
     label: change > 0 ? "내 점수엔 유리" : "내 점수엔 불리",
     headline: gapText,
+    rows,
     detail,
   };
 }

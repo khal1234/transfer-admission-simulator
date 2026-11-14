@@ -52,7 +52,8 @@ describe("점수 계산이 바뀌는 학과의 유불리", () => {
     expect(impact?.tone).toBe("worse");
     expect(impact?.label).toBe("내 점수엔 불리");
     expect(impact?.headline).toContain("-1.59점 → 약 -3.6점");
-    expect(impact?.detail).toContain("56.5점 → 51.6점");
+    expect(impact?.rows[0]).toEqual({ label: "내 점수 (TOEIC 850)", before: "56.5", after: "51.6" });
+    expect(impact?.rows).toHaveLength(2);
   });
 
   it("합격 평균보다 TOEIC이 높으면 유리해진다고 말한다", () => {

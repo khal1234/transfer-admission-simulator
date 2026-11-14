@@ -5549,20 +5549,6 @@ html[data-theme="dark"] .decision-tabs button strong {
   font-weight: 700;
 }
 
-.guideline-card-notice-list {
-  display: grid;
-  gap: 3px;
-  margin: 5px 0;
-  padding: 0;
-  list-style: none;
-}
-
-.guideline-card-notice-list li {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
 .guideline-card-notice-foot {
   color: var(--text-secondary);
 }
@@ -6064,26 +6050,6 @@ html .univ-chip.univ-chip:not(.active):hover {
   display: inline;
 }
 
-.guideline-card-more > ul {
-  display: grid;
-  gap: 8px;
-  margin: 2px 0 2px;
-  padding: 0;
-  list-style: none;
-}
-
-.guideline-card-more > ul > li {
-  border-top: 1px solid color-mix(in srgb, var(--text-muted) 30%, transparent);
-  padding-top: 6px;
-}
-
-.guideline-card-more .guideline-change-detail {
-  margin: 4px 0 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
 #target-basket.is-capturing .guideline-card-more:not([open]) {
   display: none !important;
 }
@@ -6517,9 +6483,95 @@ html[data-theme="dark"] :is(.univ-chip, .transfer-review-tab).active .university
 }
 
 .guideline-card-more .guideline-impact-detail {
-  margin: 6px 0 8px;
+  margin: 4px 0 6px;
   color: var(--text-secondary);
-  line-height: 1.55;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 펼침 안의 숫자: 문단 대신 전 → 후 작은 표. */
+.guideline-impact-table {
+  width: 100%;
+  margin: 2px 0 0;
+  border-collapse: collapse;
+  border-radius: 6px;
+  background: var(--card-bg);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.guideline-impact-table :is(th, td) {
+  padding: 4px 9px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.guideline-impact-table :is(th, td):first-child {
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-align: left;
+}
+
+.guideline-impact-table thead th {
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.guideline-impact-table td:last-child {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+/* 카드의 달라진 점: 한 줄에 제목만. 줄을 누르면 그 아래로 전 · 후와 원문 쪽수가 펼쳐진다. */
+.guideline-card-changes {
+  display: grid;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guideline-card-change > summary {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.guideline-card-change > summary::-webkit-details-marker {
+  display: none;
+}
+
+.guideline-card-change-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.guideline-card-change > summary svg {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.guideline-card-change[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.guideline-card-change[open] .guideline-card-change-title {
+  font-weight: 700;
+}
+
+.guideline-card-change .guideline-change-detail {
+  margin: 0 0 8px;
+}
+
+@media (max-width: 899px) {
+  .guideline-card-change > summary {
+    min-height: 38px;
+  }
 }
 
 /* 자격 미달: 기준과 근거 쪽수를 한 줄에, 그래서 어떻게 했는지는 아랫줄에. */

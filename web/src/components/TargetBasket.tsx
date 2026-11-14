@@ -23,12 +23,11 @@ import {
 import { formatScore, formatSignedScore } from "../utils/formatScore";
 import {
   GUIDELINE_CHANGES,
-  getAreaLabel,
   getRelevantChanges,
   type UniversityGuidelineChange,
 } from "../utils/guidelineChanges";
 import { closeSiblingDisclosureOnNarrow } from "../utils/disclosure";
-import GuidelineChangeDetail from "./GuidelineChangeDetail";
+import GuidelineCardChanges from "./GuidelineCardChanges";
 import { formatCompetitionRatio } from "../utils/competition";
 import { getGpaMax, type GpaType } from "../utils/scoreInput";
 import {
@@ -300,9 +299,6 @@ function TargetStrategyBoard({ summaries }: { summaries: TargetSummary[] }) {
     </section>
   );
 }
-
-/** 카드 알림에 제목으로 적는 항목 수. 넘는 것은 «외 N건»으로 줄인다(카드가 길어지지 않게). */
-const CARD_NOTICE_LIMIT = 3;
 
 /** 판정 딱지. 판정 기준은 딱지에 갖다 대거나(폰은 누르면) 나온다 — 늘 펼쳐 두면 글이 많다. */
 function StatusBadge({
@@ -712,88 +708,72 @@ function TargetBasket({
                           </p>
                           {/* 긴 설명을 카드에 그대로 깔아 두니 훑어 내릴 때 글이 빽빽했다(2026-11-15 사용자 지적).
                               보이는 것은 판정 딱지와 숫자 한 줄, 나머지는 아래 펼침 안에 둔다. */}
-                          {impact !== null ? (
+                          {impact !== null && (
                             <p className={`guideline-impact guideline-impact--${impact.tone}`}>
                               <span className="guideline-impact-label">{impact.label}</span>
                               <strong>{impact.headline}</strong>
                             </p>
-                          ) : (
-                            <ul className="guideline-card-notice-list">
-                              {scoreCautions.map((change) => (
-                                <li key={change.title}>
-                                  <span className="guideline-change-area">{getAreaLabel(change)}</span>
-                                  <span>{change.title}</span>
-                                </li>
-                              ))}
-                            </ul>
                           )}
                           <p className="guideline-card-notice-foot">
                             지금 판정은 {referenceRecord.연도}학년도 식 기준입니다.
                           </p>
-                          {/* 누르면 첫 화면 위쪽 상자로 옮겨 가던 것을, 그 자리에서 아래로 펼친다(2026-11-15 사용자 지적). */}
-                          <details className="guideline-card-more">
-                            <summary>
-                              <span className="details-closed-label">달라진 점 {relevantChanges.length}건 보기</span>
-                              <span className="details-open-label">달라진 점 접기</span>
-                              <ChevronDown size={14} aria-hidden="true" />
-                            </summary>
-                            {impact !== null && (
+                          {impact === null ? (
+                            <GuidelineCardChanges
+                              entry={guidelineChange!}
+                              changes={relevantChanges}
+                              baseYear={GUIDELINE_CHANGES.baseYear}
+                              targetYear={guidelineTargetYear}
+                            />
+                          ) : (
+                            <details className="guideline-card-more">
+                              <summary>
+                                <span className="details-closed-label">달라진 점 {relevantChanges.length}건 보기</span>
+                                <span className="details-open-label">달라진 점 접기</span>
+                                <ChevronDown size={14} aria-hidden="true" />
+                              </summary>
+                              {/* 펼친 안도 문단이 길었다(2026-11-15 사용자 지적). 숫자는 작은 표로,
+                                  항목은 제목 줄만 두고 전·후 글은 그 줄을 눌러야 나온다. */}
+                              {impact.rows.length > 0 && (
+                                <table className="guideline-impact-table">
+                                  <thead>
+                                    <tr>
+                                      <th scope="col">영어 점수</th>
+                                      <th scope="col">{GUIDELINE_CHANGES.baseYear}</th>
+                                      <th scope="col">{guidelineTargetYear}</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {impact.rows.map((row) => (
+                                      <tr key={row.label}>
+                                        <th scope="row">{row.label}</th>
+                                        <td>{row.before}</td>
+                                        <td>{row.after}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              )}
                               <p className="guideline-impact-detail">{impact.detail}</p>
-                            )}
-                            <ul>
-                              {relevantChanges.map((change) => (
-                                <li key={change.title}>
-                                  <strong>{change.title}</strong>
-                                  <GuidelineChangeDetail
-                                    entry={guidelineChange!}
-                                    change={change}
-                                    baseYear={GUIDELINE_CHANGES.baseYear}
-                                    targetYear={guidelineTargetYear}
-                                  />
-                                </li>
-                              ))}
-                            </ul>
-                          </details>
+                              <GuidelineCardChanges
+                                entry={guidelineChange!}
+                                changes={relevantChanges}
+                                baseYear={GUIDELINE_CHANGES.baseYear}
+                                targetYear={guidelineTargetYear}
+                              />
+                            </details>
+                          )}
                         </div>
                       ) : (
                         <div className="guideline-card-notice">
                           <p className="guideline-card-notice-lead">
                             📢 {guidelineTargetYear}학년도에 달라지는 것
                           </p>
-                          <ul className="guideline-card-notice-list">
-                            {relevantChanges.slice(0, CARD_NOTICE_LIMIT).map((change) => (
-                              <li key={change.title}>
-                                <span className="guideline-change-area">{getAreaLabel(change)}</span>
-                                <span>{change.title}</span>
-                              </li>
-                            ))}
-                          </ul>
-                          {relevantChanges.length > CARD_NOTICE_LIMIT && (
-                            <p className="guideline-card-notice-foot">
-                              외 {relevantChanges.length - CARD_NOTICE_LIMIT}건
-                            </p>
-                          )}
-                          {/* 누르면 첫 화면 위쪽 상자로 옮겨 가던 것을, 그 자리에서 아래로 펼친다(2026-11-15 사용자 지적). */}
-                          <details className="guideline-card-more">
-                            <summary>
-                              <span className="details-closed-label">달라진 점 보기</span>
-                              <span className="details-open-label">달라진 점 접기</span>
-                              <ChevronDown size={14} aria-hidden="true" />
-                            </summary>
-                            <ul>
-                              {relevantChanges.map((change) => (
-                                <li key={change.title}>
-                                  <strong>{change.title}</strong>
-                                  <GuidelineChangeDetail
-                                    entry={guidelineChange!}
-                                    change={change}
-                                    baseYear={GUIDELINE_CHANGES.baseYear}
-                                    targetYear={guidelineTargetYear}
-                                  />
-                                </li>
-                              ))}
-                            </ul>
-                          </details>
+                          <GuidelineCardChanges
+                            entry={guidelineChange!}
+                            changes={relevantChanges}
+                            baseYear={GUIDELINE_CHANGES.baseYear}
+                            targetYear={guidelineTargetYear}
+                          />
                         </div>
                       )
                     )}
